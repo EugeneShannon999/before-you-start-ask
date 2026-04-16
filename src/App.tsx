@@ -28,7 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/ai/policy" replace />} />
             <Route path="/ai/policy" element={<PolicyCenter />} />
-            <Route path="/ai/policy/subscription" element={<PolicySubscription />} />
+            
             <Route path="/ai/policy/:id" element={<PolicyDetail />} />
             <Route path="/tools/market" element={<MarketInfo />} />
             <Route path="/tools/prediction" element={<Prediction />} />
