@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { Search, Star, Filter } from "lucide-react";
+import { Search, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -112,17 +110,7 @@ export default function PolicyCenter() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold">政策AI</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate("/ai/policy/subscription")}
-          className="text-sm"
-        >
-          订阅管理
-        </Button>
-      </div>
+      <h1 className="text-xl font-semibold mb-6">政策AI</h1>
 
       <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1">

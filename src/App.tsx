@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
 import PolicyCenter from "./pages/PolicyCenter";
 import PolicyDetail from "./pages/PolicyDetail";
-import PolicySubscription from "./pages/PolicySubscription";
+
 import Calculator from "./pages/Calculator";
 import PluginManagement from "./pages/PluginManagement";
 import MarketInfo from "./pages/MarketInfo";
@@ -28,7 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/ai/policy" replace />} />
             <Route path="/ai/policy" element={<PolicyCenter />} />
-            <Route path="/ai/policy/subscription" element={<PolicySubscription />} />
+            
             <Route path="/ai/policy/:id" element={<PolicyDetail />} />
             <Route path="/tools/market" element={<MarketInfo />} />
             <Route path="/tools/prediction" element={<Prediction />} />
