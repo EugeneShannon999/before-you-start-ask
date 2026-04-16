@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
 import PolicyCenter from "./pages/PolicyCenter";
 import PolicyDetail from "./pages/PolicyDetail";
-import PolicySubscription from "./pages/PolicySubscription";
+
 import Calculator from "./pages/Calculator";
 import PluginManagement from "./pages/PluginManagement";
 import MarketInfo from "./pages/MarketInfo";

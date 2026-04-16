@@ -1,8 +1,16 @@
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, Settings, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useNavigate } from "react-router-dom";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export function AppTopBar() {
+  const navigate = useNavigate();
+
   return (
     <header className="h-12 flex items-center border-b px-4 gap-3 shrink-0 bg-card">
       <SidebarTrigger className="-ml-1" />
@@ -27,9 +35,29 @@ export function AppTopBar() {
           <Bell className="h-4 w-4 text-muted-foreground" />
           <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-destructive rounded-full" />
         </button>
-        <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-medium">
-          U
-        </div>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity">
+              U
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-48 p-1">
+            <button
+              onClick={() => navigate("/system/account")}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md hover:bg-secondary transition-colors"
+            >
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              账号设置
+            </button>
+            <button
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md hover:bg-secondary transition-colors text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+              退出登录
+            </button>
+          </PopoverContent>
+        </Popover>
       </div>
     </header>
   );
