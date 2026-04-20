@@ -16,6 +16,7 @@ import BatchesPage from "./pages/calculator/BatchesPage";
 
 import PluginManagement from "./pages/PluginManagement";
 import MarketInfo from "./pages/MarketInfo";
+import ChartFullscreen from "./pages/market/ChartFullscreen";
 import Prediction from "./pages/Prediction";
 import TradeCalendar from "./pages/TradeCalendar";
 import Trading from "./pages/Trading";
