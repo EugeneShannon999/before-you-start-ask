@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -13,6 +13,7 @@ import {
 import { AlertTriangle, Info } from "lucide-react";
 
 type TabKey = "load" | "renewable" | "space" | "price" | "factor";
+type Granularity = "15min" | "hour";
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "load", label: "负荷预测" },
@@ -22,28 +23,74 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: "factor", label: "因子分析" },
 ];
 
-// ===== Mock 预测数据 =====
-const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
+// ===== 96 点 15 分钟基础 Mock 数据 =====
+function pointLabel(idx: number) {
+  const m = idx * 15;
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+// 确定性伪随机，避免 setState 抖动
+function seeded(seed: number) {
+  return Math.sin(seed * 9301 + 49297) * 0.5 + 0.5;
+}
 
-function genSeries(base: number, amp: number, noise: number) {
-  return hours.map((h, i) => {
-    const v = base + Math.sin(((i - 6) / 24) * Math.PI * 2) * amp + 100;
+interface SeriesPoint {
+  idx: number;
+  label: string; // 15 分钟模式 X 轴
+  hourLabel: string; // 1 小时模式 X 轴
+  period: string; // 时段编号 1-96
+  periodRange: string; // 1 小时聚合时显示 "1-4"
+  predicted: number;
+  actual: number;
+  deviation: number;
+  deviationPct: string;
+}
+
+function gen96(base: number, amp: number, noise: number, salt: number): SeriesPoint[] {
+  return Array.from({ length: 96 }, (_, i) => {
+    const t = (i - 24) / 96;
+    const v = base + Math.sin(t * Math.PI * 2) * amp + 100;
     const predicted = Math.round(v);
-    const actual = Math.round(v + (Math.random() - 0.5) * noise);
+    const actual = Math.round(v + (seeded(i + salt) - 0.5) * noise);
+    const deviation = actual - predicted;
+    const h = Math.floor(i / 4);
     return {
-      hour: h,
-      period: `${i * 4 + 1}-${i * 4 + 4}`,
+      idx: i,
+      label: pointLabel(i),
+      hourLabel: `${String(h).padStart(2, "0")}:00`,
+      period: String(i + 1),
+      periodRange: `${h * 4 + 1}-${h * 4 + 4}`,
       predicted,
       actual,
-      deviation: actual - predicted,
-      deviationPct: (((actual - predicted) / predicted) * 100).toFixed(1),
+      deviation,
+      deviationPct: ((deviation / predicted) * 100).toFixed(1),
+    };
+  });
+}
+
+// 96 → 24 聚合（每 4 个点取均值）
+function aggregate(points: SeriesPoint[]): SeriesPoint[] {
+  return Array.from({ length: 24 }, (_, h) => {
+    const slice = points.slice(h * 4, h * 4 + 4);
+    const predicted = Math.round(slice.reduce((s, p) => s + p.predicted, 0) / 4);
+    const actual = Math.round(slice.reduce((s, p) => s + p.actual, 0) / 4);
+    const deviation = actual - predicted;
+    return {
+      idx: h * 4,
+      label: `${String(h).padStart(2, "0")}:00`,
+      hourLabel: `${String(h).padStart(2, "0")}:00`,
+      period: `${h * 4 + 1}-${h * 4 + 4}`,
+      periodRange: `${h * 4 + 1}-${h * 4 + 4}`,
+      predicted,
+      actual,
+      deviation,
+      deviationPct: ((deviation / predicted) * 100).toFixed(1),
     };
   });
 }
 
 const dataMap: Record<TabKey, any> = {
   load: {
-    series: genSeries(3200, 1200, 180),
+    series: gen96(3200, 1200, 200, 0),
     unit: "MW",
     metrics: [
       { label: "MAPE", value: "2.3%", desc: "平均绝对百分比误差" },
@@ -56,7 +103,7 @@ const dataMap: Record<TabKey, any> = {
     gaps: ["无"],
   },
   renewable: {
-    series: genSeries(800, 700, 220),
+    series: gen96(800, 700, 240, 100),
     unit: "MW",
     metrics: [
       { label: "MAPE", value: "8.1%", desc: "新能源波动较大" },
@@ -69,7 +116,7 @@ const dataMap: Record<TabKey, any> = {
     gaps: ["02:00-02:15 SCADA 数据缺失"],
   },
   space: {
-    series: genSeries(2400, 800, 200),
+    series: gen96(2400, 800, 220, 200),
     unit: "MW",
     metrics: [
       { label: "MAPE", value: "4.5%", desc: "" },
@@ -82,7 +129,7 @@ const dataMap: Record<TabKey, any> = {
     gaps: ["无"],
   },
   price: {
-    series: genSeries(380, 120, 35),
+    series: gen96(380, 120, 40, 300),
     unit: "元/MWh",
     metrics: [
       { label: "MAPE", value: "9.4%", desc: "" },
@@ -95,7 +142,7 @@ const dataMap: Record<TabKey, any> = {
     gaps: ["无"],
   },
   factor: {
-    series: genSeries(380, 120, 35),
+    series: gen96(380, 120, 40, 400),
     unit: "元/MWh",
     metrics: [
       { label: "样本量", value: "30 d", desc: "近 30 日数据" },
@@ -123,13 +170,37 @@ const C_DESTRUCTIVE = "hsl(var(--destructive))";
 
 export default function Prediction() {
   const [active, setActive] = useState<TabKey>("load");
+  const [granularity, setGranularity] = useState<Granularity>("hour");
   const data = dataMap[active];
+
+  const series: SeriesPoint[] = useMemo(
+    () => (granularity === "15min" ? data.series : aggregate(data.series)),
+    [granularity, data.series],
+  );
+  const xKey = granularity === "15min" ? "label" : "hourLabel";
+  const xInterval = granularity === "15min" ? 7 : 2;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-baseline justify-between mb-1">
+      <div className="flex items-baseline justify-between mb-1 flex-wrap gap-2">
         <h1 className="text-xl font-semibold">算法预测</h1>
-        <p className="text-xs text-muted-foreground">专项预测钻取 · 主看盘请前往「市场看板」</p>
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-md border overflow-hidden text-xs">
+            <button
+              onClick={() => setGranularity("15min")}
+              className={`px-2 py-1 ${granularity === "15min" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+            >
+              15分钟 · 96点
+            </button>
+            <button
+              onClick={() => setGranularity("hour")}
+              className={`px-2 py-1 ${granularity === "hour" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+            >
+              1小时 · 24点
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">专项预测钻取 · 主看盘请前往「市场看板」</p>
+        </div>
       </div>
 
       <div className="flex gap-1 mb-5 border-b mt-3">
@@ -163,21 +234,28 @@ export default function Prediction() {
         <>
           {/* 主图：预测 vs 实际 */}
           <div className="rounded-lg shadow-notion bg-card p-5 mb-5">
-            <h3 className="text-sm font-semibold mb-3">
-              预测 vs 实际（{data.unit}）
-            </h3>
+            <div className="flex items-baseline justify-between mb-3">
+              <h3 className="text-sm font-semibold">
+                预测 vs 实际（{data.unit}）
+              </h3>
+              <span className="text-[11px] text-muted-foreground">
+                {granularity === "15min" ? "96 时段 · 15 分钟" : "24 时段 · 1 小时聚合"}
+              </span>
+            </div>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={data.series}>
+                <ComposedChart data={series}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
+                  <XAxis dataKey={xKey} tick={{ fontSize: 10 }} interval={xInterval} />
                   <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{ fontSize: 12, borderRadius: 6 }}
                     formatter={(v: number, name: string, p: any) => {
-                      const period = p?.payload?.period;
-                      return [v, `${name}${period ? ` (时段 ${period})` : ""}`];
+                      const tag = granularity === "15min"
+                        ? `时段 ${p?.payload?.period}`
+                        : `时段 ${p?.payload?.periodRange}`;
+                      return [`${v.toLocaleString()} ${data.unit}`, `${name} · ${tag}`];
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -192,12 +270,15 @@ export default function Prediction() {
           {/* Detail table */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
             <div className="rounded-lg shadow-notion bg-card overflow-hidden md:col-span-2">
-              <div className="px-4 py-2.5 border-b bg-secondary/50">
+              <div className="px-4 py-2.5 border-b bg-secondary/50 flex items-center justify-between">
                 <h3 className="text-sm font-semibold">明细</h3>
+                <span className="text-[10px] text-muted-foreground">
+                  {series.length} 条 · {granularity === "15min" ? "15 分钟" : "1 小时"}
+                </span>
               </div>
               <div className="max-h-72 overflow-auto">
                 <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-card">
+                  <thead className="sticky top-0 bg-card z-10">
                     <tr className="border-b">
                       <th className="text-left px-4 py-2 font-medium text-xs text-muted-foreground">时段</th>
                       <th className="text-right px-4 py-2 font-medium text-xs text-muted-foreground">预测</th>
@@ -207,10 +288,13 @@ export default function Prediction() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.series.slice(0, 12).map((d: any) => (
-                      <tr key={d.hour} className="border-b last:border-b-0">
-                        <td className="px-4 py-1.5 text-xs">
-                          {d.hour} <span className="text-muted-foreground">({d.period})</span>
+                    {series.map((d) => (
+                      <tr key={d.idx} className="border-b last:border-b-0">
+                        <td className="px-4 py-1.5 text-xs whitespace-nowrap">
+                          {granularity === "15min" ? d.label : d.hourLabel}{" "}
+                          <span className="text-muted-foreground">
+                            ({granularity === "15min" ? `#${d.period}` : d.periodRange})
+                          </span>
                         </td>
                         <td className="px-4 py-1.5 text-right text-muted-foreground text-xs">
                           {d.predicted.toLocaleString()}
