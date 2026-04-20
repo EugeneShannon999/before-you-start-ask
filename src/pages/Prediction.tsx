@@ -270,12 +270,15 @@ export default function Prediction() {
           {/* Detail table */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
             <div className="rounded-lg shadow-notion bg-card overflow-hidden md:col-span-2">
-              <div className="px-4 py-2.5 border-b bg-secondary/50">
+              <div className="px-4 py-2.5 border-b bg-secondary/50 flex items-center justify-between">
                 <h3 className="text-sm font-semibold">明细</h3>
+                <span className="text-[10px] text-muted-foreground">
+                  {series.length} 条 · {granularity === "15min" ? "15 分钟" : "1 小时"}
+                </span>
               </div>
               <div className="max-h-72 overflow-auto">
                 <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-card">
+                  <thead className="sticky top-0 bg-card z-10">
                     <tr className="border-b">
                       <th className="text-left px-4 py-2 font-medium text-xs text-muted-foreground">时段</th>
                       <th className="text-right px-4 py-2 font-medium text-xs text-muted-foreground">预测</th>
@@ -285,10 +288,13 @@ export default function Prediction() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.series.slice(0, 12).map((d: any) => (
-                      <tr key={d.hour} className="border-b last:border-b-0">
-                        <td className="px-4 py-1.5 text-xs">
-                          {d.hour} <span className="text-muted-foreground">({d.period})</span>
+                    {series.map((d) => (
+                      <tr key={d.idx} className="border-b last:border-b-0">
+                        <td className="px-4 py-1.5 text-xs whitespace-nowrap">
+                          {granularity === "15min" ? d.label : d.hourLabel}{" "}
+                          <span className="text-muted-foreground">
+                            ({granularity === "15min" ? `#${d.period}` : d.periodRange})
+                          </span>
                         </td>
                         <td className="px-4 py-1.5 text-right text-muted-foreground text-xs">
                           {d.predicted.toLocaleString()}
