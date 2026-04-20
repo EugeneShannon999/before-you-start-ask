@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
   Clock,
   MapPin,
-  Activity,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -19,7 +18,6 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  LineChart,
 } from "recharts";
 import {
   Select,
@@ -29,59 +27,136 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// ===== Mock 数据：96 点 15 分钟粒度，简化为 24 小时点 =====
-const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
+// ===== 96 点 15 分钟基础数据生成 =====
+type Granularity = "15min" | "hour";
 
-const priceSeries = hours.map((h, i) => {
-  const base = 280 + Math.sin((i / 24) * Math.PI * 2) * 90 + Math.cos(i / 3) * 30;
+// 时段编号 1-96，对应时间 HH:MM
+function pointLabel(idx: number) {
+  const totalMin = idx * 15;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+// 用确定性伪随机替代 Math.random，避免每次 setState 重渲染数据抖动
+function seeded(seed: number) {
+  return Math.sin(seed * 9301 + 49297) * 0.5 + 0.5; // 0..1
+}
+
+interface PricePoint {
+  idx: number;
+  label: string;
+  period: string; // 时段号
+  dayAhead: number;
+  realtime: number;
+  spread: number;
+}
+interface LoadPoint {
+  idx: number;
+  label: string;
+  period: string;
+  predicted: number;
+  actual: number;
+  deviation: number;
+  deviationPct: string;
+}
+interface RenewablePoint {
+  idx: number;
+  label: string;
+  period: string;
+  solar: number;
+  wind: number;
+  total: number;
+}
+interface SpacePoint {
+  idx: number;
+  label: string;
+  period: string;
+  load: number;
+  renewable: number;
+  space: number;
+}
+
+const points96 = Array.from({ length: 96 }, (_, i) => i);
+
+const price96: PricePoint[] = points96.map((i) => {
+  const t = i / 96;
+  const base = 280 + Math.sin(t * Math.PI * 2) * 90 + Math.cos(i / 12) * 30;
   const dayAhead = Math.round(base + 50);
-  const realtime = Math.round(base + 50 + (Math.random() - 0.5) * 60);
+  const realtime = Math.round(base + 50 + (seeded(i) - 0.5) * 60);
   return {
-    hour: h,
-    period: `${i * 4 + 1}-${i * 4 + 4}`,
+    idx: i,
+    label: pointLabel(i),
+    period: String(i + 1),
     dayAhead,
     realtime,
     spread: realtime - dayAhead,
   };
 });
 
-const loadSeries = hours.map((h, i) => {
-  const base = 3000 + Math.sin(((i - 6) / 24) * Math.PI * 2) * 1200 + 800;
+const load96: LoadPoint[] = points96.map((i) => {
+  const t = (i - 24) / 96; // 偏移让早晨开始上升
+  const base = 3000 + Math.sin(t * Math.PI * 2) * 1200 + 800;
   const predicted = Math.round(base);
-  const actual = Math.round(base + (Math.random() - 0.5) * 180);
+  const actual = Math.round(base + (seeded(i + 100) - 0.5) * 200);
+  const deviation = actual - predicted;
   return {
-    hour: h,
+    idx: i,
+    label: pointLabel(i),
+    period: String(i + 1),
     predicted,
     actual,
-    deviation: actual - predicted,
-    deviationPct: (((actual - predicted) / predicted) * 100).toFixed(1),
+    deviation,
+    deviationPct: ((deviation / predicted) * 100).toFixed(1),
   };
 });
 
-const renewableSeries = hours.map((h, i) => {
-  const sun = Math.max(0, Math.sin(((i - 6) / 12) * Math.PI) * 1100);
-  const wind = 400 + Math.cos(i / 4) * 250 + Math.random() * 80;
-  const solar = Math.round(sun);
+const renewable96: RenewablePoint[] = points96.map((i) => {
+  // 光伏：6:00-18:00 抛物线
+  const hour = i / 4;
+  const sun = hour >= 6 && hour <= 18 ? Math.sin(((hour - 6) / 12) * Math.PI) * 1100 : 0;
+  const wind = 400 + Math.cos(i / 16) * 250 + seeded(i + 200) * 80;
+  const solar = Math.max(0, Math.round(sun));
   const windOut = Math.round(wind);
   return {
-    hour: h,
+    idx: i,
+    label: pointLabel(i),
+    period: String(i + 1),
     solar,
     wind: windOut,
     total: solar + windOut,
   };
 });
 
-const biddingSpaceSeries = hours.map((h, i) => {
-  const load = loadSeries[i].predicted;
-  const re = renewableSeries[i].total;
-  return {
-    hour: h,
-    load,
-    renewable: re,
-    space: load - re,
-  };
-});
+const space96: SpacePoint[] = points96.map((i) => ({
+  idx: i,
+  label: pointLabel(i),
+  period: String(i + 1),
+  load: load96[i].predicted,
+  renewable: renewable96[i].total,
+  space: load96[i].predicted - renewable96[i].total,
+}));
 
+// ===== 聚合到小时（96 → 24，每 4 点取均值）=====
+function aggregateToHour<T extends { idx: number }>(
+  arr: T[],
+  numericKeys: (keyof T)[],
+): (T & { hourLabel: string; periodRange: string })[] {
+  const out: any[] = [];
+  for (let h = 0; h < 24; h++) {
+    const slice = arr.slice(h * 4, h * 4 + 4);
+    const merged: any = { ...slice[0] };
+    numericKeys.forEach((k) => {
+      merged[k] = Math.round(slice.reduce((s, p) => s + (p[k] as number), 0) / slice.length);
+    });
+    merged.hourLabel = `${String(h).padStart(2, "0")}:00`;
+    merged.periodRange = `${h * 4 + 1}-${h * 4 + 4}`;
+    out.push(merged);
+  }
+  return out;
+}
+
+// ===== 静态信息 =====
 const boundaryRows = [
   { item: "联络线外送计划", value: "+850 MW", note: "向华东送电" },
   { item: "皖南-皖北断面限额", value: "2,400 MW", note: "当前负载 78%" },
@@ -103,16 +178,15 @@ const alerts = [
   { level: "medium", text: "皖南-皖北关键断面接近限额（78%），后续可能压减外送" },
 ];
 
-// ===== Summary cards =====
-const dayAheadAvg = Math.round(priceSeries.reduce((s, p) => s + p.dayAhead, 0) / 24);
-const realtimeAvg = Math.round(priceSeries.reduce((s, p) => s + p.realtime, 0) / 24);
+const dayAheadAvg = Math.round(price96.reduce((s, p) => s + p.dayAhead, 0) / 96);
+const realtimeAvg = Math.round(price96.reduce((s, p) => s + p.realtime, 0) / 96);
 const summary = [
   { label: "日前均价", value: dayAheadAvg, unit: "元/MWh", change: "+3.2%", up: true },
   { label: "实时均价", value: realtimeAvg, unit: "元/MWh", change: "-1.1%", up: false },
   { label: "日前-实时价差", value: realtimeAvg - dayAheadAvg, unit: "元/MWh", change: "扩大", up: true },
-  { label: "最大负荷", value: Math.max(...loadSeries.map((l) => l.actual)).toLocaleString(), unit: "MW", change: "+5.8%", up: true },
-  { label: "新能源预测", value: Math.max(...renewableSeries.map((r) => r.total)).toLocaleString(), unit: "MW", change: "+2.1%", up: true },
-  { label: "竞价空间(峰)", value: Math.max(...biddingSpaceSeries.map((b) => b.space)).toLocaleString(), unit: "MW", change: "—", up: true },
+  { label: "最大负荷", value: Math.max(...load96.map((l) => l.actual)).toLocaleString(), unit: "MW", change: "+5.8%", up: true },
+  { label: "新能源预测(峰)", value: Math.max(...renewable96.map((r) => r.total)).toLocaleString(), unit: "MW", change: "+2.1%", up: true },
+  { label: "竞价空间(峰)", value: Math.max(...space96.map((b) => b.space)).toLocaleString(), unit: "MW", change: "—", up: true },
   { label: "正备用", value: 520, unit: "MW", change: "正常", up: true },
   { label: "负备用", value: 380, unit: "MW", change: "正常", up: true },
 ];
@@ -136,7 +210,42 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
 }
 
 export default function MarketInfo() {
-  const [granularity, setGranularity] = useState("hour");
+  const [granularity, setGranularity] = useState<Granularity>("hour");
+
+  const { priceData, loadData, renewableData, spaceData, xKey, xInterval, periodLabel } =
+    useMemo(() => {
+      if (granularity === "15min") {
+        return {
+          priceData: price96,
+          loadData: load96,
+          renewableData: renewable96,
+          spaceData: space96,
+          xKey: "label",
+          // 96 点：每 8 个点(2 小时)显示一个刻度
+          xInterval: 7,
+          periodLabel: (p: any) => `时段 ${p.period}`,
+        };
+      }
+      const priceData = aggregateToHour(price96, ["dayAhead", "realtime", "spread"]);
+      const loadData = aggregateToHour(load96, ["predicted", "actual", "deviation"]);
+      const renewableData = aggregateToHour(renewable96, ["solar", "wind", "total"]);
+      const spaceData = aggregateToHour(space96, ["load", "renewable", "space"]);
+      return {
+        priceData,
+        loadData,
+        renewableData,
+        spaceData,
+        xKey: "hourLabel",
+        xInterval: 2,
+        periodLabel: (p: any) => `时段 ${p.periodRange}`,
+      };
+    }, [granularity]);
+
+  const tooltipFormatter = (unit: string) =>
+    (v: number, name: string, p: any) => {
+      const tag = p?.payload ? periodLabel(p.payload) : "";
+      return [`${v.toLocaleString()} ${unit}`, `${name}${tag ? ` · ${tag}` : ""}`];
+    };
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-5">
@@ -165,13 +274,13 @@ export default function MarketInfo() {
               onClick={() => setGranularity("15min")}
               className={`px-2 py-1 ${granularity === "15min" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
             >
-              15分钟
+              15分钟 · 96点
             </button>
             <button
               onClick={() => setGranularity("hour")}
               className={`px-2 py-1 ${granularity === "hour" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
             >
-              1小时
+              1小时 · 24点
             </button>
           </div>
           <span className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -201,21 +310,15 @@ export default function MarketInfo() {
       </div>
 
       {/* 1. 电价与价差 */}
-      <Section title="1. 电价与价差" subtitle="日前 vs 实时 vs 价差（元/MWh）">
+      <Section title="1. 电价与价差" subtitle={`日前 vs 实时 vs 价差（元/MWh）· ${granularity === "15min" ? "96 点" : "24 点"}`}>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={priceSeries}>
+            <ComposedChart data={priceData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
+              <XAxis dataKey={xKey} tick={{ fontSize: 10 }} interval={xInterval} />
               <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
-              <Tooltip
-                contentStyle={{ fontSize: 12, borderRadius: 6 }}
-                formatter={(v: number, name: string, p: any) => {
-                  const period = p?.payload?.period;
-                  return [`${v} 元/MWh`, `${name}${period ? ` (时段 ${period})` : ""}`];
-                }}
-              />
+              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} formatter={tooltipFormatter("元/MWh")} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar yAxisId="right" dataKey="spread" name="价差" fill={C_PRIMARY} fillOpacity={0.25} />
               <Line yAxisId="left" type="monotone" dataKey="dayAhead" name="日前电价" stroke={C_PRIMARY} strokeWidth={2} dot={false} />
@@ -224,7 +327,7 @@ export default function MarketInfo() {
           </ResponsiveContainer>
         </div>
         <p className="text-[11px] text-muted-foreground mt-2">
-          价差 = 实时电价 - 日前电价。正值表示实时高于日前，售电方受益。
+          价差 = 实时电价 − 日前电价。{granularity === "15min" ? "15 分钟粒度，时段编号 1-96。" : "1 小时聚合（每 4 个 15 分钟时段取均值）。"}
         </p>
       </Section>
 
@@ -232,12 +335,12 @@ export default function MarketInfo() {
       <Section title="2. 负荷预测 vs 实际" subtitle="单位 MW · 偏差以折线展示">
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={loadSeries}>
+            <ComposedChart data={loadData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
+              <XAxis dataKey={xKey} tick={{ fontSize: 10 }} interval={xInterval} />
               <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} formatter={tooltipFormatter("MW")} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar yAxisId="left" dataKey="predicted" name="预测负荷" fill={C_PRIMARY} fillOpacity={0.35} />
               <Bar yAxisId="left" dataKey="actual" name="实际负荷" fill={C_PRIMARY} />
@@ -251,7 +354,7 @@ export default function MarketInfo() {
       <Section title="3. 新能源出力" subtitle="风电 + 光伏 预测出力（MW）">
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={renewableSeries}>
+            <AreaChart data={renewableData}>
               <defs>
                 <linearGradient id="solar" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={C_PRIMARY} stopOpacity={0.5} />
@@ -263,9 +366,9 @@ export default function MarketInfo() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
+              <XAxis dataKey={xKey} tick={{ fontSize: 10 }} interval={xInterval} />
               <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} formatter={tooltipFormatter("MW")} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Area type="monotone" dataKey="wind" name="风电" stackId="1" stroke={C_SUCCESS} fill="url(#wind)" />
               <Area type="monotone" dataKey="solar" name="光伏" stackId="1" stroke={C_PRIMARY} fill="url(#solar)" />
@@ -281,11 +384,11 @@ export default function MarketInfo() {
       <Section title="4. 竞价空间" subtitle="竞价空间 = 总负荷预测 − 新能源预测">
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={biddingSpaceSeries}>
+            <ComposedChart data={spaceData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
+              <XAxis dataKey={xKey} tick={{ fontSize: 10 }} interval={xInterval} />
               <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} formatter={tooltipFormatter("MW")} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="load" name="总负荷预测" stroke={C_MUTED} strokeWidth={1.5} dot={false} />
               <Line type="monotone" dataKey="renewable" name="新能源预测" stroke={C_SUCCESS} strokeWidth={1.5} dot={false} />
