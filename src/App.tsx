@@ -31,67 +31,58 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AppLayout>
-          <Routes>
-            <Route path="/" element={<Navigate to="/ai/policy" replace />} />
-            <Route path="/ai/policy" element={<PolicyCenter />} />
-            <Route path="/ai/policy/:id" element={<PolicyDetail />} />
-            <Route path="/tools/market" element={<MarketInfo />} />
-            <Route path="/tools/prediction" element={<Prediction />} />
+        <Routes>
+          {/* 图表大屏 - 独立页面，无侧边栏 */}
+          <Route path="/tools/market/chart/:chartId" element={<ChartFullscreen />} />
 
-            {/* 结算计算器 - 嵌套二级侧边栏 + 多级路由 */}
-            <Route
-              path="/tools/calculator"
-              element={<Navigate to="/tools/calculator/customers" replace />}
-            />
-            <Route
-              path="/tools/calculator/customers"
-              element={
-                <CalculatorLayout>
-                  <CustomersPage />
-                </CalculatorLayout>
-              }
-            />
-            <Route
-              path="/tools/calculator/runs"
-              element={
-                <CalculatorLayout>
-                  <RunsPage />
-                </CalculatorLayout>
-              }
-            />
-            <Route
-              path="/tools/calculator/runs/:runId/results"
-              element={
-                <CalculatorLayout>
-                  <RunResultPage />
-                </CalculatorLayout>
-              }
-            />
-            <Route
-              path="/tools/calculator/policies"
-              element={
-                <CalculatorLayout>
-                  <PoliciesPage />
-                </CalculatorLayout>
-              }
-            />
-            <Route
-              path="/tools/calculator/batches"
-              element={
-                <CalculatorLayout>
-                  <BatchesPage />
-                </CalculatorLayout>
-              }
-            />
+          {/* 主应用 - 带侧边栏 */}
+          <Route
+            path="*"
+            element={
+              <AppLayout>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/ai/policy" replace />} />
+                  <Route path="/ai/policy" element={<PolicyCenter />} />
+                  <Route path="/ai/policy/:id" element={<PolicyDetail />} />
+                  <Route path="/tools/market" element={<MarketInfo />} />
+                  <Route path="/tools/prediction" element={<Prediction />} />
 
-            <Route path="/tools/calendar" element={<TradeCalendar />} />
-            <Route path="/tools/trading" element={<Trading />} />
-            <Route path="/system/plugin" element={<PluginManagement />} />
-            <Route path="/system/account" element={<AccountSettings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppLayout>
+                  {/* 结算计算器 - 嵌套二级侧边栏 + 多级路由 */}
+                  <Route
+                    path="/tools/calculator"
+                    element={<Navigate to="/tools/calculator/customers" replace />}
+                  />
+                  <Route
+                    path="/tools/calculator/customers"
+                    element={<CalculatorLayout><CustomersPage /></CalculatorLayout>}
+                  />
+                  <Route
+                    path="/tools/calculator/runs"
+                    element={<CalculatorLayout><RunsPage /></CalculatorLayout>}
+                  />
+                  <Route
+                    path="/tools/calculator/runs/:runId/results"
+                    element={<CalculatorLayout><RunResultPage /></CalculatorLayout>}
+                  />
+                  <Route
+                    path="/tools/calculator/policies"
+                    element={<CalculatorLayout><PoliciesPage /></CalculatorLayout>}
+                  />
+                  <Route
+                    path="/tools/calculator/batches"
+                    element={<CalculatorLayout><BatchesPage /></CalculatorLayout>}
+                  />
+
+                  <Route path="/tools/calendar" element={<TradeCalendar />} />
+                  <Route path="/tools/trading" element={<Trading />} />
+                  <Route path="/system/plugin" element={<PluginManagement />} />
+                  <Route path="/system/account" element={<AccountSettings />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AppLayout>
+            }
+          />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
