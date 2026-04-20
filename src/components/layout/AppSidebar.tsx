@@ -93,23 +93,27 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarContent className="pt-0">
-        {/* Tab switcher：全局产品层级 */}
+        {/* Tab switcher：选中态展开图标+文字占主区，未选中收为图标按钮 */}
         {!collapsed && (
-          <div className="flex border-b">
-            {tabConfig.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors border-b-2 ${
-                  activeTab === tab.key
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <tab.icon className="h-3.5 w-3.5" />
-                {tab.label}
-              </button>
-            ))}
+          <div className="flex items-stretch gap-1 p-1.5 border-b bg-secondary/30">
+            {tabConfig.map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  title={tab.label}
+                  className={`flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-medium transition-all ${
+                    active
+                      ? "flex-1 bg-card text-primary shadow-notion px-2"
+                      : "w-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  }`}
+                >
+                  <tab.icon className="h-3.5 w-3.5 shrink-0" />
+                  {active && <span className="truncate">{tab.label}</span>}
+                </button>
+              );
+            })}
           </div>
         )}
 
