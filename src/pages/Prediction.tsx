@@ -234,21 +234,28 @@ export default function Prediction() {
         <>
           {/* 主图：预测 vs 实际 */}
           <div className="rounded-lg shadow-notion bg-card p-5 mb-5">
-            <h3 className="text-sm font-semibold mb-3">
-              预测 vs 实际（{data.unit}）
-            </h3>
+            <div className="flex items-baseline justify-between mb-3">
+              <h3 className="text-sm font-semibold">
+                预测 vs 实际（{data.unit}）
+              </h3>
+              <span className="text-[11px] text-muted-foreground">
+                {granularity === "15min" ? "96 时段 · 15 分钟" : "24 时段 · 1 小时聚合"}
+              </span>
+            </div>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={data.series}>
+                <ComposedChart data={series}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
+                  <XAxis dataKey={xKey} tick={{ fontSize: 10 }} interval={xInterval} />
                   <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{ fontSize: 12, borderRadius: 6 }}
                     formatter={(v: number, name: string, p: any) => {
-                      const period = p?.payload?.period;
-                      return [v, `${name}${period ? ` (时段 ${period})` : ""}`];
+                      const tag = granularity === "15min"
+                        ? `时段 ${p?.payload?.period}`
+                        : `时段 ${p?.payload?.periodRange}`;
+                      return [`${v.toLocaleString()} ${data.unit}`, `${name} · ${tag}`];
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
