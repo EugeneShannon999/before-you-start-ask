@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -13,6 +13,7 @@ import {
 import { AlertTriangle, Info } from "lucide-react";
 
 type TabKey = "load" | "renewable" | "space" | "price" | "factor";
+type Granularity = "15min" | "hour";
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "load", label: "负荷预测" },
@@ -22,28 +23,74 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: "factor", label: "因子分析" },
 ];
 
-// ===== Mock 预测数据 =====
-const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
+// ===== 96 点 15 分钟基础 Mock 数据 =====
+function pointLabel(idx: number) {
+  const m = idx * 15;
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+// 确定性伪随机，避免 setState 抖动
+function seeded(seed: number) {
+  return Math.sin(seed * 9301 + 49297) * 0.5 + 0.5;
+}
 
-function genSeries(base: number, amp: number, noise: number) {
-  return hours.map((h, i) => {
-    const v = base + Math.sin(((i - 6) / 24) * Math.PI * 2) * amp + 100;
+interface SeriesPoint {
+  idx: number;
+  label: string; // 15 分钟模式 X 轴
+  hourLabel: string; // 1 小时模式 X 轴
+  period: string; // 时段编号 1-96
+  periodRange: string; // 1 小时聚合时显示 "1-4"
+  predicted: number;
+  actual: number;
+  deviation: number;
+  deviationPct: string;
+}
+
+function gen96(base: number, amp: number, noise: number, salt: number): SeriesPoint[] {
+  return Array.from({ length: 96 }, (_, i) => {
+    const t = (i - 24) / 96;
+    const v = base + Math.sin(t * Math.PI * 2) * amp + 100;
     const predicted = Math.round(v);
-    const actual = Math.round(v + (Math.random() - 0.5) * noise);
+    const actual = Math.round(v + (seeded(i + salt) - 0.5) * noise);
+    const deviation = actual - predicted;
+    const h = Math.floor(i / 4);
     return {
-      hour: h,
-      period: `${i * 4 + 1}-${i * 4 + 4}`,
+      idx: i,
+      label: pointLabel(i),
+      hourLabel: `${String(h).padStart(2, "0")}:00`,
+      period: String(i + 1),
+      periodRange: `${h * 4 + 1}-${h * 4 + 4}`,
       predicted,
       actual,
-      deviation: actual - predicted,
-      deviationPct: (((actual - predicted) / predicted) * 100).toFixed(1),
+      deviation,
+      deviationPct: ((deviation / predicted) * 100).toFixed(1),
+    };
+  });
+}
+
+// 96 → 24 聚合（每 4 个点取均值）
+function aggregate(points: SeriesPoint[]): SeriesPoint[] {
+  return Array.from({ length: 24 }, (_, h) => {
+    const slice = points.slice(h * 4, h * 4 + 4);
+    const predicted = Math.round(slice.reduce((s, p) => s + p.predicted, 0) / 4);
+    const actual = Math.round(slice.reduce((s, p) => s + p.actual, 0) / 4);
+    const deviation = actual - predicted;
+    return {
+      idx: h * 4,
+      label: `${String(h).padStart(2, "0")}:00`,
+      hourLabel: `${String(h).padStart(2, "0")}:00`,
+      period: `${h * 4 + 1}-${h * 4 + 4}`,
+      periodRange: `${h * 4 + 1}-${h * 4 + 4}`,
+      predicted,
+      actual,
+      deviation,
+      deviationPct: ((deviation / predicted) * 100).toFixed(1),
     };
   });
 }
 
 const dataMap: Record<TabKey, any> = {
   load: {
-    series: genSeries(3200, 1200, 180),
+    series: gen96(3200, 1200, 200, 0),
     unit: "MW",
     metrics: [
       { label: "MAPE", value: "2.3%", desc: "平均绝对百分比误差" },
