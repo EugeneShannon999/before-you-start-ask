@@ -170,13 +170,37 @@ const C_DESTRUCTIVE = "hsl(var(--destructive))";
 
 export default function Prediction() {
   const [active, setActive] = useState<TabKey>("load");
+  const [granularity, setGranularity] = useState<Granularity>("hour");
   const data = dataMap[active];
+
+  const series: SeriesPoint[] = useMemo(
+    () => (granularity === "15min" ? data.series : aggregate(data.series)),
+    [granularity, data.series],
+  );
+  const xKey = granularity === "15min" ? "label" : "hourLabel";
+  const xInterval = granularity === "15min" ? 7 : 2;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-baseline justify-between mb-1">
+      <div className="flex items-baseline justify-between mb-1 flex-wrap gap-2">
         <h1 className="text-xl font-semibold">算法预测</h1>
-        <p className="text-xs text-muted-foreground">专项预测钻取 · 主看盘请前往「市场看板」</p>
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-md border overflow-hidden text-xs">
+            <button
+              onClick={() => setGranularity("15min")}
+              className={`px-2 py-1 ${granularity === "15min" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+            >
+              15分钟 · 96点
+            </button>
+            <button
+              onClick={() => setGranularity("hour")}
+              className={`px-2 py-1 ${granularity === "hour" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+            >
+              1小时 · 24点
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">专项预测钻取 · 主看盘请前往「市场看板」</p>
+        </div>
       </div>
 
       <div className="flex gap-1 mb-5 border-b mt-3">
