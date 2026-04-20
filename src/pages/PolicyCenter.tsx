@@ -1,219 +1,287 @@
 import { useState } from "react";
-import { Search, Star } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Brain,
+  MessageSquare,
+  PieChart,
+  History,
+  Send,
+  FileText,
+  ExternalLink,
+  CornerDownRight,
+  Sparkles,
+  Plus,
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
-interface PolicyMessage {
+type Capability = "policy" | "qa" | "chart" | "review";
+
+const capabilities: { key: Capability; name: string; icon: typeof Brain; desc: string }[] = [
+  { key: "policy", name: "政策 AI", icon: Brain, desc: "解读最新政策与影响" },
+  { key: "qa", name: "交易问答", icon: MessageSquare, desc: "市场规则与交易策略问答" },
+  { key: "chart", name: "图表解读", icon: PieChart, desc: "上传或选取图表自动解释" },
+  { key: "review", name: "复盘助手", icon: History, desc: "复盘某日交易与价差成因" },
+];
+
+const recentSessions: Record<Capability, { id: string; title: string; ts: string }[]> = {
+  policy: [
+    { id: "p1", title: "7月安徽偏差考核新规解读", ts: "10:32" },
+    { id: "p2", title: "全国统一电力市场征求意见影响", ts: "昨天" },
+    { id: "p3", title: "广东现货分段考核机制", ts: "2天前" },
+  ],
+  qa: [
+    { id: "q1", title: "竞价空间为什么会变小？", ts: "09:10" },
+    { id: "q2", title: "实时价差扩大的常见原因", ts: "昨天" },
+  ],
+  chart: [
+    { id: "c1", title: "解读 7-15 日前出清曲线", ts: "08:50" },
+  ],
+  review: [
+    { id: "r1", title: "7-14 价差异常复盘", ts: "昨天" },
+  ],
+};
+
+interface PolicyCard {
   id: string;
   title: string;
-  summary: string;
-  region: string;
+  oneLine: string;
+  affects: string;
+  effectiveTime: string;
   source: string;
-  date: string;
-  isRead: boolean;
-  isFavorite: boolean;
-  importance: "high" | "medium" | "low";
+  evidence: string;
 }
 
-const mockPolicies: PolicyMessage[] = [
+const policyCards: PolicyCard[] = [
   {
     id: "1",
-    title: "安徽省电力市场2025年7月结算规则调整通知",
-    summary: "省能源局发布新规，调整中长期曲线回收阈值，中午8小时下偏差考核由55%调整为50%...",
-    region: "安徽",
-    source: "省能源局",
-    date: "2025-07-15 10:30",
-    isRead: false,
-    isFavorite: true,
-    importance: "high",
+    title: "安徽 2025-07 结算规则调整",
+    oneLine: "中午 8 小时下偏差考核阈值由 55% 调整为 50%，对光伏富集时段不利。",
+    affects: "省内现货售电主体、光伏占比 >30% 的零售套餐",
+    effectiveTime: "2025-07-20 起",
+    source: "安徽省能源局 〔2025〕 47 号",
+    evidence: "原文 §3.2 / 附件 1 表 2",
   },
   {
     id: "2",
-    title: "全国电力市场统一规则征求意见稿发布",
-    summary: "国家发改委发布全国统一电力市场规则征求意见，涉及现货交易、中长期交易、辅助服务等多个方面...",
-    region: "全国",
-    source: "发改委",
-    date: "2025-07-14 16:00",
-    isRead: false,
-    isFavorite: false,
-    importance: "high",
-  },
-  {
-    id: "3",
-    title: "山东省2025年8月集中竞价交易公告",
-    summary: "山东电力交易中心发布8月集中竞价交易时间安排...",
-    region: "山东",
-    source: "交易中心",
-    date: "2025-07-14 09:00",
-    isRead: true,
-    isFavorite: false,
-    importance: "medium",
-  },
-  {
-    id: "4",
-    title: "广东省现货市场结算试运行方案（修订版）",
-    summary: "广东电力交易中心发布现货市场结算试运行方案修订版，新增偏差考核分段机制...",
-    region: "广东",
-    source: "交易中心",
-    date: "2025-07-13 14:20",
-    isRead: true,
-    isFavorite: true,
-    importance: "medium",
-  },
-  {
-    id: "5",
-    title: "浙江省2025年下半年中长期交易规则补充通知",
-    summary: "浙江省能源局发布下半年中长期交易规则补充，明确分时段交易量约束和偏差处理方式...",
-    region: "浙江",
-    source: "省能源局",
-    date: "2025-07-12 11:00",
-    isRead: true,
-    isFavorite: false,
-    importance: "low",
+    title: "国家发改委：全国统一电力市场征求意见",
+    oneLine: "明确跨省现货衔接、辅助服务分摊原则，长期影响零售报价模型。",
+    affects: "全国所有售电公司、虚拟电厂运营方",
+    effectiveTime: "意见反馈截止 2025-08-30",
+    source: "国家发改委 价格司",
+    evidence: "征求意见稿 §5、§7",
   },
 ];
 
-type TabType = "all" | "unread" | "favorite";
+const evidencePanel = {
+  excerpt:
+    "「中午时段（10:00-18:00）下偏差考核比例由 55% 调整为 50%。光伏出力高峰期间，售电主体应加强中长期分时签约与现货申报曲线的一致性管理……」",
+  source: "安徽省能源局 〔2025〕 47 号 §3.2",
+  related: [
+    "安徽 2025 年中长期分时交易实施细则",
+    "7-14 实时电价偏差周报",
+    "套餐 PKG-A 光伏占比 32%",
+  ],
+};
 
 export default function PolicyCenter() {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabType>("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [policies, setPolicies] = useState(mockPolicies);
+  const [active, setActive] = useState<Capability>("policy");
+  const [input, setInput] = useState("");
 
-  const filteredPolicies = policies.filter((p) => {
-    if (activeTab === "unread" && p.isRead) return false;
-    if (activeTab === "favorite" && !p.isFavorite) return false;
-    if (searchQuery && !p.title.includes(searchQuery) && !p.summary.includes(searchQuery)) return false;
-    return true;
-  });
-
-  const toggleFavorite = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPolicies((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, isFavorite: !p.isFavorite } : p))
-    );
-  };
-
-  const tabs: { key: TabType; label: string }[] = [
-    { key: "all", label: "全部" },
-    { key: "unread", label: "未读" },
-    { key: "favorite", label: "已收藏" },
-  ];
+  const current = capabilities.find((c) => c.key === active)!;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-xl font-semibold mb-6">政策AI</h1>
-
-      <div className="flex items-center gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="搜索政策..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-secondary border-none h-9"
-          />
+    <div className="flex h-[calc(100vh-3rem)]">
+      {/* Left: capability list */}
+      <aside className="w-56 border-r bg-card/30 flex flex-col shrink-0">
+        <div className="p-3 border-b">
+          <button className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:opacity-90">
+            <Plus className="h-4 w-4" />
+            新建会话
+          </button>
         </div>
-        <div className="flex gap-1">
-          {tabs.map((tab) => (
+        <div className="p-2">
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 py-1.5">
+            AI 能力
+          </p>
+          {capabilities.map((c) => (
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                activeTab === tab.key
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-secondary"
+              key={c.key}
+              onClick={() => setActive(c.key)}
+              className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-md text-left transition-colors ${
+                active === c.key
+                  ? "bg-secondary text-primary"
+                  : "hover:bg-secondary/60 text-foreground"
               }`}
             >
-              {tab.label}
+              <c.icon className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-tight">{c.name}</p>
+                <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 line-clamp-1">
+                  {c.desc}
+                </p>
+              </div>
             </button>
           ))}
         </div>
-      </div>
+        <div className="p-2 mt-2 border-t flex-1 overflow-auto">
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 py-1.5">
+            最近会话
+          </p>
+          {recentSessions[active].map((s) => (
+            <button
+              key={s.id}
+              className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-sm rounded-md hover:bg-secondary/60 text-left"
+            >
+              <span className="truncate text-foreground/80">{s.title}</span>
+              <span className="text-[10px] text-muted-foreground shrink-0">{s.ts}</span>
+            </button>
+          ))}
+        </div>
+      </aside>
 
-      <div className="flex gap-2 mb-5">
-        <Select>
-          <SelectTrigger className="w-[130px] h-8 text-sm">
-            <SelectValue placeholder="全部来源" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部来源</SelectItem>
-            <SelectItem value="energy">省能源局</SelectItem>
-            <SelectItem value="ndrc">发改委</SelectItem>
-            <SelectItem value="exchange">交易中心</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select>
-          <SelectTrigger className="w-[130px] h-8 text-sm">
-            <SelectValue placeholder="全部地区" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部地区</SelectItem>
-            <SelectItem value="national">全国</SelectItem>
-            <SelectItem value="anhui">安徽</SelectItem>
-            <SelectItem value="shandong">山东</SelectItem>
-            <SelectItem value="guangdong">广东</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select>
-          <SelectTrigger className="w-[130px] h-8 text-sm">
-            <SelectValue placeholder="全部主题" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部主题</SelectItem>
-            <SelectItem value="spot">现货交易</SelectItem>
-            <SelectItem value="medium">中长期交易</SelectItem>
-            <SelectItem value="settlement">结算规则</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Center: conversation */}
+      <main className="flex-1 flex flex-col min-w-0 bg-background">
+        <header className="h-12 border-b flex items-center px-5 gap-2 shrink-0">
+          <current.icon className="h-4 w-4 text-primary" />
+          <h1 className="text-sm font-semibold">{current.name}</h1>
+          <span className="text-xs text-muted-foreground ml-2">· {current.desc}</span>
+        </header>
 
-      <div className="space-y-3">
-        {filteredPolicies.map((policy) => (
-          <div
-            key={policy.id}
-            onClick={() => navigate(`/ai/policy/${policy.id}`)}
-            className="p-4 rounded-lg shadow-notion bg-card cursor-pointer hover:shadow-md transition-shadow relative"
-          >
-            {!policy.isRead && (
-              <span className="absolute left-1.5 top-5 w-2 h-2 rounded-full bg-destructive" />
-            )}
-            <h3 className="text-sm font-semibold mb-2 pl-3">{policy.title}</h3>
-            <p className="text-sm text-muted-foreground mb-3 pl-3 line-clamp-2">
-              {policy.summary}
+        <div className="flex-1 overflow-auto px-6 py-6 space-y-5">
+          {/* Greeting */}
+          <div className="max-w-2xl mx-auto text-center pt-4 pb-2">
+            <Sparkles className="h-6 w-6 text-primary mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              你好，我是「{current.name}」。基于最近 30 天的政策、出清和你的套餐数据回答。
             </p>
-            <div className="flex items-center justify-between pl-3">
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <span>📍 {policy.region} · {policy.source}</span>
-                <span>📅 {policy.date}</span>
+          </div>
+
+          {/* Policy cards as conversation messages */}
+          {active === "policy" &&
+            policyCards.map((p) => (
+              <div key={p.id} className="max-w-2xl mx-auto">
+                <div className="rounded-lg border bg-card shadow-notion p-4">
+                  <div className="flex items-start gap-2 mb-2">
+                    <FileText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <h3 className="text-sm font-semibold flex-1">{p.title}</h3>
+                  </div>
+                  <p className="text-sm text-foreground/90 mb-3 leading-relaxed">{p.oneLine}</p>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs mb-3">
+                    <div>
+                      <dt className="text-muted-foreground">影响对象</dt>
+                      <dd className="text-foreground/80 mt-0.5">{p.affects}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">影响时间</dt>
+                      <dd className="text-foreground/80 mt-0.5">{p.effectiveTime}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">来源</dt>
+                      <dd className="text-foreground/80 mt-0.5">{p.source}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">证据定位</dt>
+                      <dd className="text-foreground/80 mt-0.5">{p.evidence}</dd>
+                    </div>
+                  </dl>
+                  <div className="flex gap-2 pt-2 border-t">
+                    <button className="text-xs px-2.5 py-1 rounded border hover:bg-secondary">
+                      查看解读
+                    </button>
+                    <button className="text-xs px-2.5 py-1 rounded border hover:bg-secondary flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" /> 查看原文
+                    </button>
+                    <button className="text-xs px-2.5 py-1 rounded border hover:bg-secondary flex items-center gap-1">
+                      <CornerDownRight className="h-3 w-3" /> 追问
+                    </button>
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={(e) => toggleFavorite(policy.id, e)}
-                className="text-warning hover:scale-110 transition-transform"
-              >
-                <Star
-                  className="h-4 w-4"
-                  fill={policy.isFavorite ? "currentColor" : "none"}
-                />
+            ))}
+
+          {active !== "policy" && (
+            <div className="max-w-2xl mx-auto space-y-3">
+              <div className="rounded-lg border bg-card shadow-notion p-4">
+                <p className="text-xs text-muted-foreground mb-1.5">示例问答</p>
+                <p className="text-sm font-medium mb-2">
+                  {active === "qa" && "今天 18:00-20:00 实时价差为什么变大？"}
+                  {active === "chart" && "请解读今天的日前出清曲线"}
+                  {active === "review" && "复盘 7-14 全天交易表现"}
+                </p>
+                <p className="text-sm text-foreground/85 leading-relaxed">
+                  根据当前数据：晚高峰时段总负荷达 4850 MW，新能源出力快速回落 (-65%)，
+                  竞价空间从 1200 MW 收窄至 480 MW，叠加联络线外送计划下调，实时电价
+                  上行 12.4%，与日前价差扩大至 +47 元/MWh。
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Input */}
+        <div className="border-t bg-card p-4 shrink-0">
+          <div className="max-w-2xl mx-auto">
+            <div className="relative rounded-lg border bg-background focus-within:border-primary transition-colors">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="问政策、问市场、问某天价差为什么变大…"
+                className="border-0 resize-none min-h-[60px] pr-12 focus-visible:ring-0"
+              />
+              <button className="absolute bottom-2 right-2 p-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40">
+                <Send className="h-4 w-4" />
               </button>
             </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5 px-1">
+              AI 回答可能存在偏差，关键决策请核对原文与实时数据。
+            </p>
           </div>
-        ))}
-      </div>
-
-      {filteredPolicies.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground text-sm">
-          暂无匹配的政策信息
         </div>
-      )}
+      </main>
+
+      {/* Right: evidence panel */}
+      <aside className="w-72 border-l bg-card/30 shrink-0 overflow-auto">
+        <div className="p-4 border-b">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            证据与来源
+          </p>
+        </div>
+        <div className="p-4 space-y-4">
+          <div>
+            <p className="text-[11px] text-muted-foreground mb-1.5">政策原文片段</p>
+            <div className="rounded-md border bg-card p-3">
+              <p className="text-xs leading-relaxed text-foreground/85 italic">
+                "{evidencePanel.excerpt}"
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-2">— {evidencePanel.source}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[11px] text-muted-foreground mb-1.5">关联公告 / 数据</p>
+            <div className="space-y-1">
+              {evidencePanel.related.map((r, i) => (
+                <button
+                  key={i}
+                  className="w-full text-left text-xs px-2.5 py-1.5 rounded-md hover:bg-secondary text-foreground/80 flex items-center gap-1.5"
+                >
+                  <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="truncate">{r}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button className="flex-1 text-xs py-1.5 rounded border hover:bg-secondary flex items-center justify-center gap-1">
+              <ExternalLink className="h-3 w-3" /> 查看原文
+            </button>
+            <button className="flex-1 text-xs py-1.5 rounded border hover:bg-secondary flex items-center justify-center gap-1">
+              <CornerDownRight className="h-3 w-3" /> 继续追问
+            </button>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }
