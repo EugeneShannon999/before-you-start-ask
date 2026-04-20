@@ -103,7 +103,7 @@ const dataMap: Record<TabKey, any> = {
     gaps: ["无"],
   },
   renewable: {
-    series: genSeries(800, 700, 220),
+    series: gen96(800, 700, 240, 100),
     unit: "MW",
     metrics: [
       { label: "MAPE", value: "8.1%", desc: "新能源波动较大" },
@@ -116,7 +116,7 @@ const dataMap: Record<TabKey, any> = {
     gaps: ["02:00-02:15 SCADA 数据缺失"],
   },
   space: {
-    series: genSeries(2400, 800, 200),
+    series: gen96(2400, 800, 220, 200),
     unit: "MW",
     metrics: [
       { label: "MAPE", value: "4.5%", desc: "" },
@@ -129,7 +129,7 @@ const dataMap: Record<TabKey, any> = {
     gaps: ["无"],
   },
   price: {
-    series: genSeries(380, 120, 35),
+    series: gen96(380, 120, 40, 300),
     unit: "元/MWh",
     metrics: [
       { label: "MAPE", value: "9.4%", desc: "" },
@@ -142,7 +142,7 @@ const dataMap: Record<TabKey, any> = {
     gaps: ["无"],
   },
   factor: {
-    series: genSeries(380, 120, 35),
+    series: gen96(380, 120, 40, 400),
     unit: "元/MWh",
     metrics: [
       { label: "样本量", value: "30 d", desc: "近 30 日数据" },
