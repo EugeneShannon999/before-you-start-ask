@@ -27,8 +27,11 @@ import {
 //   公告信息、日前/实时电价、负荷预测、实际负荷、新能源预测、
 //   联络线计划、断面限额、实际输电、必开/必停机组、正备用/负备用
 //
-// 来源类型口径（SP1 统一这 4 类）：
-//   公开API / 页面抓取 / 插件同步 / 规则计算
+// 来源类型口径（SP1 仅这 3 类，统一原则）：
+//   公开API   - 由交易中心 / 调度公开接口拉取
+//   页面抓取  - 浏览器插件抓取页面 DOM 解析
+//   规则计算  - 基于已采集原始数据由本地规则引擎加工
+// 不再使用「插件同步」（属于接入方式而非数据来源）。
 //
 // 状态口径：
 //   正常 / 延迟 / 失败 / 未接入
@@ -36,10 +39,12 @@ import {
 // 备注：
 //   - U盾相关检测当前 SP1 暂不展示，待 SP2 单列「U盾检测状态」
 //   - 失败原因目前为 mock，SP2 接入后端 sync_logs 表
+//   - 「正备用/负备用」按方案A：展示原始数据 → 公开API
+//     （非"是否偏紧"的判断结果；判断结果会作为独立"备用预警"行接入规则计算）
 // ============================================================
 
 type SyncStatus = "ok" | "delay" | "fail" | "missing";
-type SourceType = "公开API" | "页面抓取" | "插件同步" | "规则计算";
+type SourceType = "公开API" | "页面抓取" | "规则计算";
 
 interface SyncRow {
   item: string;
@@ -54,13 +59,13 @@ const syncRows: SyncRow[] = [
   { item: "公告信息", source: "页面抓取", lastSync: "2025-07-15 10:32", range: "近 30 天", status: "ok" },
   { item: "日前/实时电价", source: "公开API", lastSync: "2025-07-15 10:30", range: "D-1 ~ D", status: "ok" },
   { item: "负荷预测", source: "公开API", lastSync: "2025-07-15 10:30", range: "D 全日 96 点", status: "ok" },
-  { item: "实际负荷", source: "插件同步", lastSync: "2025-07-15 10:15", range: "D 截至 10:15", status: "delay", failReason: "页面响应较慢" },
+  { item: "实际负荷", source: "公开API", lastSync: "2025-07-15 10:15", range: "D 截至 10:15", status: "delay", failReason: "接口响应延迟" },
   { item: "新能源预测", source: "公开API", lastSync: "2025-07-15 10:30", range: "D 全日 96 点", status: "ok" },
-  { item: "联络线计划", source: "插件同步", lastSync: "2025-07-15 09:00", range: "D 全日", status: "ok" },
-  { item: "断面限额", source: "插件同步", lastSync: "2025-07-15 09:00", range: "D 全日", status: "ok" },
-  { item: "实际输电", source: "插件同步", lastSync: "—", range: "D 全日", status: "fail", failReason: "登录失效" },
-  { item: "必开/必停机组", source: "插件同步", lastSync: "2025-07-15 08:30", range: "D 全日", status: "ok" },
-  { item: "正备用/负备用", source: "规则计算", lastSync: "2025-07-15 10:30", range: "D 全日", status: "ok" },
+  { item: "联络线计划", source: "公开API", lastSync: "2025-07-15 09:00", range: "D 全日", status: "ok" },
+  { item: "断面限额", source: "公开API", lastSync: "2025-07-15 09:00", range: "D 全日", status: "ok" },
+  { item: "实际输电", source: "公开API", lastSync: "—", range: "D 全日", status: "fail", failReason: "接口超时" },
+  { item: "必开/必停机组", source: "公开API", lastSync: "2025-07-15 08:30", range: "D 全日", status: "ok" },
+  { item: "正备用/负备用", source: "公开API", lastSync: "2025-07-15 10:30", range: "D 全日", status: "ok" },
 ];
 
 const statusMeta: Record<SyncStatus, { label: string; color: string; Icon: typeof CircleCheck }> = {
@@ -179,7 +184,7 @@ export default function PluginManagement() {
           </table>
         </div>
         <p className="text-[11px] text-muted-foreground mt-2 px-1">
-          数据项与「市场看板」展示口径一致；状态为「失败/延迟」时可在「查看日志」中查看完整原因。
+          说明：本页仅展示 SP1 已接入的数据项。来源类型分为公开API、页面抓取、规则计算。失败或延迟原因可在「查看日志」中查看。
         </p>
       </div>
 
