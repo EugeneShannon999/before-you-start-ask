@@ -24,6 +24,8 @@ export interface ChatSession {
   policyId?: string;
 }
 
+export type BulletinKind = "policy" | "notice";
+
 export interface HistoricalPolicy {
   id: string;
   title: string;
@@ -33,6 +35,8 @@ export interface HistoricalPolicy {
   oneLine: string;
   starred: boolean;
   pinned: boolean;
+  kind: BulletinKind; // 政策 / 公告
+  read: boolean; // 是否已读
 }
 
 // ---------- 默认 mock ----------
