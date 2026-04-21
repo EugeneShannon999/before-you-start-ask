@@ -8,7 +8,6 @@ import {
   ExternalLink,
   CornerDownRight,
   Sparkles,
-  Plus,
   Construction,
   CalendarRange,
   AlertOctagon,
@@ -31,15 +30,6 @@ const capabilities: CapabilityDef[] = [
   { key: "policy", name: "政策 AI", icon: Brain, desc: "解读最新政策与影响" },
   { key: "review", name: "复盘助手", icon: History, desc: "复盘某日交易与价差成因", placeholder: true },
 ];
-
-const recentSessions: Record<Capability, { id: string; title: string; ts: string }[]> = {
-  policy: [
-    { id: "p1", title: "7月安徽偏差考核新规解读", ts: "10:32" },
-    { id: "p2", title: "全国统一电力市场征求意见影响", ts: "昨天" },
-    { id: "p3", title: "广东现货分段考核机制", ts: "2天前" },
-  ],
-  review: [],
-};
 
 interface PolicyCard {
   id: string;
