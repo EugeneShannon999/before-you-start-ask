@@ -293,5 +293,18 @@ export function useHistoricalPolicies() {
     setPolicies((p) => p.filter((x) => !set.has(x.id)));
   }, []);
 
-  return { policies, toggleStar, togglePin, removeMany };
+  const markRead = useCallback((id: string, read = true) => {
+    setPolicies((p) => p.map((x) => (x.id === id ? { ...x, read } : x)));
+  }, []);
+
+  const markAllRead = useCallback((ids?: string[]) => {
+    if (!ids) {
+      setPolicies((p) => p.map((x) => ({ ...x, read: true })));
+      return;
+    }
+    const set = new Set(ids);
+    setPolicies((p) => p.map((x) => (set.has(x.id) ? { ...x, read: true } : x)));
+  }, []);
+
+  return { policies, toggleStar, togglePin, removeMany, markRead, markAllRead };
 }
