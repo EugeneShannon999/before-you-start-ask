@@ -13,10 +13,18 @@ import {
   Construction,
   Brain,
   History,
+  Star,
+  StarOff,
+  Pin,
+  PinOff,
+  Trash2,
+  MessageSquarePlus,
+  FileSearch,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { p0Messages, p1Messages, p2QuarterSummary, formatMsgTime } from "@/lib/messageMocks";
 import { useProvince } from "@/contexts/ProvinceContext";
+import { useHistoricalPolicies } from "@/lib/aiSessionStore";
 
 // ============================================================
 // 听雨（原"政策 AI"）主对话区
