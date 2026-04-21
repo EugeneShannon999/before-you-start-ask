@@ -4,29 +4,36 @@
 // 后续接入说明（TODO for SP2+）：
 //   1. P0/P1/P2 三级消息均由后端 AI 解析管道处理后入库；
 //      前端只消费 messages 表，不做内容生成。
-//   2. P0 推送：当前 SP1 仅做 站内弹窗 + 顶部红点 原型。
+//   2. P0 推送：当前 SP1 仅做 站内弹窗 + 顶部红点 原型；
 //      SP2 接入完整 Web Push（Service Worker + VAPID + 移动端）。
 //   3. P1 全局横条：从 messages 表拉 status='unread' 且 level='P1'
-//      的最新一条，按 created_at 倒序轮播。
+//      的最新一条，按 created_at 倒序轮播，最多 5 条。
 //   4. P2 季度整合：后端定时任务（每季度末）将该季度 P2 消息
-//      合并为一份摘要文档，前端在 PolicyCenter 通过预设 prompt
-//      触发 AI 解读会话。
+//      合并为一份摘要文档，前端在 听雨 通过预设 prompt 触发解读。
 //   5. 点击 P0/P1 横条/弹窗 → 跳转 /ai/policy?msgId=xxx，
-//      由 PolicyCenter 自动以该消息为上下文发起会话。
+//      由 PolicyCenter 自动以该消息为上下文呈现 AI 解读。
+//   6. ⚠ 省份过滤口径：
+//      - P1 / P2 消息均按「市场看板当前省份」过滤（province 字段）；
+//        province === "all" 表示全国级、所有省份都展示。
+//      - P0 紧急消息 不区分省份，全用户级广播推送。
+//      - 看板省份选择持久化在 localStorage（ProvinceContext），
+//        二次进入恢复上一次选择，默认 "anhui"。
 // ============================================================
+
+import type { ProvinceCode } from "@/contexts/ProvinceContext";
 
 export type MessageLevel = "P0" | "P1" | "P2";
 
 // AI 预解析结构化结果（mock）
 // 后端口径：消息入库后由 AI 管道异步生成 analysis，前端只读
 export interface MessageAnalysis {
-  headline: string;       // 一句话结论
-  impactScope: string;    // 影响对象
-  impactWindow: string;   // 影响时段
-  keyPoints: string[];    // 关键要点
-  suggestion: string;     // 建议动作
-  evidence: string;       // 原文证据片段
-  evidenceSource: string; // 证据来源
+  headline: string;
+  impactScope: string;
+  impactWindow: string;
+  keyPoints: string[];
+  suggestion: string;
+  evidence: string;
+  evidenceSource: string;
 }
 
 export interface MarketMessage {
@@ -36,14 +43,15 @@ export interface MarketMessage {
   summary: string;
   source: string;
   publishedAt: string; // ISO
-  // 后端解析结果（mock）：实际由 AI 管道写入
+  // ⚠ P1 / P2 必须带 province；"all" 表示全国级，对所有省份可见
+  // P0 不强制 province（按全用户广播）
+  province?: ProvinceCode | "all";
   aiAnalyzed: boolean;
   analysis?: MessageAnalysis;
-  // 跳转目标会话 id（PolicyCenter 中预生成）
   sessionId?: string;
 }
 
-// ---- P0：紧急 / 立即推送 ----
+// ---- P0：紧急 / 立即推送（不区分省份）----
 export const p0Messages: MarketMessage[] = [
   {
     id: "msg-p0-001",
@@ -75,11 +83,12 @@ export const p0Messages: MarketMessage[] = [
   },
 ];
 
-// ---- P1：重要 / 全局横条轮播 ----
+// ---- P1：重要 / 全局横条轮播（最多 5 条，按看板省份过滤）----
 export const p1Messages: MarketMessage[] = [
   {
     id: "msg-p1-001",
     level: "P1",
+    province: "anhui",
     title: "安徽 7 月偏差考核新规：中午时段阈值由 55% 调整为 50%",
     summary: "对光伏富集时段不利，建议复核 PKG-A 套餐分时签约比例。",
     source: "安徽省能源局 〔2025〕47 号",
@@ -107,6 +116,7 @@ export const p1Messages: MarketMessage[] = [
   {
     id: "msg-p1-002",
     level: "P1",
+    province: "all",
     title: "国家发改委：全国统一电力市场建设方案征求意见",
     summary: "明确跨省现货衔接、辅助服务分摊原则，长期影响零售报价模型。",
     source: "国家发改委 价格司",
@@ -134,6 +144,7 @@ export const p1Messages: MarketMessage[] = [
   {
     id: "msg-p1-003",
     level: "P1",
+    province: "guangdong",
     title: "广东现货：分段考核机制 8 月起试运行",
     summary: "分时段加权考核，对夜间高负荷主体影响较大。",
     source: "广东电力交易中心",
@@ -158,22 +169,80 @@ export const p1Messages: MarketMessage[] = [
       evidenceSource: "广东电力交易中心 〔2025〕通知第 22 号",
     },
   },
+  {
+    id: "msg-p1-004",
+    level: "P1",
+    province: "anhui",
+    title: "安徽 7-15 实时电价通告：午间出现负电价时段",
+    summary: "12:15-12:45 实时出清出现 -32 元/MWh，新能源大发叠加负荷低谷。",
+    source: "安徽电力交易中心 日清算简报",
+    publishedAt: "2025-07-15T13:08:00+08:00",
+    aiAnalyzed: true,
+    sessionId: "sess-p1-004",
+    analysis: {
+      headline:
+        "7-15 中午出现 30 分钟负电价区间，光伏富集套餐当日实时收益受拖累。",
+      impactScope: "安徽省内光伏占比高的零售套餐及自有光伏发电客户",
+      impactWindow: "2025-07-15 12:15-12:45（30 分钟）",
+      keyPoints: [
+        "实时出清最低 -32 元/MWh，连续 2 个 15 分钟点位",
+        "PKG-A 估算当日实时收益减少约 1.8 万元",
+        "建议复核中长期分时合约对该时段的覆盖度",
+        "短期可通过虚拟电厂调峰将部分负荷迁移到午间消纳",
+      ],
+      suggestion:
+        "1) 在算法预测页加入『午间负电价概率』提示；2) 与重点光伏客户沟通午间限发或储能配套；3) 月度复盘新增『负电价时段收益』口径。",
+      evidence:
+        "「2025-07-15 12:15-12:45 实时市场出清电价为 -32 元/MWh，主要受光伏出力达年内高位 5.2GW、午间负荷低谷叠加影响。」",
+      evidenceSource: "安徽电力交易中心 日清算简报 (2025-07-15)",
+    },
+  },
+  {
+    id: "msg-p1-005",
+    level: "P1",
+    province: "shandong",
+    title: "山东：分布式光伏并网管理细则修订征求意见",
+    summary: "新增整县推进项目并网容量上限与考核口径。",
+    source: "山东省能源局",
+    publishedAt: "2025-07-12T16:00:00+08:00",
+    aiAnalyzed: true,
+    sessionId: "sess-p1-005",
+    analysis: {
+      headline:
+        "山东修订分布式光伏并网细则，新增整县项目容量上限与省级考核口径。",
+      impactScope: "山东省内分布式光伏开发商、聚合商、配套售电主体",
+      impactWindow: "意见反馈截止 2025-08-15，落地预计 2025 Q4",
+      keyPoints: [
+        "整县项目并网容量上限按 110kV 主变最大允许接入容量的 60% 设定",
+        "考核新增『反送电时段』偏差，对午间反送电的零售套餐成本上升",
+        "建议聚合商提前梳理已签约项目的并网时序",
+        "对纯工商业自用客户影响有限",
+      ],
+      suggestion:
+        "1) 与山东客户的销售经理同步政策动向；2) 在结算计算器中预留『反送电偏差』参数；3) 8-15 前形成反馈意见。",
+      evidence:
+        "「整县推进项目并网容量原则上不超过所在区域 110kV 主变最大允许接入容量的 60%，反送电时段纳入偏差考核。」",
+      evidenceSource: "山东省能源局《分布式光伏并网管理细则（征求意见稿）》§4.3",
+    },
+  },
 ];
 
 // ---- P2：常规 / 季度整合 ----
 // SP1 仅占位：实际 P2 列表由后端按季度聚合生成摘要
 export const p2QuarterSummary = {
   quarter: "2025 Q3",
-  count: 47, // 该季度累计 P2 数量
+  count: 47,
   topics: ["分时电价微调", "辅助服务费率", "可再生消纳权重", "跨省互济结算细则"],
   sessionId: "sess-p2-q3-2025",
 };
 
+// 时间在前的格式化：用于消息列表"时间 · 标题"展示
+// 同日：HH:mm；非同日：MM-DD HH:mm
 export function formatMsgTime(iso: string): string {
   const d = new Date(iso);
   const today = new Date();
-  if (d.toDateString() === today.toDateString()) {
-    return d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-  }
-  return d.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" });
+  const hm = d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  if (d.toDateString() === today.toDateString()) return hm;
+  const md = `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${md} ${hm}`;
 }

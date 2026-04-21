@@ -5,8 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CalculatorLayout } from "@/components/layout/CalculatorLayout";
+import { ProvinceProvider } from "@/contexts/ProvinceContext";
 import PolicyCenter from "./pages/PolicyCenter";
 import PolicyDetail from "./pages/PolicyDetail";
+import SessionsView from "./pages/SessionsView";
 
 import CustomersPage from "./pages/calculator/CustomersPage";
 import RunsPage from "./pages/calculator/RunsPage";
@@ -31,6 +33,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ProvinceProvider>
         <Routes>
           {/* 图表大屏 - 独立页面，无侧边栏 */}
           <Route path="/tools/market/chart/:chartId" element={<ChartFullscreen />} />
@@ -44,6 +47,7 @@ const App = () => (
                   <Route path="/" element={<Navigate to="/ai/policy" replace />} />
                   <Route path="/ai/policy" element={<PolicyCenter />} />
                   <Route path="/ai/policy/:id" element={<PolicyDetail />} />
+                  <Route path="/ai/sessions" element={<SessionsView />} />
                   <Route path="/tools/market" element={<MarketInfo />} />
                   <Route path="/tools/prediction" element={<Prediction />} />
 
@@ -83,6 +87,7 @@ const App = () => (
             }
           />
         </Routes>
+        </ProvinceProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

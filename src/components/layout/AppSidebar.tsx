@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Brain,
   BarChart3,
@@ -12,13 +12,27 @@ import {
   Puzzle,
   History,
   Plus,
+  Star,
+  StarOff,
+  Pin,
+  PinOff,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  ChevronRight,
+  Trash,
   type LucideIcon,
 } from "lucide-react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 import {
-  Sidebar,
-  SidebarContent,
-} from "@/components/ui/sidebar";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useChatSessions, useHistoricalPolicies } from "@/lib/aiSessionStore";
+import { useProvince } from "@/contexts/ProvinceContext";
 
 type SidebarTab = "ai" | "dashboard" | "plugin";
 
@@ -29,7 +43,6 @@ interface NavItem {
   placeholder?: boolean;
 }
 
-// AI 能力（与 PolicyCenter 内的 capabilities 对齐）
 interface AiCapability {
   key: "policy" | "review";
   title: string;
@@ -38,15 +51,8 @@ interface AiCapability {
 }
 
 const aiCapabilities: AiCapability[] = [
-  { key: "policy", title: "政策 AI", icon: Brain },
+  { key: "policy", title: "听雨", icon: Brain },
   { key: "review", title: "复盘助手", icon: History, placeholder: true },
-];
-
-// AI 最近会话（mock，与 PolicyCenter 内保持一致）
-const aiRecentSessions: { id: string; title: string; ts: string }[] = [
-  { id: "p1", title: "7月安徽偏差考核新规解读", ts: "10:32" },
-  { id: "p2", title: "全国统一电力市场征求意见影响", ts: "昨天" },
-  { id: "p3", title: "广东现货分段考核机制", ts: "2天前" },
 ];
 
 const dashboardItems: NavItem[] = [
@@ -85,16 +91,11 @@ export function AppSidebar() {
 
   const handleTabClick = (tab: SidebarTab) => {
     setActiveTab(tab);
-    if (tab === "ai") {
-      navigate("/ai/policy?cap=policy");
-    } else if (tab === "dashboard") {
-      navigate(dashboardItems[0].url);
-    } else if (tab === "plugin") {
-      navigate(pluginItems[0].url);
-    }
+    if (tab === "ai") navigate("/ai/policy?cap=policy");
+    else if (tab === "dashboard") navigate(dashboardItems[0].url);
+    else if (tab === "plugin") navigate(pluginItems[0].url);
   };
 
-  // 当前 AI 能力（仅 AI tab 时使用）
   const activeCap = (searchParams.get("cap") as "policy" | "review") || "policy";
 
   return (
@@ -116,88 +117,14 @@ export function AppSidebar() {
                 }`}
               >
                 <tab.icon className="h-4 w-4 shrink-0" />
-                {active && (
-                  <span className="text-xs font-medium truncate">{tab.label}</span>
-                )}
+                {active && <span className="text-xs font-medium truncate">{tab.label}</span>}
               </button>
             );
           })}
         </div>
 
-        {/* 二级菜单：AI tab 显示能力+最近会话；其他 tab 显示通用 nav */}
         {activeTab === "ai" ? (
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* 新建会话 */}
-            <div className="px-1.5 py-1.5 border-b">
-              <button
-                onClick={() => navigate("/ai/policy?cap=policy")}
-                className="w-full flex items-center justify-center gap-1 h-7 rounded bg-primary text-primary-foreground hover:opacity-90 text-[11px]"
-              >
-                <Plus className="h-3 w-3" />
-                新建会话
-              </button>
-            </div>
-
-            {/* AI 能力 */}
-            <div className="px-1.5 pt-1.5 pb-1">
-              <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider px-1.5 pb-1">
-                AI 能力
-              </p>
-              <div className="flex flex-col gap-px">
-                {aiCapabilities.map((c) => {
-                  const isActive = !c.placeholder && activeCap === c.key;
-                  const handleClick = () => {
-                    if (c.placeholder) return;
-                    navigate(`/ai/policy?cap=${c.key}`);
-                  };
-                  return (
-                    <button
-                      key={c.key}
-                      onClick={handleClick}
-                      title={c.title + (c.placeholder ? " (占位)" : "")}
-                      className={`relative w-full h-7 flex items-center gap-1.5 px-2 rounded text-left transition-colors ${
-                        isActive
-                          ? "bg-secondary text-primary font-medium"
-                          : c.placeholder
-                          ? "text-muted-foreground/50 cursor-not-allowed"
-                          : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                      }`}
-                    >
-                      {isActive && (
-                        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
-                      )}
-                      <c.icon className="h-3 w-3 shrink-0" />
-                      <span className="text-[11px] leading-none truncate flex-1">{c.title}</span>
-                      {c.placeholder && (
-                        <span className="text-[8px] px-1 rounded bg-muted text-muted-foreground">
-                          占位
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 最近会话 */}
-            <div className="px-1.5 pt-2 pb-1.5 border-t mt-1 flex-1 min-h-0 flex flex-col">
-              <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider px-1.5 pb-1 shrink-0">
-                最近会话
-              </p>
-              <div className="flex-1 overflow-auto flex flex-col gap-px">
-                {aiRecentSessions.map((s) => (
-                  <button
-                    key={s.id}
-                    title={s.title}
-                    className="w-full flex flex-col gap-0.5 px-2 py-1 rounded hover:bg-secondary/60 text-left text-muted-foreground hover:text-foreground"
-                  >
-                    <span className="text-[11px] leading-tight truncate">{s.title}</span>
-                    <span className="text-[9px] text-muted-foreground/70">{s.ts}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+          <AiPanel activeCap={activeCap} />
         ) : (
           <nav className="flex-1 py-1.5 px-1.5 flex flex-col gap-px">
             {(activeTab === "dashboard" ? dashboardItems : pluginItems).map((item) => {
@@ -236,5 +163,414 @@ export function AppSidebar() {
         )}
       </SidebarContent>
     </Sidebar>
+  );
+}
+
+// ============================================================
+// AI 面板：新建会话 / AI 能力 / 历史政策（跟随省份）/ 置顶 + 最近会话
+// ============================================================
+function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
+  const navigate = useNavigate();
+  const { province, label: provinceLabel } = useProvince();
+  const { sessions, togglePin, rename, remove, removeMany, create } = useChatSessions();
+  const {
+    policies,
+    toggleStar,
+    togglePin: togglePolicyPin,
+    removeMany: removePolicies,
+  } = useHistoricalPolicies();
+
+  const [policyMultiSelect, setPolicyMultiSelect] = useState(false);
+  const [selectedPolicyIds, setSelectedPolicyIds] = useState<Set<string>>(new Set());
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [recentHover, setRecentHover] = useState(false);
+
+  // 历史政策：跟随省份过滤；置顶在前；星标在前；按发布时间倒序
+  const visiblePolicies = useMemo(() => {
+    return policies
+      .filter((p) => p.province === "all" || p.province === province)
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        if (a.starred !== b.starred) return a.starred ? -1 : 1;
+        return b.publishedAt.localeCompare(a.publishedAt);
+      });
+  }, [policies, province]);
+
+  const pinnedSessions = useMemo(
+    () =>
+      [...sessions]
+        .filter((s) => s.pinned)
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    [sessions]
+  );
+  const recentSessions = useMemo(
+    () =>
+      [...sessions]
+        .filter((s) => !s.pinned)
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .slice(0, 6),
+    [sessions]
+  );
+
+  const togglePolicySelect = (id: string) => {
+    setSelectedPolicyIds((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleNewSession = () => {
+    const sess = create("新建会话");
+    navigate(`/ai/policy?cap=policy&sid=${sess.id}`);
+  };
+
+  const startRename = (id: string, current: string) => {
+    setRenamingId(id);
+    setRenameDraft(current);
+  };
+  const commitRename = () => {
+    if (renamingId && renameDraft.trim()) rename(renamingId, renameDraft.trim());
+    setRenamingId(null);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0">
+      {/* 新建会话 */}
+      <div className="px-1.5 py-1.5 border-b">
+        <button
+          onClick={handleNewSession}
+          className="w-full flex items-center justify-center gap-1 h-7 rounded bg-primary text-primary-foreground hover:opacity-90 text-[11px]"
+        >
+          <Plus className="h-3 w-3" />
+          新建会话
+        </button>
+      </div>
+
+      {/* AI 能力 */}
+      <div className="px-1.5 pt-1.5 pb-1">
+        <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider px-1.5 pb-1">
+          AI 能力
+        </p>
+        <div className="flex flex-col gap-px">
+          {aiCapabilities.map((c) => {
+            const isActive = !c.placeholder && activeCap === c.key;
+            const handleClick = () => {
+              if (c.placeholder) return;
+              navigate(`/ai/policy?cap=${c.key}`);
+            };
+            return (
+              <button
+                key={c.key}
+                onClick={handleClick}
+                title={c.title + (c.placeholder ? " (占位)" : "")}
+                className={`relative w-full h-7 flex items-center gap-1.5 px-2 rounded text-left transition-colors ${
+                  isActive
+                    ? "bg-secondary text-primary font-medium"
+                    : c.placeholder
+                    ? "text-muted-foreground/50 cursor-not-allowed"
+                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
+                )}
+                <c.icon className="h-3 w-3 shrink-0" />
+                <span className="text-[11px] leading-none truncate flex-1">{c.title}</span>
+                {c.placeholder && (
+                  <span className="text-[8px] px-1 rounded bg-muted text-muted-foreground">
+                    占位
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 历史政策（跟随省份） */}
+      <div className="px-1.5 pt-2 pb-1.5 border-t">
+        <div className="flex items-center justify-between px-1.5 pb-1">
+          <p
+            className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider truncate"
+            title={`跟随当前看板省份：${provinceLabel}`}
+          >
+            历史政策 · {provinceLabel}
+          </p>
+          <button
+            onClick={() => {
+              if (policyMultiSelect && selectedPolicyIds.size > 0) {
+                removePolicies([...selectedPolicyIds]);
+                setSelectedPolicyIds(new Set());
+              }
+              setPolicyMultiSelect((v) => !v);
+            }}
+            title={policyMultiSelect ? "退出多选" : "批量删除"}
+            className="text-[9px] text-muted-foreground hover:text-foreground p-0.5 rounded hover:bg-secondary/60"
+          >
+            {policyMultiSelect ? (
+              selectedPolicyIds.size > 0 ? (
+                <Trash className="h-3 w-3 text-destructive" />
+              ) : (
+                <span>×</span>
+              )
+            ) : (
+              <Trash className="h-3 w-3" />
+            )}
+          </button>
+        </div>
+        <div className="max-h-32 overflow-auto flex flex-col gap-px">
+          {visiblePolicies.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground/70 px-2 py-1">暂无</p>
+          ) : (
+            visiblePolicies.map((p) => {
+              const selected = selectedPolicyIds.has(p.id);
+              return (
+                <div
+                  key={p.id}
+                  className={`group relative rounded px-1.5 py-1 hover:bg-secondary/60 ${
+                    selected ? "bg-primary/10" : ""
+                  }`}
+                >
+                  <div className="flex items-start gap-1">
+                    {policyMultiSelect && (
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => togglePolicySelect(p.id)}
+                        className="mt-0.5 h-3 w-3 shrink-0 accent-primary"
+                      />
+                    )}
+                    <button
+                      onClick={() => {
+                        if (policyMultiSelect) {
+                          togglePolicySelect(p.id);
+                        } else {
+                          navigate(`/ai/policy?cap=policy&pid=${p.id}`);
+                        }
+                      }}
+                      className="flex-1 min-w-0 text-left"
+                      title={p.title}
+                    >
+                      <div className="flex items-center gap-0.5">
+                        {p.pinned && <Pin className="h-2.5 w-2.5 text-primary shrink-0" />}
+                        {p.starred && <Star className="h-2.5 w-2.5 fill-warning text-warning shrink-0" />}
+                        <span className="text-[10px] leading-tight text-foreground/80 truncate">
+                          {p.title}
+                        </span>
+                      </div>
+                    </button>
+                    {!policyMultiSelect && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="opacity-0 group-hover:opacity-100 h-4 w-4 flex items-center justify-center rounded hover:bg-secondary text-muted-foreground shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-3 w-3" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-32">
+                          <DropdownMenuItem onClick={() => toggleStar(p.id)}>
+                            {p.starred ? (
+                              <>
+                                <StarOff className="h-3 w-3 mr-2" /> 取消星标
+                              </>
+                            ) : (
+                              <>
+                                <Star className="h-3 w-3 mr-2" /> 加星标
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => togglePolicyPin(p.id)}>
+                            {p.pinned ? (
+                              <>
+                                <PinOff className="h-3 w-3 mr-2" /> 取消置顶
+                              </>
+                            ) : (
+                              <>
+                                <Pin className="h-3 w-3 mr-2" /> 置顶
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => removePolicies([p.id])}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3 mr-2" /> 删除
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* 置顶会话 */}
+      {pinnedSessions.length > 0 && (
+        <div className="px-1.5 pt-2 pb-1.5 border-t">
+          <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider px-1.5 pb-1">
+            置顶会话
+          </p>
+          <div className="flex flex-col gap-px">
+            {pinnedSessions.map((s) => (
+              <SessionRow
+                key={s.id}
+                session={s}
+                renaming={renamingId === s.id}
+                renameDraft={renameDraft}
+                setRenameDraft={setRenameDraft}
+                onCommitRename={commitRename}
+                onStartRename={() => startRename(s.id, s.title)}
+                onTogglePin={() => togglePin(s.id)}
+                onRemove={() => remove(s.id)}
+                onOpen={() => navigate(`/ai/policy?cap=policy&sid=${s.id}`)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 最近会话 + hover 显示 View All */}
+      <div
+        className="px-1.5 pt-2 pb-1.5 border-t mt-1 flex-1 min-h-0 flex flex-col"
+        onMouseEnter={() => setRecentHover(true)}
+        onMouseLeave={() => setRecentHover(false)}
+      >
+        <div className="flex items-center justify-between px-1.5 pb-1 shrink-0">
+          <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
+            最近会话
+          </p>
+          <button
+            onClick={() => navigate("/ai/sessions")}
+            className={`text-[9px] flex items-center gap-0.5 text-primary transition-opacity ${
+              recentHover ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+          >
+            View All <ChevronRight className="h-2.5 w-2.5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto flex flex-col gap-px">
+          {recentSessions.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground/70 px-2 py-1">暂无</p>
+          ) : (
+            recentSessions.map((s) => (
+              <SessionRow
+                key={s.id}
+                session={s}
+                renaming={renamingId === s.id}
+                renameDraft={renameDraft}
+                setRenameDraft={setRenameDraft}
+                onCommitRename={commitRename}
+                onStartRename={() => startRename(s.id, s.title)}
+                onTogglePin={() => togglePin(s.id)}
+                onRemove={() => remove(s.id)}
+                onOpen={() => navigate(`/ai/policy?cap=policy&sid=${s.id}`)}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- 会话行（含三点菜单：置顶/重命名/删除） ----------
+interface SessionRowProps {
+  session: { id: string; title: string; updatedAt: string; pinned: boolean };
+  renaming: boolean;
+  renameDraft: string;
+  setRenameDraft: (v: string) => void;
+  onCommitRename: () => void;
+  onStartRename: () => void;
+  onTogglePin: () => void;
+  onRemove: () => void;
+  onOpen: () => void;
+}
+
+function SessionRow({
+  session: s,
+  renaming,
+  renameDraft,
+  setRenameDraft,
+  onCommitRename,
+  onStartRename,
+  onTogglePin,
+  onRemove,
+  onOpen,
+}: SessionRowProps) {
+  return (
+    <div className="group relative flex items-center gap-1 px-1.5 py-1 rounded hover:bg-secondary/60">
+      {s.pinned && <Pin className="h-2.5 w-2.5 text-primary shrink-0" />}
+      <button
+        onClick={() => !renaming && onOpen()}
+        className="flex-1 min-w-0 text-left flex flex-col gap-0.5"
+        title={s.title}
+      >
+        {renaming ? (
+          <input
+            autoFocus
+            value={renameDraft}
+            onChange={(e) => setRenameDraft(e.target.value)}
+            onBlur={onCommitRename}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onCommitRename();
+            }}
+            className="h-5 text-[10px] bg-background border rounded px-1 w-full"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <>
+            <span className="text-[10px] leading-tight text-foreground/85 truncate">
+              {s.title}
+            </span>
+            <span className="text-[8px] text-muted-foreground/70">
+              {new Date(s.updatedAt).toLocaleDateString("zh-CN", {
+                month: "2-digit",
+                day: "2-digit",
+              })}
+            </span>
+          </>
+        )}
+      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className="opacity-0 group-hover:opacity-100 h-4 w-4 flex items-center justify-center rounded hover:bg-secondary text-muted-foreground shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MoreHorizontal className="h-3 w-3" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-32">
+          <DropdownMenuItem onClick={onTogglePin}>
+            {s.pinned ? (
+              <>
+                <PinOff className="h-3 w-3 mr-2" /> 取消置顶
+              </>
+            ) : (
+              <>
+                <Pin className="h-3 w-3 mr-2" /> 置顶
+              </>
+            )}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onStartRename}>
+            <Pencil className="h-3 w-3 mr-2" /> 重命名
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={onRemove}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="h-3 w-3 mr-2" /> 删除
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
