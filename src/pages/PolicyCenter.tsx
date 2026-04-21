@@ -109,8 +109,15 @@ export default function PolicyCenter() {
               }`}
             >
               <c.icon className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium leading-tight">{c.name}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium leading-tight flex items-center gap-1.5">
+                  {c.name}
+                  {c.placeholder && (
+                    <span className="text-[10px] px-1 py-0.5 rounded bg-muted text-muted-foreground font-normal">
+                      占位
+                    </span>
+                  )}
+                </p>
                 <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 line-clamp-1">
                   {c.desc}
                 </p>
