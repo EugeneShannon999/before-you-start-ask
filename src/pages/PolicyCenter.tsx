@@ -87,7 +87,7 @@ export default function PolicyCenter() {
   return (
     <div className="flex h-[calc(100vh-3rem)]">
       {/* Left: capability list */}
-      <aside className="w-56 border-r bg-card/30 flex flex-col shrink-0">
+      <aside className="w-60 border-r bg-background flex flex-col shrink-0">
         <div className="p-3 border-b">
           <button className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:opacity-90">
             <Plus className="h-4 w-4" />
