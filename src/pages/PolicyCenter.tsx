@@ -92,7 +92,8 @@ export default function PolicyCenter() {
 
   useEffect(() => {
     if (incomingMsg) {
-      setInput(`请深入解读这条${incomingMsg.level}消息：${incomingMsg.title}`);
+      // 跳转进入时，输入框保留为追问提示（AI 解读已自动呈现）
+      setInput("");
     }
   }, [incomingMsg]);
 
