@@ -50,15 +50,10 @@ interface AiCapability {
   placeholder?: boolean;
 }
 
-const aiCapabilities: AiCapability[] = [
-  { key: "policy", title: "听雨", icon: Brain },
-  { key: "review", title: "复盘助手", icon: History, placeholder: true },
-];
-
 const dashboardItems: NavItem[] = [
   { title: "市场看板", url: "/tools/market", icon: BarChart3 },
   { title: "算法预测", url: "/tools/prediction", icon: LineChart },
-  { title: "结算计算", url: "/tools/calculator", icon: Calculator },
+  { title: "结算计算器", url: "/tools/calculator", icon: Calculator },
   { title: "交易日历", url: "/tools/calendar", icon: Calendar },
   { title: "交易执行", url: "/tools/trading", icon: Zap, placeholder: true },
 ];
@@ -68,7 +63,7 @@ const pluginItems: NavItem[] = [
 ];
 
 const tabConfig: { key: SidebarTab; label: string; icon: LucideIcon }[] = [
-  { key: "ai", label: "AI", icon: Bot },
+  { key: "ai", label: "听雨", icon: Bot },
   { key: "dashboard", label: "看板", icon: LayoutDashboard },
   { key: "plugin", label: "插件", icon: Puzzle },
 ];
