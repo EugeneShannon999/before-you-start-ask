@@ -13,10 +13,18 @@ import {
   Construction,
   Brain,
   History,
+  Star,
+  StarOff,
+  Pin,
+  PinOff,
+  Trash2,
+  MessageSquarePlus,
+  FileSearch,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { p0Messages, p1Messages, p2QuarterSummary, formatMsgTime } from "@/lib/messageMocks";
 import { useProvince } from "@/contexts/ProvinceContext";
+import { useHistoricalPolicies } from "@/lib/aiSessionStore";
 
 // ============================================================
 // 听雨（原"政策 AI"）主对话区
@@ -53,6 +61,7 @@ export default function PolicyCenter() {
     : "policy";
   const [input, setInput] = useState("");
   const incomingMsgId = searchParams.get("msgId");
+  const incomingPid = searchParams.get("pid");
 
   // 触发自动展开 P2 季度整合：URL 带 ?p2=1（侧栏按钮跳过来）或欢迎区按钮直接点击
   const [showQuarter, setShowQuarter] = useState(false);
@@ -65,9 +74,16 @@ export default function PolicyCenter() {
     p0Messages.find((m) => m.id === incomingMsgId) ||
     p1Messages.find((m) => m.id === incomingMsgId);
 
+  // 历史政策（左侧选中 → 右侧主区处理）
+  const { policies, toggleStar, togglePin, removeMany } = useHistoricalPolicies();
+  const incomingPolicy = useMemo(
+    () => (incomingPid ? policies.find((p) => p.id === incomingPid) : undefined),
+    [incomingPid, policies]
+  );
+
   useEffect(() => {
-    if (incomingMsg) setInput("");
-  }, [incomingMsg]);
+    if (incomingMsg || incomingPolicy) setInput("");
+  }, [incomingMsg, incomingPolicy]);
 
   const current = capabilities.find((c) => c.key === active)!;
 
@@ -89,8 +105,99 @@ export default function PolicyCenter() {
         </header>
 
         <div className="flex-1 overflow-auto px-6 py-6 space-y-5">
+          {/* ---------- 历史政策详情视图（pid 模式）---------- */}
+          {incomingPolicy && active === "policy" && (
+            <div className="max-w-3xl mx-auto space-y-4">
+              <div className="rounded-lg border bg-card shadow-notion p-4">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-2">
+                  <span>历史政策 · {provinceLabel}</span>
+                  <span>·</span>
+                  <span className="tabular-nums">{formatMsgTime(incomingPolicy.publishedAt)}</span>
+                  <span>·</span>
+                  <span>{incomingPolicy.source}</span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="text-base font-semibold leading-snug flex-1 min-w-0">
+                    <span className="inline-flex items-center gap-1.5 flex-wrap">
+                      {incomingPolicy.pinned && <Pin className="h-3.5 w-3.5 text-primary" />}
+                      {incomingPolicy.starred && <Star className="h-3.5 w-3.5 fill-warning text-warning" />}
+                      <span>{incomingPolicy.title}</span>
+                    </span>
+                  </h2>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => toggleStar(incomingPolicy.id)}
+                      className="text-xs px-2 py-1 rounded border hover:bg-secondary inline-flex items-center gap-1"
+                    >
+                      {incomingPolicy.starred ? (
+                        <><StarOff className="h-3 w-3" /> 取消星标</>
+                      ) : (
+                        <><Star className="h-3 w-3" /> 星标</>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => togglePin(incomingPolicy.id)}
+                      className="text-xs px-2 py-1 rounded border hover:bg-secondary inline-flex items-center gap-1"
+                    >
+                      {incomingPolicy.pinned ? (
+                        <><PinOff className="h-3 w-3" /> 取消置顶</>
+                      ) : (
+                        <><Pin className="h-3 w-3" /> 置顶</>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => removeMany([incomingPolicy.id])}
+                      className="text-xs px-2 py-1 rounded border hover:bg-secondary text-destructive inline-flex items-center gap-1"
+                    >
+                      <Trash2 className="h-3 w-3" /> 删除
+                    </button>
+                  </div>
+                </div>
+                <p className="text-sm text-foreground/85 mt-3 leading-relaxed">
+                  {incomingPolicy.oneLine}
+                </p>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <div className="h-6 w-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                  <Bot className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div className="flex-1 rounded-lg border bg-card shadow-notion p-4 space-y-3">
+                  <p className="text-sm font-medium leading-relaxed">
+                    {incomingPolicy.title} 的关键影响（AI 预生成 · mock）
+                  </p>
+                  <ul className="space-y-1 list-disc list-inside marker:text-primary/60 text-xs">
+                    <li className="text-foreground/85 leading-relaxed pl-1">
+                      影响范围：{provinceLabel} 省内市场化用户与代理购电主体
+                    </li>
+                    <li className="text-foreground/85 leading-relaxed pl-1">
+                      生效时间：发布后次月起执行（具体以原文为准）
+                    </li>
+                    <li className="text-foreground/85 leading-relaxed pl-1">
+                      建议动作：复盘相关套餐结算口径、关注偏差考核窗口变化
+                    </li>
+                  </ul>
+                  <div className="flex flex-wrap gap-2 pt-2 border-t">
+                    <button className="text-xs px-2.5 py-1 rounded border hover:bg-secondary inline-flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" /> 查看原文
+                    </button>
+                    <button className="text-xs px-2.5 py-1 rounded border hover:bg-secondary inline-flex items-center gap-1">
+                      <FileSearch className="h-3 w-3" /> 深入分析
+                    </button>
+                    <button className="text-xs px-2.5 py-1 rounded border hover:bg-secondary inline-flex items-center gap-1">
+                      <CornerDownRight className="h-3 w-3" /> 追问
+                    </button>
+                    <button className="text-xs px-2.5 py-1 rounded border hover:bg-secondary inline-flex items-center gap-1">
+                      <MessageSquarePlus className="h-3 w-3" /> 开启对话
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ---------- 欢迎区 + P2 入口 ---------- */}
-          {!incomingMsg && active === "policy" && !showQuarter && (
+          {!incomingMsg && !incomingPolicy && active === "policy" && !showQuarter && (
             <div className="max-w-2xl mx-auto text-center pt-6 pb-2">
               <Sparkles className="h-6 w-6 text-primary mx-auto mb-2" />
               <p className="text-sm text-muted-foreground">

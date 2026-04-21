@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
 import {
-  Brain,
   BarChart3,
   LineChart,
   Calculator,
@@ -10,10 +9,8 @@ import {
   Bot,
   LayoutDashboard,
   Puzzle,
-  History,
   Plus,
   Star,
-  StarOff,
   Pin,
   PinOff,
   MoreHorizontal,
@@ -43,17 +40,7 @@ interface NavItem {
   placeholder?: boolean;
 }
 
-interface AiCapability {
-  key: "policy" | "review";
-  title: string;
-  icon: LucideIcon;
-  placeholder?: boolean;
-}
-
-const aiCapabilities: AiCapability[] = [
-  { key: "policy", title: "听雨", icon: Brain },
-  { key: "review", title: "复盘助手", icon: History, placeholder: true },
-];
+// AiCapability 已废弃：左侧不再放"AI能力"分组，听雨即默认能力，新建会话由顶部按钮触发
 
 const dashboardItems: NavItem[] = [
   { title: "市场看板", url: "/tools/market", icon: BarChart3 },
@@ -68,7 +55,7 @@ const pluginItems: NavItem[] = [
 ];
 
 const tabConfig: { key: SidebarTab; label: string; icon: LucideIcon }[] = [
-  { key: "ai", label: "AI", icon: Bot },
+  { key: "ai", label: "听雨", icon: Bot },
   { key: "dashboard", label: "看板", icon: LayoutDashboard },
   { key: "plugin", label: "插件", icon: Puzzle },
 ];
@@ -96,7 +83,7 @@ export function AppSidebar() {
     else if (tab === "plugin") navigate(pluginItems[0].url);
   };
 
-  const activeCap = (searchParams.get("cap") as "policy" | "review") || "policy";
+  const currentPid = searchParams.get("pid");
 
   return (
     <Sidebar collapsible="none" className="border-r bg-sidebar">
@@ -124,7 +111,7 @@ export function AppSidebar() {
         </div>
 
         {activeTab === "ai" ? (
-          <AiPanel activeCap={activeCap} />
+          <AiPanel currentPid={currentPid} />
         ) : (
           <nav className="flex-1 py-1.5 px-1.5 flex flex-col gap-px">
             {(activeTab === "dashboard" ? dashboardItems : pluginItems).map((item) => {
@@ -167,18 +154,14 @@ export function AppSidebar() {
 }
 
 // ============================================================
-// AI 面板：新建会话 / AI 能力 / 历史政策（跟随省份）/ 置顶 + 最近会话
+// AI 面板（轻量会话工作台）：新建会话 / 历史政策（跟随省份）/ 置顶 + 最近会话
+// 左侧只做"选择对象"，处理动作（星标 / 置顶 / 分析 / 追问 / 删除）放右侧主区
 // ============================================================
-function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
+function AiPanel({ currentPid }: { currentPid: string | null }) {
   const navigate = useNavigate();
   const { province, label: provinceLabel } = useProvince();
-  const { sessions, togglePin, rename, remove, removeMany, create } = useChatSessions();
-  const {
-    policies,
-    toggleStar,
-    togglePin: togglePolicyPin,
-    removeMany: removePolicies,
-  } = useHistoricalPolicies();
+  const { sessions, togglePin, rename, remove, create } = useChatSessions();
+  const { policies, removeMany: removePolicies } = useHistoricalPolicies();
 
   const [policyMultiSelect, setPolicyMultiSelect] = useState(false);
   const [selectedPolicyIds, setSelectedPolicyIds] = useState<Set<string>>(new Set());
@@ -249,55 +232,14 @@ function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
         </button>
       </div>
 
-      {/* AI 能力 */}
-      <div className="px-2 pt-2 pb-1">
-        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 pb-1">
-          AI 能力
-        </p>
-        <div className="flex flex-col gap-px">
-          {aiCapabilities.map((c) => {
-            const isActive = !c.placeholder && activeCap === c.key;
-            const handleClick = () => {
-              if (c.placeholder) return;
-              navigate(`/ai/policy?cap=${c.key}`);
-            };
-            return (
-              <button
-                key={c.key}
-                onClick={handleClick}
-                title={c.title + (c.placeholder ? " (占位)" : "")}
-                className={`relative w-full h-8 flex items-center gap-2 px-2 rounded text-left transition-colors ${
-                  isActive
-                    ? "bg-secondary text-primary font-medium"
-                    : c.placeholder
-                    ? "text-muted-foreground/50 cursor-not-allowed"
-                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                }`}
-              >
-                {isActive && (
-                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
-                )}
-                <c.icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="text-xs leading-none truncate flex-1">{c.title}</span>
-                {c.placeholder && (
-                  <span className="text-[9px] px-1 rounded bg-muted text-muted-foreground">
-                    占位
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 历史政策（跟随省份） */}
-      <div className="px-2 pt-2 pb-1.5 border-t">
+      {/* 历史政策（跟随省份）—— 紧随新建会话，左侧只做"选择"：点击进入右侧主区处理 */}
+      <div className="px-2 pt-2 pb-1.5">
         <div className="flex items-center justify-between px-2 pb-1">
           <p
             className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider truncate"
             title={`跟随当前看板省份：${provinceLabel}`}
           >
-            历史政策 · {provinceLabel}
+            历史政策
           </p>
           <button
             onClick={() => {
@@ -321,26 +263,27 @@ function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
             )}
           </button>
         </div>
-        <div className="max-h-40 overflow-auto flex flex-col gap-px">
+        <div className="max-h-56 overflow-auto flex flex-col gap-px">
           {visiblePolicies.length === 0 ? (
             <p className="text-[11px] text-muted-foreground/70 px-2 py-1">暂无</p>
           ) : (
             visiblePolicies.map((p) => {
               const selected = selectedPolicyIds.has(p.id);
+              const isActive = !policyMultiSelect && currentPid === p.id;
               return (
                 <div
                   key={p.id}
                   className={`group relative rounded px-2 py-1.5 hover:bg-secondary/60 ${
                     selected ? "bg-primary/10" : ""
-                  }`}
+                  } ${isActive ? "bg-secondary" : ""}`}
                 >
-                  <div className="flex items-start gap-1.5">
+                  <div className="flex items-center gap-1.5">
                     {policyMultiSelect && (
                       <input
                         type="checkbox"
                         checked={selected}
                         onChange={() => togglePolicySelect(p.id)}
-                        className="mt-0.5 h-3 w-3 shrink-0 accent-primary"
+                        className="h-3 w-3 shrink-0 accent-primary"
                       />
                     )}
                     <button
@@ -351,59 +294,15 @@ function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
                           navigate(`/ai/policy?cap=policy&pid=${p.id}`);
                         }
                       }}
-                      className="flex-1 min-w-0 text-left"
+                      className="flex-1 min-w-0 text-left flex items-center gap-1"
                       title={p.title}
                     >
-                      <div className="flex items-center gap-1">
-                        {p.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
-                        {p.starred && <Star className="h-3 w-3 fill-warning text-warning shrink-0" />}
-                        <span className="text-[11px] leading-tight text-foreground/85 truncate">
-                          {p.title}
-                        </span>
-                      </div>
+                      {p.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
+                      {p.starred && <Star className="h-3 w-3 fill-warning text-warning shrink-0" />}
+                      <span className={`text-[11px] leading-tight truncate ${isActive ? "text-primary font-medium" : "text-foreground/85"}`}>
+                        {p.title}
+                      </span>
                     </button>
-                    {!policyMultiSelect && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            className="opacity-0 group-hover:opacity-100 h-5 w-5 flex items-center justify-center rounded hover:bg-secondary text-muted-foreground shrink-0"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal className="h-3.5 w-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-36">
-                          <DropdownMenuItem onClick={() => toggleStar(p.id)}>
-                            {p.starred ? (
-                              <>
-                                <StarOff className="h-3.5 w-3.5 mr-2" /> 取消星标
-                              </>
-                            ) : (
-                              <>
-                                <Star className="h-3.5 w-3.5 mr-2" /> 加星标
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => togglePolicyPin(p.id)}>
-                            {p.pinned ? (
-                              <>
-                                <PinOff className="h-3.5 w-3.5 mr-2" /> 取消置顶
-                              </>
-                            ) : (
-                              <>
-                                <Pin className="h-3.5 w-3.5 mr-2" /> 置顶
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => removePolicies([p.id])}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 mr-2" /> 删除
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
                   </div>
                 </div>
               );
