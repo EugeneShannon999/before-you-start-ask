@@ -96,7 +96,7 @@ export function AppSidebar() {
     else if (tab === "plugin") navigate(pluginItems[0].url);
   };
 
-  const activeCap = (searchParams.get("cap") as "policy" | "review") || "policy";
+  const currentPid = searchParams.get("pid");
 
   return (
     <Sidebar collapsible="none" className="border-r bg-sidebar">
@@ -124,7 +124,7 @@ export function AppSidebar() {
         </div>
 
         {activeTab === "ai" ? (
-          <AiPanel activeCap={activeCap} />
+          <AiPanel currentPid={currentPid} />
         ) : (
           <nav className="flex-1 py-1.5 px-1.5 flex flex-col gap-px">
             {(activeTab === "dashboard" ? dashboardItems : pluginItems).map((item) => {
