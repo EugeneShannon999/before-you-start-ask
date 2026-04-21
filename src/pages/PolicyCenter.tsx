@@ -323,7 +323,7 @@ export default function PolicyCenter() {
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="问政策、问市场、问某天价差为什么变大…"
+                placeholder={incomingMsg ? "继续追问，例如：对 PKG-A 套餐的具体影响有多大？" : "问政策、问市场、问某天价差为什么变大…"}
                 className="border-0 resize-none min-h-[60px] pr-12 focus-visible:ring-0"
               />
               <button className="absolute bottom-2 right-2 p-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40">
