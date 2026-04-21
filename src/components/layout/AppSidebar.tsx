@@ -77,8 +77,8 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="none" className="border-r bg-sidebar">
       <SidebarContent className="p-0 flex flex-col items-stretch">
-        {/* Tab switcher: 顶部 3 个一级栏目，与顶栏同高 */}
-        <div className="h-12 border-b flex items-stretch shrink-0">
+        {/* 一级 Tab：选中放大显示名字，未选中收缩为图标 */}
+        <div className="h-12 border-b flex items-stretch shrink-0 px-1.5 gap-1 py-1.5">
           {tabConfig.map((tab) => {
             const active = activeTab === tab.key;
             return (
@@ -86,23 +86,23 @@ export function AppSidebar() {
                 key={tab.key}
                 onClick={() => handleTabClick(tab.key)}
                 title={tab.label}
-                className={`flex-1 flex items-center justify-center transition-colors relative ${
+                className={`relative h-full rounded-md flex items-center justify-center gap-1.5 transition-all duration-200 ${
                   active
-                    ? "text-primary bg-background"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                    ? "flex-1 bg-primary/10 text-primary px-2"
+                    : "w-8 text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                 }`}
               >
-                <tab.icon className="h-4 w-4" />
+                <tab.icon className="h-4 w-4 shrink-0" />
                 {active && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-primary rounded-t" />
+                  <span className="text-xs font-medium truncate">{tab.label}</span>
                 )}
               </button>
             );
           })}
         </div>
 
-        {/* 当前 Tab 下的二级图标导航：垂直、选中/未选中统一设计 */}
-        <nav className="flex-1 py-2 px-1.5 flex flex-col gap-0.5">
+        {/* 二级菜单：扁平、低饱和，与一级 Tab 拉开层级 */}
+        <nav className="flex-1 py-1.5 px-1.5 flex flex-col gap-px">
           {items.map((item) => {
             const isActive = !item.placeholder && location.pathname === item.url;
             const handleClick = (e: React.MouseEvent) => {
@@ -117,19 +117,19 @@ export function AppSidebar() {
                 key={item.title}
                 onClick={handleClick}
                 title={item.title + (item.placeholder ? " (占位)" : "")}
-                className={`relative w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors ${
+                className={`relative w-full h-8 flex items-center gap-2 px-2 rounded text-left transition-colors ${
                   isActive
-                    ? "bg-sidebar-accent text-primary"
+                    ? "bg-secondary text-primary font-medium"
                     : item.placeholder
                     ? "text-muted-foreground/50 cursor-not-allowed"
-                    : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                 }`}
               >
                 {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-primary" />
+                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
                 )}
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span className="text-[10px] leading-none truncate max-w-full px-1">
+                <item.icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="text-[11px] leading-none truncate">
                   {item.title.replace(" ", "")}
                 </span>
               </button>
