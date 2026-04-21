@@ -17,6 +17,18 @@
 
 export type MessageLevel = "P0" | "P1" | "P2";
 
+// AI 预解析结构化结果（mock）
+// 后端口径：消息入库后由 AI 管道异步生成 analysis，前端只读
+export interface MessageAnalysis {
+  headline: string;       // 一句话结论
+  impactScope: string;    // 影响对象
+  impactWindow: string;   // 影响时段
+  keyPoints: string[];    // 关键要点
+  suggestion: string;     // 建议动作
+  evidence: string;       // 原文证据片段
+  evidenceSource: string; // 证据来源
+}
+
 export interface MarketMessage {
   id: string;
   level: MessageLevel;
@@ -26,6 +38,7 @@ export interface MarketMessage {
   publishedAt: string; // ISO
   // 后端解析结果（mock）：实际由 AI 管道写入
   aiAnalyzed: boolean;
+  analysis?: MessageAnalysis;
   // 跳转目标会话 id（PolicyCenter 中预生成）
   sessionId?: string;
 }
