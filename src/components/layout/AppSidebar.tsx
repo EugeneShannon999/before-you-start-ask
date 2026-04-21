@@ -110,11 +110,11 @@ export function AppSidebar() {
         </div>
 
         {activeTab === "ai" ? (
-          <AiPanel activeCap={activeCap} />
+          <AiPanel />
         ) : (
-          <nav className="flex-1 py-1.5 px-1.5 flex flex-col gap-px">
+          <nav className="flex-1 py-2 px-2 flex flex-col gap-0.5">
             {(activeTab === "dashboard" ? dashboardItems : pluginItems).map((item) => {
-              const isActive = !item.placeholder && location.pathname === item.url;
+              const isActive = !item.placeholder && location.pathname.startsWith(item.url);
               const handleClick = (e: React.MouseEvent) => {
                 if (item.placeholder) {
                   e.preventDefault();
@@ -127,19 +127,16 @@ export function AppSidebar() {
                   key={item.title}
                   onClick={handleClick}
                   title={item.title + (item.placeholder ? " (占位)" : "")}
-                  className={`relative w-full h-8 flex items-center gap-2 px-2 rounded text-left transition-colors ${
+                  className={`w-full h-9 flex items-center gap-2 px-2.5 rounded-md text-left transition-colors ${
                     isActive
-                      ? "bg-secondary text-primary font-medium"
+                      ? "bg-primary/10 text-primary font-medium"
                       : item.placeholder
                       ? "text-muted-foreground/50 cursor-not-allowed"
-                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                      : "text-foreground/80 hover:bg-secondary/60 hover:text-foreground"
                   }`}
                 >
-                  {isActive && (
-                    <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
-                  )}
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span className="text-xs leading-none truncate">
+                  <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
+                  <span className="text-[13px] leading-none truncate">
                     {item.title}
                   </span>
                 </button>
@@ -153,9 +150,9 @@ export function AppSidebar() {
 }
 
 // ============================================================
-// AI 面板：新建会话 / AI 能力 / 历史政策（跟随省份）/ 置顶 + 最近会话
+// 听雨面板：新建会话 / 历史政策（跟随省份）/ 置顶 + 最近会话
 // ============================================================
-function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
+function AiPanel() {
   const navigate = useNavigate();
   const { province, label: provinceLabel } = useProvince();
   const { sessions, togglePin, rename, remove, removeMany, create } = useChatSessions();
@@ -210,7 +207,7 @@ function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
 
   const handleNewSession = () => {
     const sess = create("新建会话");
-    navigate(`/ai/policy?cap=policy&sid=${sess.id}`);
+    navigate(`/ai/policy?sid=${sess.id}`);
   };
 
   const startRename = (id: string, current: string) => {
@@ -235,47 +232,6 @@ function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
         </button>
       </div>
 
-      {/* AI 能力 */}
-      <div className="px-2 pt-2 pb-1">
-        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 pb-1">
-          AI 能力
-        </p>
-        <div className="flex flex-col gap-px">
-          {aiCapabilities.map((c) => {
-            const isActive = !c.placeholder && activeCap === c.key;
-            const handleClick = () => {
-              if (c.placeholder) return;
-              navigate(`/ai/policy?cap=${c.key}`);
-            };
-            return (
-              <button
-                key={c.key}
-                onClick={handleClick}
-                title={c.title + (c.placeholder ? " (占位)" : "")}
-                className={`relative w-full h-8 flex items-center gap-2 px-2 rounded text-left transition-colors ${
-                  isActive
-                    ? "bg-secondary text-primary font-medium"
-                    : c.placeholder
-                    ? "text-muted-foreground/50 cursor-not-allowed"
-                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                }`}
-              >
-                {isActive && (
-                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
-                )}
-                <c.icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="text-xs leading-none truncate flex-1">{c.title}</span>
-                {c.placeholder && (
-                  <span className="text-[9px] px-1 rounded bg-muted text-muted-foreground">
-                    占位
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* 历史政策（跟随省份） */}
       <div className="px-2 pt-2 pb-1.5 border-t">
         <div className="flex items-center justify-between px-2 pb-1">
@@ -283,7 +239,7 @@ function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
             className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider truncate"
             title={`跟随当前看板省份：${provinceLabel}`}
           >
-            历史政策 · {provinceLabel}
+            历史政策
           </p>
           <button
             onClick={() => {
