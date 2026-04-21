@@ -1,8 +1,6 @@
 import { useState } from "react";
 import {
   Brain,
-  MessageSquare,
-  PieChart,
   History,
   Send,
   FileText,
@@ -10,17 +8,23 @@ import {
   CornerDownRight,
   Sparkles,
   Plus,
+  Construction,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-type Capability = "policy" | "qa" | "chart" | "review";
+type Capability = "policy" | "review";
 
-const capabilities: { key: Capability; name: string; icon: typeof Brain; desc: string }[] = [
+interface CapabilityDef {
+  key: Capability;
+  name: string;
+  icon: typeof Brain;
+  desc: string;
+  placeholder?: boolean;
+}
+
+const capabilities: CapabilityDef[] = [
   { key: "policy", name: "政策 AI", icon: Brain, desc: "解读最新政策与影响" },
-  { key: "qa", name: "交易问答", icon: MessageSquare, desc: "市场规则与交易策略问答" },
-  { key: "chart", name: "图表解读", icon: PieChart, desc: "上传或选取图表自动解释" },
-  { key: "review", name: "复盘助手", icon: History, desc: "复盘某日交易与价差成因" },
+  { key: "review", name: "复盘助手", icon: History, desc: "复盘某日交易与价差成因", placeholder: true },
 ];
 
 const recentSessions: Record<Capability, { id: string; title: string; ts: string }[]> = {
@@ -29,16 +33,7 @@ const recentSessions: Record<Capability, { id: string; title: string; ts: string
     { id: "p2", title: "全国统一电力市场征求意见影响", ts: "昨天" },
     { id: "p3", title: "广东现货分段考核机制", ts: "2天前" },
   ],
-  qa: [
-    { id: "q1", title: "竞价空间为什么会变小？", ts: "09:10" },
-    { id: "q2", title: "实时价差扩大的常见原因", ts: "昨天" },
-  ],
-  chart: [
-    { id: "c1", title: "解读 7-15 日前出清曲线", ts: "08:50" },
-  ],
-  review: [
-    { id: "r1", title: "7-14 价差异常复盘", ts: "昨天" },
-  ],
+  review: [],
 };
 
 interface PolicyCard {
