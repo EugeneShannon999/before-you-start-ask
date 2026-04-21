@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
 import {
-  Brain,
   BarChart3,
   LineChart,
   Calculator,
@@ -10,10 +9,8 @@ import {
   Bot,
   LayoutDashboard,
   Puzzle,
-  History,
   Plus,
   Star,
-  StarOff,
   Pin,
   PinOff,
   MoreHorizontal,
