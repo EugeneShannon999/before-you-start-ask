@@ -116,64 +116,149 @@ export default function PolicyCenter() {
         </header>
 
         <div className="flex-1 overflow-auto px-6 py-6 space-y-5">
-          {/* Greeting */}
-          <div className="max-w-2xl mx-auto text-center pt-4 pb-2">
-            <Sparkles className="h-6 w-6 text-primary mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">
-              你好，我是「{current.name}」。基于最近 30 天的政策、出清和你的套餐数据回答。
-            </p>
+          {/* Greeting - 仅在非消息跳转、policy 能力下展示 */}
+          {!incomingMsg && (
+            <div className="max-w-2xl mx-auto text-center pt-4 pb-2">
+              <Sparkles className="h-6 w-6 text-primary mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                你好，我是「{current.name}」。基于最近 30 天的政策、出清和你的套餐数据回答。
+              </p>
 
-            {/* P2 季度整合入口 - 仅 policy 能力下展示 */}
-            {active === "policy" && !incomingMsg && (
-              <button
-                onClick={triggerQuarterSummary}
-                className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-md border bg-card hover:bg-secondary text-xs text-foreground/80 hover:text-foreground transition-colors shadow-notion"
-              >
-                <CalendarRange className="h-3.5 w-3.5 text-primary" />
-                <span>查看本季度市场要闻整合</span>
-                <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground">
-                  P2 · {p2QuarterSummary.quarter} · {p2QuarterSummary.count} 条
-                </span>
-              </button>
-            )}
-          </div>
-
-          {/* 入站消息上下文卡片 - 由 P0 弹窗 / P1 横条跳转进入时展示 */}
-          {incomingMsg && active === "policy" && (
-            <div className="max-w-2xl mx-auto">
-              <div className={`rounded-lg border p-4 shadow-notion ${
-                incomingMsg.level === "P0"
-                  ? "border-destructive/40 bg-destructive/5"
-                  : "border-primary/30 bg-primary/5"
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                    incomingMsg.level === "P0"
-                      ? "bg-destructive/15 text-destructive"
-                      : "bg-primary/15 text-primary"
-                  }`}>
-                    {incomingMsg.level === "P0" ? (
-                      <AlertOctagon className="h-3 w-3" />
-                    ) : (
-                      <AlertTriangle className="h-3 w-3" />
-                    )}
-                    {incomingMsg.level} 消息
+              {/* P2 季度整合入口 - 仅 policy 能力下展示 */}
+              {active === "policy" && (
+                <button
+                  onClick={triggerQuarterSummary}
+                  className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-md border bg-card hover:bg-secondary text-xs text-foreground/80 hover:text-foreground transition-colors shadow-notion"
+                >
+                  <CalendarRange className="h-3.5 w-3.5 text-primary" />
+                  <span>查看本季度市场要闻整合</span>
+                  <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground">
+                    P2 · {p2QuarterSummary.quarter} · {p2QuarterSummary.count} 条
                   </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    {formatMsgTime(incomingMsg.publishedAt)} · {incomingMsg.source}
-                  </span>
-                </div>
-                <h3 className="text-sm font-semibold mb-1">{incomingMsg.title}</h3>
-                <p className="text-xs text-foreground/80 leading-relaxed">{incomingMsg.summary}</p>
-                <p className="text-[10px] text-muted-foreground mt-2 italic">
-                  AI 已对该消息预先解析（mock），下方对话框已预填提问，可直接发送。
-                </p>
-              </div>
+                </button>
+              )}
             </div>
           )}
 
-          {/* Policy cards as conversation messages */}
-          {active === "policy" &&
+          {/* 由 P0 / P1 跳转：直接呈现用户提问气泡 + AI 已生成的解读气泡 */}
+          {incomingMsg && active === "policy" && incomingMsg.analysis && (
+            <>
+              {/* 1) 消息上下文卡片 */}
+              <div className="max-w-2xl mx-auto">
+                <div className={`rounded-lg border p-3 ${
+                  incomingMsg.level === "P0"
+                    ? "border-destructive/40 bg-destructive/5"
+                    : "border-primary/30 bg-primary/5"
+                }`}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      incomingMsg.level === "P0"
+                        ? "bg-destructive/15 text-destructive"
+                        : "bg-primary/15 text-primary"
+                    }`}>
+                      {incomingMsg.level === "P0" ? (
+                        <AlertOctagon className="h-3 w-3" />
+                      ) : (
+                        <AlertTriangle className="h-3 w-3" />
+                      )}
+                      {incomingMsg.level} 消息
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {formatMsgTime(incomingMsg.publishedAt)} · {incomingMsg.source}
+                    </span>
+                  </div>
+                  <p className="text-xs font-medium text-foreground/90">{incomingMsg.title}</p>
+                </div>
+              </div>
+
+              {/* 2) 用户提问气泡（系统自动发起） */}
+              <div className="max-w-2xl mx-auto flex justify-end">
+                <div className="flex items-start gap-2 max-w-[85%]">
+                  <div className="rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs leading-relaxed">
+                    请深入解读这条 {incomingMsg.level} 消息：{incomingMsg.title}
+                  </div>
+                  <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                    <User className="h-3.5 w-3.5 text-foreground/70" />
+                  </div>
+                </div>
+              </div>
+
+              {/* 3) AI 解读气泡（已预生成 mock） */}
+              <div className="max-w-2xl mx-auto flex justify-start">
+                <div className="flex items-start gap-2 w-full">
+                  <div className="h-6 w-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                    <Bot className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div className="flex-1 rounded-lg border bg-card shadow-notion p-4 space-y-3">
+                    {/* 一句话结论 */}
+                    <p className="text-sm font-medium text-foreground leading-relaxed">
+                      {incomingMsg.analysis.headline}
+                    </p>
+
+                    {/* 关键字段 */}
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs pt-2 border-t">
+                      <div>
+                        <dt className="text-muted-foreground mb-0.5">影响对象</dt>
+                        <dd className="text-foreground/85">{incomingMsg.analysis.impactScope}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground mb-0.5">影响时段</dt>
+                        <dd className="text-foreground/85">{incomingMsg.analysis.impactWindow}</dd>
+                      </div>
+                    </dl>
+
+                    {/* 关键要点 */}
+                    <div className="text-xs">
+                      <p className="text-muted-foreground mb-1.5">关键要点</p>
+                      <ul className="space-y-1 list-disc list-inside marker:text-primary/60">
+                        {incomingMsg.analysis.keyPoints.map((kp, i) => (
+                          <li key={i} className="text-foreground/85 leading-relaxed pl-1">
+                            {kp}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* 建议动作 */}
+                    <div className="text-xs rounded-md bg-secondary/60 p-2.5">
+                      <p className="text-muted-foreground mb-1 font-medium">建议动作</p>
+                      <p className="text-foreground/85 leading-relaxed">
+                        {incomingMsg.analysis.suggestion}
+                      </p>
+                    </div>
+
+                    {/* 原文证据 */}
+                    <div className="text-xs pt-2 border-t">
+                      <p className="text-muted-foreground mb-1">原文证据</p>
+                      <p className="text-foreground/80 italic leading-relaxed">
+                        “{incomingMsg.analysis.evidence}”
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        — {incomingMsg.analysis.evidenceSource}
+                      </p>
+                    </div>
+
+                    {/* 操作 */}
+                    <div className="flex gap-2 pt-2 border-t">
+                      <button className="text-xs px-2.5 py-1 rounded border hover:bg-secondary flex items-center gap-1">
+                        <ExternalLink className="h-3 w-3" /> 查看原文
+                      </button>
+                      <button className="text-xs px-2.5 py-1 rounded border hover:bg-secondary flex items-center gap-1">
+                        <CornerDownRight className="h-3 w-3" /> 追问
+                      </button>
+                    </div>
+
+                    <p className="text-[10px] text-muted-foreground italic pt-1">
+                      该解读由 AI 在消息入库时预生成（mock），下方可继续追问。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* 默认场景：未跳转时展示政策卡片列表 */}
+          {!incomingMsg && active === "policy" &&
             policyCards.map((p) => (
               <div key={p.id} className="max-w-2xl mx-auto">
                 <div className="rounded-lg border bg-card shadow-notion p-4">
