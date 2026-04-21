@@ -483,74 +483,8 @@ export default function MarketInfo() {
           )}
         </section>
 
-        {/* 6. 公告信息 / 规则预警 */}
-        {/* 备注：公告 = 原生公告（页面抓取/公开API），预警 = 规则计算（基于已落地数据）；
-            数据来源不明确的预警（如「新能源预测偏差」）SP1 暂不展示，待补实际数据来源后再开启 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <section className="rounded-lg shadow-notion bg-card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold">公告信息</h3>
-              <span className="text-[10px] text-muted-foreground">来源：交易中心 / 调度中心 公开披露</span>
-            </div>
-            <div className="space-y-1">
-              {marketEvents.filter((e) => e.category === "公告" || e.category === "规则").map((a) => (
-                <div key={a.id} className="flex items-start justify-between py-2 border-b last:border-b-0 gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <p className="text-xs font-medium leading-snug truncate">{a.title}</p>
-                      <span className="shrink-0 text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary">
-                        原生公告
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-1">
-                      {a.detail}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{a.source}</p>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground shrink-0 font-mono">{a.time}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-lg shadow-notion bg-card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold">规则预警</h3>
-              <span className="text-[10px] text-muted-foreground">基于已落地数据 + 预设阈值</span>
-            </div>
-            <div className="space-y-2">
-              {ruleWarnings.map((w) => (
-                <div
-                  key={w.id}
-                  className={`p-2.5 rounded-md text-xs border ${
-                    w.level === "high"
-                      ? "border-destructive/30 bg-destructive/5"
-                      : "border-warning/30 bg-warning/5"
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <AlertTriangle
-                      className={`h-3.5 w-3.5 shrink-0 ${
-                        w.level === "high" ? "text-destructive" : "text-warning"
-                      }`}
-                    />
-                    <p className="font-medium text-foreground flex-1">{w.title}</p>
-                    <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-                      规则计算
-                    </span>
-                  </div>
-                  <div className="pl-5 space-y-0.5 text-[11px] text-muted-foreground">
-                    <p><span className="text-foreground/70">时段：</span>{w.period}</p>
-                    <p><span className="text-foreground/70">当前值：</span>{w.current}</p>
-                    <p><span className="text-foreground/70">阈值/原因：</span>{w.threshold}</p>
-                    <p className="text-foreground/80"><span className="text-foreground/60">建议动作：</span>{w.action}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      </div>
+        {/* 公告信息 / 规则预警 已移到中栏控制区 */}
+      </WorkbenchLayout>
     </MarketCursorProvider>
   );
 }
