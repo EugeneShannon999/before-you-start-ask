@@ -23,7 +23,7 @@ import {
   Trash,
   type LucideIcon,
 } from "lucide-react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -70,7 +70,7 @@ function getTabFromPath(pathname: string): SidebarTab {
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  
   const [activeTab, setActiveTab] = useState<SidebarTab>(() => getTabFromPath(location.pathname));
 
   useEffect(() => {
