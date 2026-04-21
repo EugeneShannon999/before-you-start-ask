@@ -161,11 +161,6 @@ export default function MarketInfo() {
               </div>
             </WorkbenchPanel>
 
-            {/* 当前选中时段摘要 */}
-            <WorkbenchPanel title="当前时段" compact>
-              <CurrentPeriodBar granularity={globalGranularity} />
-            </WorkbenchPanel>
-
             {/* 行情摘要卡片 */}
             <WorkbenchPanel title="行情摘要">
               <div className="grid grid-cols-2 gap-2">

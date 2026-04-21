@@ -46,14 +46,12 @@ export function WorkbenchLayout({
         fixedHeight ? "h-[calc(100vh-5rem)] overflow-hidden" : "min-h-[calc(100vh-5rem)]",
       ].join(" ")}
     >
-      {/* 中栏：控制 / 步骤 / 状态 */}
+      {/* 中栏：控制 / 步骤 / 状态（不独立滚动，跟随整页滚动） */}
       <aside
         className={[
           "shrink-0 w-full",
           middleWidth,
-          fixedHeight
-            ? "xl:h-full xl:overflow-y-auto"
-            : "xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto",
+          fixedHeight ? "xl:h-full xl:overflow-y-auto" : "",
           "space-y-3",
         ].join(" ")}
       >
