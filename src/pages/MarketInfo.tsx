@@ -144,8 +144,7 @@ export default function MarketInfo() {
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success">公开披露</span>
             </div>
           </div>
-          {/* 市场消息条 */}
-          <MarketEventTicker />
+          {/* 市场消息条已移除：全局 P1 横条已承载市场消息提示，避免重复 */}
           {/* 当前时段联动摘要 */}
           <CurrentPeriodBar granularity={globalGranularity} />
         </div>
