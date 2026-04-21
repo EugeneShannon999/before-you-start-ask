@@ -12,6 +12,8 @@ import {
   CalendarRange,
   AlertOctagon,
   AlertTriangle,
+  Bot,
+  User,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { p0Messages, p1Messages, p2QuarterSummary, formatMsgTime } from "@/lib/messageMocks";
