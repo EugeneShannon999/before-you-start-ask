@@ -27,7 +27,7 @@ import {
 } from "@/lib/marketMocks";
 import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
 import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
-import { CurrentPeriodBar } from "@/components/market/CurrentPeriodBar";
+
 import { ChartCard } from "@/components/market/ChartCard";
 import { WorkbenchLayout, WorkbenchPanel } from "@/components/layout/WorkbenchLayout";
 import {
