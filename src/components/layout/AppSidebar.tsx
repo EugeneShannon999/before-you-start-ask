@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import {
   Brain,
-  History,
   BarChart3,
   LineChart,
   Calculator,
@@ -11,19 +10,13 @@ import {
   Bot,
   LayoutDashboard,
   Puzzle,
+  History,
+  type LucideIcon,
 } from "lucide-react";
-import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar";
 
 type SidebarTab = "ai" | "dashboard" | "plugin";
@@ -31,12 +24,10 @@ type SidebarTab = "ai" | "dashboard" | "plugin";
 interface NavItem {
   title: string;
   url: string;
-  icon: typeof Brain;
+  icon: LucideIcon;
   placeholder?: boolean;
 }
 
-// AI 工作台共用一个路由，左侧只是切换 capability（页面内 state），
-// 这里仍按 SP1 文案列出 4 个能力入口。
 const aiItems: NavItem[] = [
   { title: "政策 AI", url: "/ai/policy", icon: Brain },
   { title: "复盘助手", url: "/ai/policy", icon: History, placeholder: true },
@@ -45,7 +36,7 @@ const aiItems: NavItem[] = [
 const dashboardItems: NavItem[] = [
   { title: "市场看板", url: "/tools/market", icon: BarChart3 },
   { title: "算法预测", url: "/tools/prediction", icon: LineChart },
-  { title: "结算计算器", url: "/tools/calculator", icon: Calculator },
+  { title: "结算计算", url: "/tools/calculator", icon: Calculator },
   { title: "交易日历", url: "/tools/calendar", icon: Calendar },
   { title: "交易执行", url: "/tools/trading", icon: Zap, placeholder: true },
 ];
@@ -54,17 +45,11 @@ const pluginItems: NavItem[] = [
   { title: "插件管理", url: "/system/plugin", icon: Plug },
 ];
 
-const tabConfig: { key: SidebarTab; label: string; icon: typeof Bot }[] = [
-  { key: "ai", label: "AI", icon: Bot },
-  { key: "dashboard", label: "看板", icon: LayoutDashboard },
-  { key: "plugin", label: "插件", icon: Puzzle },
+const tabConfig: { key: SidebarTab; label: string; icon: LucideIcon; items: NavItem[] }[] = [
+  { key: "ai", label: "AI", icon: Bot, items: aiItems },
+  { key: "dashboard", label: "看板", icon: LayoutDashboard, items: dashboardItems },
+  { key: "plugin", label: "插件", icon: Puzzle, items: pluginItems },
 ];
-
-const tabMenuMap: Record<SidebarTab, { label: string; items: NavItem[] }[]> = {
-  ai: [{ label: "AI 能力", items: aiItems }],
-  dashboard: [{ label: "业务工具", items: dashboardItems }],
-  plugin: [{ label: "插件", items: pluginItems }],
-};
 
 function getTabFromPath(pathname: string): SidebarTab {
   if (pathname.startsWith("/ai")) return "ai";
@@ -73,81 +58,84 @@ function getTabFromPath(pathname: string): SidebarTab {
 }
 
 export function AppSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
   const location = useLocation();
-
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<SidebarTab>(() => getTabFromPath(location.pathname));
 
-  // 路由变化时自动同步顶部 Tab
   useEffect(() => {
     setActiveTab(getTabFromPath(location.pathname));
   }, [location.pathname]);
 
-  const groups = tabMenuMap[activeTab];
+  const items = tabConfig.find((t) => t.key === activeTab)?.items ?? [];
+
+  const handleTabClick = (tab: SidebarTab) => {
+    setActiveTab(tab);
+    const first = tabConfig.find((t) => t.key === tab)?.items[0];
+    if (first && !first.placeholder) navigate(first.url);
+  };
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
-      <SidebarContent className="pt-0">
-        {/* Tab switcher：与顶栏同高，整行铺满侧边栏宽度 */}
-        {!collapsed && (
-          <div className="flex items-stretch gap-1 px-2 h-12 border-b bg-secondary/30 shrink-0">
-            {tabConfig.map((tab) => {
-              const active = activeTab === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  title={tab.label}
-                  className={`my-1.5 flex items-center justify-center gap-1 rounded text-[11px] font-medium transition-all ${
-                    active
-                      ? "flex-1 bg-card text-primary shadow-notion px-2"
-                      : "w-7 shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  }`}
-                >
-                  <tab.icon className="h-3.5 w-3.5 shrink-0" />
-                  {active && <span className="truncate">{tab.label}</span>}
-                </button>
-              );
-            })}
-          </div>
-        )}
+    <Sidebar collapsible="none" className="border-r bg-sidebar">
+      <SidebarContent className="p-0 flex flex-col items-stretch">
+        {/* Tab switcher: 顶部 3 个一级栏目，与顶栏同高 */}
+        <div className="h-12 border-b flex items-stretch shrink-0">
+          {tabConfig.map((tab) => {
+            const active = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => handleTabClick(tab.key)}
+                title={tab.label}
+                className={`flex-1 flex items-center justify-center transition-colors relative ${
+                  active
+                    ? "text-primary bg-background"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                }`}
+              >
+                <tab.icon className="h-4 w-4" />
+                {active && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-primary rounded-t" />
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-        {groups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-3 pt-3 pb-1">
-              {!collapsed && group.label}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5 px-1.5">
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="h-7 px-2 text-xs">
-                      <NavLink
-                        to={item.url}
-                        end
-                        className="relative rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
-                        activeClassName="!bg-sidebar-accent !text-primary font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-r before:bg-primary"
-                      >
-                        <item.icon className="h-3.5 w-3.5 shrink-0" />
-                        {!collapsed && (
-                          <span className="text-xs flex items-center gap-1.5">
-                            {item.title}
-                            {item.placeholder && (
-                              <span className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground font-normal">
-                                占位
-                              </span>
-                            )}
-                          </span>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        {/* 当前 Tab 下的二级图标导航：垂直、选中/未选中统一设计 */}
+        <nav className="flex-1 py-2 px-1.5 flex flex-col gap-0.5">
+          {items.map((item) => {
+            const isActive = !item.placeholder && location.pathname === item.url;
+            const handleClick = (e: React.MouseEvent) => {
+              if (item.placeholder) {
+                e.preventDefault();
+                return;
+              }
+              navigate(item.url);
+            };
+            return (
+              <button
+                key={item.title}
+                onClick={handleClick}
+                title={item.title + (item.placeholder ? " (占位)" : "")}
+                className={`relative w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors ${
+                  isActive
+                    ? "bg-sidebar-accent text-primary"
+                    : item.placeholder
+                    ? "text-muted-foreground/50 cursor-not-allowed"
+                    : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-primary" />
+                )}
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span className="text-[10px] leading-none truncate max-w-full px-1">
+                  {item.title.replace(" ", "")}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
       </SidebarContent>
     </Sidebar>
   );
