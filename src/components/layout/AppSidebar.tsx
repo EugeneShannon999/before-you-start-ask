@@ -40,17 +40,7 @@ interface NavItem {
   placeholder?: boolean;
 }
 
-interface AiCapability {
-  key: "policy" | "review";
-  title: string;
-  icon: LucideIcon;
-  placeholder?: boolean;
-}
-
-const aiCapabilities: AiCapability[] = [
-  { key: "policy", title: "听雨", icon: Brain },
-  { key: "review", title: "复盘助手", icon: History, placeholder: true },
-];
+// AiCapability 已废弃：左侧不再放"AI能力"分组，听雨即默认能力，新建会话由顶部按钮触发
 
 const dashboardItems: NavItem[] = [
   { title: "市场看板", url: "/tools/market", icon: BarChart3 },
