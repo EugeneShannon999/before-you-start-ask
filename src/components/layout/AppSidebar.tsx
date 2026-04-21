@@ -414,8 +414,8 @@ function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
 
       {/* 置顶会话 */}
       {pinnedSessions.length > 0 && (
-        <div className="px-1.5 pt-2 pb-1.5 border-t">
-          <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider px-1.5 pb-1">
+        <div className="px-2 pt-2 pb-1.5 border-t">
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 pb-1">
             置顶会话
           </p>
           <div className="flex flex-col gap-px">
@@ -439,26 +439,26 @@ function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
 
       {/* 最近会话 + hover 显示 View All */}
       <div
-        className="px-1.5 pt-2 pb-1.5 border-t mt-1 flex-1 min-h-0 flex flex-col"
+        className="px-2 pt-2 pb-2 border-t mt-1 flex-1 min-h-0 flex flex-col"
         onMouseEnter={() => setRecentHover(true)}
         onMouseLeave={() => setRecentHover(false)}
       >
-        <div className="flex items-center justify-between px-1.5 pb-1 shrink-0">
-          <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
+        <div className="flex items-center justify-between px-2 pb-1 shrink-0">
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             最近会话
           </p>
           <button
             onClick={() => navigate("/ai/sessions")}
-            className={`text-[9px] flex items-center gap-0.5 text-primary transition-opacity ${
+            className={`text-[10px] flex items-center gap-0.5 text-primary hover:underline transition-opacity ${
               recentHover ? "opacity-100" : "opacity-0 pointer-events-none"
             }`}
           >
-            View All <ChevronRight className="h-2.5 w-2.5" />
+            View All <ChevronRight className="h-3 w-3" />
           </button>
         </div>
         <div className="flex-1 overflow-auto flex flex-col gap-px">
           {recentSessions.length === 0 ? (
-            <p className="text-[10px] text-muted-foreground/70 px-2 py-1">暂无</p>
+            <p className="text-[11px] text-muted-foreground/70 px-2 py-1">暂无</p>
           ) : (
             recentSessions.map((s) => (
               <SessionRow
@@ -506,8 +506,8 @@ function SessionRow({
   onOpen,
 }: SessionRowProps) {
   return (
-    <div className="group relative flex items-center gap-1 px-1.5 py-1 rounded hover:bg-secondary/60">
-      {s.pinned && <Pin className="h-2.5 w-2.5 text-primary shrink-0" />}
+    <div className="group relative flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-secondary/60">
+      {s.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
       <button
         onClick={() => !renaming && onOpen()}
         className="flex-1 min-w-0 text-left flex flex-col gap-0.5"
@@ -522,15 +522,15 @@ function SessionRow({
             onKeyDown={(e) => {
               if (e.key === "Enter") onCommitRename();
             }}
-            className="h-5 text-[10px] bg-background border rounded px-1 w-full"
+            className="h-6 text-xs bg-background border rounded px-1.5 w-full"
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
           <>
-            <span className="text-[10px] leading-tight text-foreground/85 truncate">
+            <span className="text-[11px] leading-tight text-foreground/85 truncate">
               {s.title}
             </span>
-            <span className="text-[8px] text-muted-foreground/70">
+            <span className="text-[10px] text-muted-foreground/70 tabular-nums">
               {new Date(s.updatedAt).toLocaleDateString("zh-CN", {
                 month: "2-digit",
                 day: "2-digit",
@@ -542,32 +542,32 @@ function SessionRow({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="opacity-0 group-hover:opacity-100 h-4 w-4 flex items-center justify-center rounded hover:bg-secondary text-muted-foreground shrink-0"
+            className="opacity-0 group-hover:opacity-100 h-5 w-5 flex items-center justify-center rounded hover:bg-secondary text-muted-foreground shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
-            <MoreHorizontal className="h-3 w-3" />
+            <MoreHorizontal className="h-3.5 w-3.5" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-32">
+        <DropdownMenuContent align="start" className="w-36">
           <DropdownMenuItem onClick={onTogglePin}>
             {s.pinned ? (
               <>
-                <PinOff className="h-3 w-3 mr-2" /> 取消置顶
+                <PinOff className="h-3.5 w-3.5 mr-2" /> 取消置顶
               </>
             ) : (
               <>
-                <Pin className="h-3 w-3 mr-2" /> 置顶
+                <Pin className="h-3.5 w-3.5 mr-2" /> 置顶
               </>
             )}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onStartRename}>
-            <Pencil className="h-3 w-3 mr-2" /> 重命名
+            <Pencil className="h-3.5 w-3.5 mr-2" /> 重命名
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onRemove}
             className="text-destructive focus:text-destructive"
           >
-            <Trash2 className="h-3 w-3 mr-2" /> 删除
+            <Trash2 className="h-3.5 w-3.5 mr-2" /> 删除
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
