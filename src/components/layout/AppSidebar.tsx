@@ -313,7 +313,6 @@ function SessionRow({
 }: SessionRowProps) {
   return (
     <div className="group relative flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-secondary/60">
-      {s.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
       <button
         onClick={() => !renaming && onOpen()}
         className="flex-1 min-w-0 text-left flex flex-col gap-0.5"
