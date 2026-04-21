@@ -30,8 +30,8 @@ export function P1Ticker() {
   };
 
   return (
-    <div className="h-8 border-b bg-amber-50/60 dark:bg-amber-950/20 flex items-center px-4 gap-2 shrink-0 text-xs">
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 font-medium text-[10px] shrink-0">
+    <div className="h-8 border-b bg-secondary/40 flex items-center px-4 gap-2 shrink-0 text-xs">
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium text-[10px] shrink-0">
         <AlertTriangle className="h-3 w-3" />
         P1
       </span>
@@ -53,7 +53,7 @@ export function P1Ticker() {
           <span
             key={i}
             className={`h-1 rounded-full transition-all ${
-              i === idx ? "w-3 bg-amber-500" : "w-1 bg-amber-500/30"
+              i === idx ? "w-3 bg-primary" : "w-1 bg-primary/30"
             }`}
           />
         ))}
@@ -61,7 +61,7 @@ export function P1Ticker() {
 
       <button
         onClick={() => setDismissed(true)}
-        className="p-0.5 rounded hover:bg-amber-500/20 text-muted-foreground shrink-0"
+        className="p-0.5 rounded hover:bg-secondary text-muted-foreground shrink-0"
         title="本次会话内不再提示"
       >
         <X className="h-3 w-3" />
