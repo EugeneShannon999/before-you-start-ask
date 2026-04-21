@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import {
+  Brain,
   BarChart3,
   LineChart,
   Calculator,
@@ -9,8 +10,10 @@ import {
   Bot,
   LayoutDashboard,
   Puzzle,
+  History,
   Plus,
   Star,
+  StarOff,
   Pin,
   PinOff,
   MoreHorizontal,
@@ -20,7 +23,7 @@ import {
   Trash,
   type LucideIcon,
 } from "lucide-react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -40,12 +43,10 @@ interface NavItem {
   placeholder?: boolean;
 }
 
-// AiCapability 已废弃：左侧不再放"AI能力"分组，听雨即默认能力，新建会话由顶部按钮触发
-
 const dashboardItems: NavItem[] = [
   { title: "市场看板", url: "/tools/market", icon: BarChart3 },
   { title: "算法预测", url: "/tools/prediction", icon: LineChart },
-  { title: "结算计算", url: "/tools/calculator", icon: Calculator },
+  { title: "结算计算器", url: "/tools/calculator", icon: Calculator },
   { title: "交易日历", url: "/tools/calendar", icon: Calendar },
   { title: "交易执行", url: "/tools/trading", icon: Zap, placeholder: true },
 ];
@@ -69,7 +70,7 @@ function getTabFromPath(pathname: string): SidebarTab {
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  
   const [activeTab, setActiveTab] = useState<SidebarTab>(() => getTabFromPath(location.pathname));
 
   useEffect(() => {
@@ -78,12 +79,10 @@ export function AppSidebar() {
 
   const handleTabClick = (tab: SidebarTab) => {
     setActiveTab(tab);
-    if (tab === "ai") navigate("/ai/policy?cap=policy");
+    if (tab === "ai") navigate("/ai/policy");
     else if (tab === "dashboard") navigate(dashboardItems[0].url);
     else if (tab === "plugin") navigate(pluginItems[0].url);
   };
-
-  const currentPid = searchParams.get("pid");
 
   return (
     <Sidebar collapsible="none" className="border-r bg-sidebar">
@@ -111,11 +110,11 @@ export function AppSidebar() {
         </div>
 
         {activeTab === "ai" ? (
-          <AiPanel currentPid={currentPid} />
+          <AiPanel />
         ) : (
-          <nav className="flex-1 py-1.5 px-1.5 flex flex-col gap-px">
+          <nav className="flex-1 py-2 px-2 flex flex-col gap-0.5">
             {(activeTab === "dashboard" ? dashboardItems : pluginItems).map((item) => {
-              const isActive = !item.placeholder && location.pathname === item.url;
+              const isActive = !item.placeholder && location.pathname.startsWith(item.url);
               const handleClick = (e: React.MouseEvent) => {
                 if (item.placeholder) {
                   e.preventDefault();
@@ -128,19 +127,16 @@ export function AppSidebar() {
                   key={item.title}
                   onClick={handleClick}
                   title={item.title + (item.placeholder ? " (占位)" : "")}
-                  className={`relative w-full h-8 flex items-center gap-2 px-2 rounded text-left transition-colors ${
+                  className={`w-full h-9 flex items-center gap-2 px-2.5 rounded-md text-left transition-colors ${
                     isActive
-                      ? "bg-secondary text-primary font-medium"
+                      ? "bg-primary/10 text-primary font-medium"
                       : item.placeholder
                       ? "text-muted-foreground/50 cursor-not-allowed"
-                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                      : "text-foreground/80 hover:bg-secondary/60 hover:text-foreground"
                   }`}
                 >
-                  {isActive && (
-                    <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
-                  )}
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span className="text-xs leading-none truncate">
+                  <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
+                  <span className="text-[13px] leading-none truncate">
                     {item.title}
                   </span>
                 </button>
@@ -154,15 +150,18 @@ export function AppSidebar() {
 }
 
 // ============================================================
-// AI 面板（轻量会话工作台）：新建会话 / 历史政策（跟随省份）/ 置顶 + 最近会话
-// 左侧只做"选择对象"，处理动作（星标 / 置顶 / 分析 / 追问 / 删除）放右侧主区
+// 听雨面板：新建会话 / 历史政策（跟随省份）/ 置顶 + 最近会话
 // ============================================================
-function AiPanel({ currentPid }: { currentPid: string | null }) {
-  // currentPid: 当前 URL 选中的历史政策 id（用于左侧高亮）
+function AiPanel() {
   const navigate = useNavigate();
   const { province, label: provinceLabel } = useProvince();
-  const { sessions, togglePin, rename, remove, create } = useChatSessions();
-  const { policies, removeMany: removePolicies } = useHistoricalPolicies();
+  const { sessions, togglePin, rename, remove, removeMany, create } = useChatSessions();
+  const {
+    policies,
+    toggleStar,
+    togglePin: togglePolicyPin,
+    removeMany: removePolicies,
+  } = useHistoricalPolicies();
 
   const [policyMultiSelect, setPolicyMultiSelect] = useState(false);
   const [selectedPolicyIds, setSelectedPolicyIds] = useState<Set<string>>(new Set());
@@ -208,7 +207,7 @@ function AiPanel({ currentPid }: { currentPid: string | null }) {
 
   const handleNewSession = () => {
     const sess = create("新建会话");
-    navigate(`/ai/policy?cap=policy&sid=${sess.id}`);
+    navigate(`/ai/policy?sid=${sess.id}`);
   };
 
   const startRename = (id: string, current: string) => {
@@ -233,8 +232,8 @@ function AiPanel({ currentPid }: { currentPid: string | null }) {
         </button>
       </div>
 
-      {/* 历史政策（跟随省份）—— 紧随新建会话，左侧只做"选择"：点击进入右侧主区处理 */}
-      <div className="px-2 pt-2 pb-1.5">
+      {/* 历史政策（跟随省份） */}
+      <div className="px-2 pt-2 pb-1.5 border-t">
         <div className="flex items-center justify-between px-2 pb-1">
           <p
             className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider truncate"
@@ -264,27 +263,26 @@ function AiPanel({ currentPid }: { currentPid: string | null }) {
             )}
           </button>
         </div>
-        <div className="max-h-56 overflow-auto flex flex-col gap-px">
+        <div className="max-h-40 overflow-auto flex flex-col gap-px">
           {visiblePolicies.length === 0 ? (
             <p className="text-[11px] text-muted-foreground/70 px-2 py-1">暂无</p>
           ) : (
             visiblePolicies.map((p) => {
               const selected = selectedPolicyIds.has(p.id);
-              const isActive = !policyMultiSelect && currentPid === p.id;
               return (
                 <div
                   key={p.id}
                   className={`group relative rounded px-2 py-1.5 hover:bg-secondary/60 ${
                     selected ? "bg-primary/10" : ""
-                  } ${isActive ? "bg-secondary" : ""}`}
+                  }`}
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-start gap-1.5">
                     {policyMultiSelect && (
                       <input
                         type="checkbox"
                         checked={selected}
                         onChange={() => togglePolicySelect(p.id)}
-                        className="h-3 w-3 shrink-0 accent-primary"
+                        className="mt-0.5 h-3 w-3 shrink-0 accent-primary"
                       />
                     )}
                     <button
@@ -292,18 +290,62 @@ function AiPanel({ currentPid }: { currentPid: string | null }) {
                         if (policyMultiSelect) {
                           togglePolicySelect(p.id);
                         } else {
-                          navigate(`/ai/policy?cap=policy&pid=${p.id}`);
+                          navigate(`/ai/policy?pid=${p.id}`);
                         }
                       }}
-                      className="flex-1 min-w-0 text-left flex items-center gap-1"
+                      className="flex-1 min-w-0 text-left"
                       title={p.title}
                     >
-                      {p.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
-                      {p.starred && <Star className="h-3 w-3 fill-warning text-warning shrink-0" />}
-                      <span className={`text-[11px] leading-tight truncate ${isActive ? "text-primary font-medium" : "text-foreground/85"}`}>
-                        {p.title}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        {p.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
+                        {p.starred && <Star className="h-3 w-3 fill-warning text-warning shrink-0" />}
+                        <span className="text-[11px] leading-tight text-foreground/85 truncate">
+                          {p.title}
+                        </span>
+                      </div>
                     </button>
+                    {!policyMultiSelect && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="opacity-0 group-hover:opacity-100 h-5 w-5 flex items-center justify-center rounded hover:bg-secondary text-muted-foreground shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-36">
+                          <DropdownMenuItem onClick={() => toggleStar(p.id)}>
+                            {p.starred ? (
+                              <>
+                                <StarOff className="h-3.5 w-3.5 mr-2" /> 取消星标
+                              </>
+                            ) : (
+                              <>
+                                <Star className="h-3.5 w-3.5 mr-2" /> 加星标
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => togglePolicyPin(p.id)}>
+                            {p.pinned ? (
+                              <>
+                                <PinOff className="h-3.5 w-3.5 mr-2" /> 取消置顶
+                              </>
+                            ) : (
+                              <>
+                                <Pin className="h-3.5 w-3.5 mr-2" /> 置顶
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => removePolicies([p.id])}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-2" /> 删除
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
               );
@@ -330,7 +372,7 @@ function AiPanel({ currentPid }: { currentPid: string | null }) {
                 onStartRename={() => startRename(s.id, s.title)}
                 onTogglePin={() => togglePin(s.id)}
                 onRemove={() => remove(s.id)}
-                onOpen={() => navigate(`/ai/policy?cap=policy&sid=${s.id}`)}
+                onOpen={() => navigate(`/ai/policy?sid=${s.id}`)}
               />
             ))}
           </div>
@@ -371,7 +413,7 @@ function AiPanel({ currentPid }: { currentPid: string | null }) {
                 onStartRename={() => startRename(s.id, s.title)}
                 onTogglePin={() => togglePin(s.id)}
                 onRemove={() => remove(s.id)}
-                onOpen={() => navigate(`/ai/policy?cap=policy&sid=${s.id}`)}
+                onOpen={() => navigate(`/ai/policy?sid=${s.id}`)}
               />
             ))
           )}

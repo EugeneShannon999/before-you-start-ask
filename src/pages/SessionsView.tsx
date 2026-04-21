@@ -37,11 +37,11 @@ export default function SessionsView() {
 
   const handleNew = () => {
     const sess = create("新建会话");
-    navigate(`/ai/policy?cap=policy&sid=${sess.id}`);
+    navigate(`/ai/policy?sid=${sess.id}`);
   };
 
   const handleOpen = (s: ChatSession) => {
-    navigate(`/ai/policy?cap=policy&sid=${s.id}`);
+    navigate(`/ai/policy?sid=${s.id}`);
   };
 
   const startRename = (s: ChatSession) => {
@@ -61,7 +61,7 @@ export default function SessionsView() {
       {/* 顶栏：返回 + 搜索 + 新建 */}
       <header className="h-12 border-b flex items-center px-4 gap-2 shrink-0">
         <button
-          onClick={() => navigate("/ai/policy?cap=policy")}
+          onClick={() => navigate("/ai/policy")}
           className="h-7 w-7 rounded hover:bg-secondary flex items-center justify-center text-muted-foreground"
           title="返回"
         >
