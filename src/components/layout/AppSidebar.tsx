@@ -43,13 +43,6 @@ interface NavItem {
   placeholder?: boolean;
 }
 
-interface AiCapability {
-  key: "policy" | "review";
-  title: string;
-  icon: LucideIcon;
-  placeholder?: boolean;
-}
-
 const dashboardItems: NavItem[] = [
   { title: "市场看板", url: "/tools/market", icon: BarChart3 },
   { title: "算法预测", url: "/tools/prediction", icon: LineChart },
@@ -86,12 +79,10 @@ export function AppSidebar() {
 
   const handleTabClick = (tab: SidebarTab) => {
     setActiveTab(tab);
-    if (tab === "ai") navigate("/ai/policy?cap=policy");
+    if (tab === "ai") navigate("/ai/policy");
     else if (tab === "dashboard") navigate(dashboardItems[0].url);
     else if (tab === "plugin") navigate(pluginItems[0].url);
   };
-
-  const activeCap = (searchParams.get("cap") as "policy" | "review") || "policy";
 
   return (
     <Sidebar collapsible="none" className="border-r bg-sidebar">
