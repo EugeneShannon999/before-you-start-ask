@@ -9,6 +9,7 @@ import { ProvinceProvider } from "@/contexts/ProvinceContext";
 import PolicyCenter from "./pages/PolicyCenter";
 import PolicyDetail from "./pages/PolicyDetail";
 import SessionsView from "./pages/SessionsView";
+import PoliciesListView from "./pages/PoliciesListView";
 
 import CustomersPage from "./pages/calculator/CustomersPage";
 import RunsPage from "./pages/calculator/RunsPage";
@@ -48,6 +49,7 @@ const App = () => (
                   <Route path="/ai/policy" element={<PolicyCenter />} />
                   <Route path="/ai/policy/:id" element={<PolicyDetail />} />
                   <Route path="/ai/sessions" element={<SessionsView />} />
+                  <Route path="/ai/policies" element={<PoliciesListView />} />
                   <Route path="/tools/market" element={<MarketInfo />} />
                   <Route path="/tools/prediction" element={<Prediction />} />
 
