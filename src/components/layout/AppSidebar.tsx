@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Puzzle,
   History,
+  Megaphone,
   Plus,
   Pin,
   PinOff,
