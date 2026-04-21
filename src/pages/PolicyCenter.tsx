@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Brain,
   History,
@@ -9,8 +10,12 @@ import {
   Sparkles,
   Plus,
   Construction,
+  CalendarRange,
+  AlertOctagon,
+  AlertTriangle,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { p0Messages, p1Messages, p2QuarterSummary, formatMsgTime } from "@/lib/messageMocks";
 
 type Capability = "policy" | "review";
 
