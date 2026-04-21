@@ -139,18 +139,21 @@ export default function PoliciesListView() {
 
   return (
     <div className="h-[calc(100vh-3rem)] flex flex-col bg-background">
-      {/* 顶栏：标题（左） + 三段 Tab（中右） + 省份下拉（最右） */}
+      {/* 第一行：标题（左） + 分类 Tab（中） + 省份/批量/全部已读（右） */}
       <header className="h-12 border-b flex items-center px-5 gap-3 shrink-0">
-        <Megaphone className="h-4 w-4 text-primary shrink-0" />
-        <h1 className="text-sm font-semibold shrink-0">布告栏</h1>
-        {unreadCount > 0 && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive text-destructive-foreground tabular-nums">
-            {unreadCount} 未读
-          </span>
-        )}
+        {/* 左：标题 */}
+        <div className="flex items-center gap-2 shrink-0 w-[200px]">
+          <Megaphone className="h-4 w-4 text-primary shrink-0" />
+          <h1 className="text-sm font-semibold">布告栏</h1>
+          {unreadCount > 0 && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive text-destructive-foreground tabular-nums">
+              {unreadCount}
+            </span>
+          )}
+        </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          {/* 三段 Tab：全部 / 政策 / 公告 */}
+        {/* 中：分类 Tab */}
+        <div className="flex-1 flex justify-center">
           <div className="inline-flex items-center rounded-md border bg-card p-0.5 h-8 text-xs">
             {([
               { v: "all", label: "全部" },
@@ -160,7 +163,7 @@ export default function PoliciesListView() {
               <button
                 key={t.v}
                 onClick={() => setKind(t.v)}
-                className={`h-7 px-3 rounded transition-colors ${
+                className={`h-7 px-4 rounded transition-colors ${
                   kind === t.v
                     ? "bg-primary/10 text-primary font-medium"
                     : "text-muted-foreground hover:text-foreground"
@@ -170,13 +173,15 @@ export default function PoliciesListView() {
               </button>
             ))}
           </div>
+        </div>
 
-          {/* 省份下拉 */}
+        {/* 右：省份 + 批量管理 + 全部已读 */}
+        <div className="flex items-center gap-2 shrink-0 w-[200px] justify-end">
           <Select
             value={province}
             onValueChange={(v) => setProvince(v as ProvinceCode)}
           >
-            <SelectTrigger className="h-8 w-[120px] text-xs">
+            <SelectTrigger className="h-8 w-[100px] text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -187,12 +192,56 @@ export default function PoliciesListView() {
               ))}
             </SelectContent>
           </Select>
+
+          {multi ? (
+            <>
+              <button
+                onClick={() => {
+                  if (selected.size > 0) {
+                    removeMany([...selected]);
+                    setSelected(new Set());
+                  }
+                  setMulti(false);
+                }}
+                disabled={selected.size === 0}
+                className="h-8 px-3 rounded-md bg-destructive text-destructive-foreground text-xs hover:opacity-90 disabled:opacity-40 shrink-0"
+              >
+                删除({selected.size})
+              </button>
+              <button
+                onClick={() => {
+                  setMulti(false);
+                  setSelected(new Set());
+                }}
+                className="h-8 px-3 rounded-md border text-xs hover:bg-secondary shrink-0"
+              >
+                取消
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setMulti(true)}
+                className="h-8 px-3 rounded-md border text-xs hover:bg-secondary text-muted-foreground shrink-0"
+              >
+                批量管理
+              </button>
+              <button
+                onClick={() => markAllRead(visible.map((p) => p.id))}
+                disabled={unreadCount === 0}
+                className="h-8 px-3 rounded-md border text-xs hover:bg-secondary text-muted-foreground shrink-0 flex items-center gap-1 disabled:opacity-40"
+                title="将当前列表全部标记为已读"
+              >
+                <CheckCheck className="h-3.5 w-3.5" />
+                全部已读
+              </button>
+            </>
+          )}
         </div>
       </header>
 
-      {/* 工具栏：居中搜索 + 时间快捷 + 未读 + 批量 */}
-      <div className="px-5 py-3 border-b flex items-center gap-3 shrink-0">
-        {/* 左侧：时间快捷 */}
+      {/* 第二行：筛选栏（时间 + 仅未读 + 搜索） */}
+      <div className="px-5 py-2.5 border-b flex items-center gap-3 shrink-0 bg-muted/20">
         <Select value={range} onValueChange={(v) => setRange(v as RangeFilter)}>
           <SelectTrigger className="h-8 w-[120px] text-xs shrink-0">
             <SelectValue />
@@ -208,7 +257,7 @@ export default function PoliciesListView() {
 
         <button
           onClick={() => setUnreadOnly((v) => !v)}
-          className={`h-8 px-3 rounded-md text-xs border transition-colors ${
+          className={`h-8 px-3 rounded-md text-xs border transition-colors shrink-0 ${
             unreadOnly
               ? "bg-primary/10 border-primary/40 text-primary"
               : "text-muted-foreground hover:bg-secondary"
@@ -217,9 +266,8 @@ export default function PoliciesListView() {
           仅未读
         </button>
 
-        {/* 中间：搜索框居中 */}
         <div className="flex-1 flex justify-center">
-          <div className="w-full max-w-md relative">
+          <div className="w-full max-w-sm relative">
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={q}
@@ -230,54 +278,8 @@ export default function PoliciesListView() {
           </div>
         </div>
 
-        {/* 右侧：批量管理 / 全部已读 */}
-        {multi ? (
-          <>
-            <span className="text-xs text-muted-foreground shrink-0">
-              已选 {selected.size}
-            </span>
-            <button
-              onClick={() => {
-                if (selected.size > 0) {
-                  removeMany([...selected]);
-                  setSelected(new Set());
-                }
-                setMulti(false);
-              }}
-              disabled={selected.size === 0}
-              className="h-8 px-3 rounded-md bg-destructive text-destructive-foreground text-xs hover:opacity-90 disabled:opacity-40 shrink-0"
-            >
-              删除所选
-            </button>
-            <button
-              onClick={() => {
-                setMulti(false);
-                setSelected(new Set());
-              }}
-              className="h-8 px-3 rounded-md border text-xs hover:bg-secondary shrink-0"
-            >
-              取消
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => markAllRead(visible.map((p) => p.id))}
-              disabled={unreadCount === 0}
-              className="h-8 px-3 rounded-md border text-xs hover:bg-secondary text-muted-foreground shrink-0 flex items-center gap-1 disabled:opacity-40"
-              title="将当前列表全部标记为已读"
-            >
-              <CheckCheck className="h-3.5 w-3.5" />
-              全部已读
-            </button>
-            <button
-              onClick={() => setMulti(true)}
-              className="h-8 px-3 rounded-md border text-xs hover:bg-secondary text-muted-foreground shrink-0"
-            >
-              批量管理
-            </button>
-          </>
-        )}
+        {/* 右侧占位，保持搜索框居中对齐 */}
+        <div className="w-[200px] shrink-0" />
       </div>
 
       {/* 列表 */}
