@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import {
   Brain,
-  MessageSquare,
-  PieChart,
   History,
   BarChart3,
   LineChart,
