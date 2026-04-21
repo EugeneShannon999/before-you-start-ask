@@ -11,8 +11,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     <SidebarProvider
       style={
         {
-          "--sidebar-width": "10.5rem",
-          "--sidebar-width-icon": "2.5rem",
+          "--sidebar-width": "4rem",
+          "--sidebar-width-icon": "4rem",
         } as React.CSSProperties
       }
     >
