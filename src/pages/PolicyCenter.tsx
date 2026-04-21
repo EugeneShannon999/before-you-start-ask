@@ -61,6 +61,7 @@ export default function PolicyCenter() {
     : "policy";
   const [input, setInput] = useState("");
   const incomingMsgId = searchParams.get("msgId");
+  const incomingPid = searchParams.get("pid");
 
   // 触发自动展开 P2 季度整合：URL 带 ?p2=1（侧栏按钮跳过来）或欢迎区按钮直接点击
   const [showQuarter, setShowQuarter] = useState(false);
@@ -73,9 +74,16 @@ export default function PolicyCenter() {
     p0Messages.find((m) => m.id === incomingMsgId) ||
     p1Messages.find((m) => m.id === incomingMsgId);
 
+  // 历史政策（左侧选中 → 右侧主区处理）
+  const { policies, toggleStar, togglePin, removeMany } = useHistoricalPolicies();
+  const incomingPolicy = useMemo(
+    () => (incomingPid ? policies.find((p) => p.id === incomingPid) : undefined),
+    [incomingPid, policies]
+  );
+
   useEffect(() => {
-    if (incomingMsg) setInput("");
-  }, [incomingMsg]);
+    if (incomingMsg || incomingPolicy) setInput("");
+  }, [incomingMsg, incomingPolicy]);
 
   const current = capabilities.find((c) => c.key === active)!;
 
