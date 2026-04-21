@@ -1,8 +1,6 @@
 import { useState } from "react";
 import {
   Brain,
-  MessageSquare,
-  PieChart,
   History,
   Send,
   FileText,
@@ -10,17 +8,23 @@ import {
   CornerDownRight,
   Sparkles,
   Plus,
+  Construction,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-type Capability = "policy" | "qa" | "chart" | "review";
+type Capability = "policy" | "review";
 
-const capabilities: { key: Capability; name: string; icon: typeof Brain; desc: string }[] = [
+interface CapabilityDef {
+  key: Capability;
+  name: string;
+  icon: typeof Brain;
+  desc: string;
+  placeholder?: boolean;
+}
+
+const capabilities: CapabilityDef[] = [
   { key: "policy", name: "政策 AI", icon: Brain, desc: "解读最新政策与影响" },
-  { key: "qa", name: "交易问答", icon: MessageSquare, desc: "市场规则与交易策略问答" },
-  { key: "chart", name: "图表解读", icon: PieChart, desc: "上传或选取图表自动解释" },
-  { key: "review", name: "复盘助手", icon: History, desc: "复盘某日交易与价差成因" },
+  { key: "review", name: "复盘助手", icon: History, desc: "复盘某日交易与价差成因", placeholder: true },
 ];
 
 const recentSessions: Record<Capability, { id: string; title: string; ts: string }[]> = {
@@ -29,16 +33,7 @@ const recentSessions: Record<Capability, { id: string; title: string; ts: string
     { id: "p2", title: "全国统一电力市场征求意见影响", ts: "昨天" },
     { id: "p3", title: "广东现货分段考核机制", ts: "2天前" },
   ],
-  qa: [
-    { id: "q1", title: "竞价空间为什么会变小？", ts: "09:10" },
-    { id: "q2", title: "实时价差扩大的常见原因", ts: "昨天" },
-  ],
-  chart: [
-    { id: "c1", title: "解读 7-15 日前出清曲线", ts: "08:50" },
-  ],
-  review: [
-    { id: "r1", title: "7-14 价差异常复盘", ts: "昨天" },
-  ],
+  review: [],
 };
 
 interface PolicyCard {
@@ -114,8 +109,15 @@ export default function PolicyCenter() {
               }`}
             >
               <c.icon className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium leading-tight">{c.name}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium leading-tight flex items-center gap-1.5">
+                  {c.name}
+                  {c.placeholder && (
+                    <span className="text-[10px] px-1 py-0.5 rounded bg-muted text-muted-foreground font-normal">
+                      占位
+                    </span>
+                  )}
+                </p>
                 <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 line-clamp-1">
                   {c.desc}
                 </p>
@@ -199,19 +201,16 @@ export default function PolicyCenter() {
               </div>
             ))}
 
-          {active !== "policy" && (
-            <div className="max-w-2xl mx-auto space-y-3">
-              <div className="rounded-lg border bg-card shadow-notion p-4">
-                <p className="text-xs text-muted-foreground mb-1.5">示例问答</p>
-                <p className="text-sm font-medium mb-2">
-                  {active === "qa" && "今天 18:00-20:00 实时价差为什么变大？"}
-                  {active === "chart" && "请解读今天的日前出清曲线"}
-                  {active === "review" && "复盘 7-14 全天交易表现"}
+          {active === "review" && (
+            <div className="max-w-2xl mx-auto">
+              <div className="rounded-lg border bg-card shadow-notion p-12 text-center">
+                <Construction className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-base font-semibold mb-2">🚧 复盘助手开发中</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  该能力将在后续版本中上线
                 </p>
-                <p className="text-sm text-foreground/85 leading-relaxed">
-                  根据当前数据：晚高峰时段总负荷达 4850 MW，新能源出力快速回落 (-65%)，
-                  竞价空间从 1200 MW 收窄至 480 MW，叠加联络线外送计划下调，实时电价
-                  上行 12.4%，与日前价差扩大至 +47 元/MWh。
+                <p className="text-xs text-muted-foreground">
+                  预计包含：交易日复盘、价差成因归因、异常时段定位、与算法预测对比
                 </p>
               </div>
             </div>
