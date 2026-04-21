@@ -185,6 +185,76 @@ export function getDataset(granularity: Granularity) {
   };
 }
 
+// ============================================================
+// 价差影响因子对照（SP1）
+// 字段口径：
+//   spread     = 日前电价 - 实时电价
+//   loadDev    = 实际负荷 - 日前负荷预测
+//   tieLineDev = 实际联络线总量 - 日前联络线计划总量
+// 候选主因仅做候选判断，不做因果定论：
+//   "load" 负荷偏差主导 / "tieLine" 联络线偏差主导
+//   "mixed" 多因子叠加 / "none" 暂无明显主导因子
+// 风电 / 光伏差列 SP1 不展示（无同口径实际值）
+// ============================================================
+export type SpreadDriver = "load" | "tieLine" | "mixed" | "none";
+export interface SpreadFactorRow {
+  hour: number;
+  hourLabel: string;
+  periodRange: string;
+  spread: number;       // 元/MWh
+  loadDev: number;      // MW
+  tieLineDev: number;   // MW
+  driver: SpreadDriver;
+}
+
+// 联络线"计划"基线：在 boundary96.tieLine（视作实际）基础上做平稳化处理
+const tieLinePlan96 = boundary96.map((p, i) => {
+  // 用滑动平均近似日前计划，并叠加少量偏置
+  const w = [boundary96[(i - 2 + 96) % 96].tieLine, boundary96[(i - 1 + 96) % 96].tieLine, p.tieLine];
+  return Math.round(w.reduce((s, v) => s + v, 0) / w.length + (seeded(i + 700) - 0.5) * 30);
+});
+
+function classifyDriver(spread: number, loadDev: number, tieLineDev: number): SpreadDriver {
+  // SP1 简单候选判断：相对幅度比较 + 阈值
+  const aSpread = Math.abs(spread);
+  if (aSpread < 8) return "none";
+  const aLoad = Math.abs(loadDev);
+  const aTie = Math.abs(tieLineDev);
+  if (aLoad < 80 && aTie < 60) return "none";
+  // 主导项：远大于另一项（>=1.8x）且本身>阈值
+  if (aLoad >= aTie * 1.8 && aLoad >= 80) return "load";
+  if (aTie >= aLoad * 1.8 && aTie >= 60) return "tieLine";
+  return "mixed";
+}
+
+export const spreadFactorHourly: SpreadFactorRow[] = Array.from({ length: 24 }, (_, h) => {
+  const slice = (arr: number[]) => arr.slice(h * 4, h * 4 + 4);
+  const avg = (arr: number[]) => arr.reduce((s, v) => s + v, 0) / arr.length;
+
+  const spread = Math.round(avg(slice(price96.map((p) => p.realtime - p.dayAhead))));
+  const loadDev = Math.round(avg(slice(load96.map((l) => l.deviation))));
+  const tieActualAvg = avg(slice(boundary96.map((b) => b.tieLine)));
+  const tiePlanAvg = avg(slice(tieLinePlan96));
+  const tieLineDev = Math.round(tieActualAvg - tiePlanAvg);
+
+  return {
+    hour: h,
+    hourLabel: `${String(h).padStart(2, "0")}:00`,
+    periodRange: `${h * 4 + 1}-${h * 4 + 4}`,
+    spread,
+    loadDev,
+    tieLineDev,
+    driver: classifyDriver(spread, loadDev, tieLineDev),
+  };
+});
+
+export const SPREAD_DRIVER_LABEL: Record<SpreadDriver, string> = {
+  load: "负荷偏差主导",
+  tieLine: "联络线偏差主导",
+  mixed: "多因子叠加",
+  none: "暂无明显主导因子",
+};
+
 // 顶部摘要
 const dayAheadAvg = Math.round(price96.reduce((s, p) => s + p.dayAhead, 0) / 96);
 const realtimeAvg = Math.round(price96.reduce((s, p) => s + p.realtime, 0) / 96);
