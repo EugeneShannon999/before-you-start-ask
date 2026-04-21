@@ -167,18 +167,14 @@ export function AppSidebar() {
 }
 
 // ============================================================
-// AI 面板：新建会话 / AI 能力 / 历史政策（跟随省份）/ 置顶 + 最近会话
+// AI 面板（轻量会话工作台）：新建会话 / 历史政策（跟随省份）/ 置顶 + 最近会话
+// 左侧只做"选择对象"，处理动作（星标 / 置顶 / 分析 / 追问 / 删除）放右侧主区
 // ============================================================
-function AiPanel({ activeCap }: { activeCap: "policy" | "review" }) {
+function AiPanel({ currentPid }: { currentPid: string | null }) {
   const navigate = useNavigate();
   const { province, label: provinceLabel } = useProvince();
-  const { sessions, togglePin, rename, remove, removeMany, create } = useChatSessions();
-  const {
-    policies,
-    toggleStar,
-    togglePin: togglePolicyPin,
-    removeMany: removePolicies,
-  } = useHistoricalPolicies();
+  const { sessions, togglePin, rename, remove, create } = useChatSessions();
+  const { policies, removeMany: removePolicies } = useHistoricalPolicies();
 
   const [policyMultiSelect, setPolicyMultiSelect] = useState(false);
   const [selectedPolicyIds, setSelectedPolicyIds] = useState<Set<string>>(new Set());
