@@ -408,41 +408,67 @@ export default function MarketInfo() {
           )}
         </section>
 
-        {/* 6. 底部完整公告/异常 */}
+        {/* 6. 公告信息 / 规则预警 */}
+        {/* 备注：公告 = 原生公告（页面抓取/公开API），预警 = 规则计算（基于已落地数据）；
+            数据来源不明确的预警（如「新能源预测偏差」）SP1 暂不展示，待补实际数据来源后再开启 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <section className="rounded-lg shadow-notion bg-card p-4">
-            <h3 className="text-sm font-semibold mb-2">完整公告列表</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold">公告信息</h3>
+              <span className="text-[10px] text-muted-foreground">来源：交易中心 / 调度中心 公开披露</span>
+            </div>
             <div className="space-y-1">
               {marketEvents.filter((e) => e.category === "公告" || e.category === "规则").map((a) => (
                 <div key={a.id} className="flex items-start justify-between py-2 border-b last:border-b-0 gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium leading-snug">{a.title}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">{a.detail}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <p className="text-xs font-medium leading-snug truncate">{a.title}</p>
+                      <span className="shrink-0 text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary">
+                        原生公告
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-1">
+                      {a.detail}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{a.source}</p>
                   </div>
-                  <div className="flex flex-col items-end text-[10px] text-muted-foreground shrink-0">
-                    <span>{a.source}</span>
-                    <span>{a.time}</span>
-                  </div>
+                  <span className="text-[10px] text-muted-foreground shrink-0 font-mono">{a.time}</span>
                 </div>
               ))}
             </div>
           </section>
+
           <section className="rounded-lg shadow-notion bg-card p-4">
-            <h3 className="text-sm font-semibold mb-2">完整异常/预警</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold">规则预警</h3>
+              <span className="text-[10px] text-muted-foreground">基于已落地数据 + 预设阈值</span>
+            </div>
             <div className="space-y-2">
-              {marketEvents.filter((e) => e.category === "异常" || e.category === "预警").map((a) => (
+              {ruleWarnings.map((w) => (
                 <div
-                  key={a.id}
-                  className={`flex items-start gap-2 p-2.5 rounded-md text-xs ${
-                    a.level === "high"
-                      ? "bg-destructive/10 text-destructive"
-                      : "bg-warning/10 text-warning"
+                  key={w.id}
+                  className={`p-2.5 rounded-md text-xs border ${
+                    w.level === "high"
+                      ? "border-destructive/30 bg-destructive/5"
+                      : "border-warning/30 bg-warning/5"
                   }`}
                 >
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium leading-snug">{a.title}</p>
-                    <p className="text-[11px] opacity-80 mt-0.5">{a.detail}</p>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <AlertTriangle
+                      className={`h-3.5 w-3.5 shrink-0 ${
+                        w.level === "high" ? "text-destructive" : "text-warning"
+                      }`}
+                    />
+                    <p className="font-medium text-foreground flex-1">{w.title}</p>
+                    <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                      规则计算
+                    </span>
+                  </div>
+                  <div className="pl-5 space-y-0.5 text-[11px] text-muted-foreground">
+                    <p><span className="text-foreground/70">时段：</span>{w.period}</p>
+                    <p><span className="text-foreground/70">当前值：</span>{w.current}</p>
+                    <p><span className="text-foreground/70">阈值/原因：</span>{w.threshold}</p>
+                    <p className="text-foreground/80"><span className="text-foreground/60">建议动作：</span>{w.action}</p>
                   </div>
                 </div>
               ))}
@@ -453,6 +479,61 @@ export default function MarketInfo() {
     </MarketCursorProvider>
   );
 }
+
+// ============================================================
+// 规则预警 mock (SP1)
+// 仅保留可基于公开数据 + 预设阈值推导的预警类型：
+//   实时价差扩大 / 断面接近限额 / 备用偏紧 / 必开必停状态提醒
+// 「新能源预测偏差」类预警 SP1 暂不展示（待补实际数据来源）
+// ============================================================
+interface RuleWarning {
+  id: string;
+  title: string;
+  period: string;
+  current: string;
+  threshold: string;
+  action: string;
+  level: "high" | "medium";
+}
+
+const ruleWarnings: RuleWarning[] = [
+  {
+    id: "rw-1",
+    title: "实时价差扩大",
+    period: "18:00-20:00",
+    current: "当前价差 +47 元/MWh",
+    threshold: "超过预设阈值 ±30 元/MWh",
+    action: "建议关注晚间申报策略",
+    level: "high",
+  },
+  {
+    id: "rw-2",
+    title: "断面接近限额",
+    period: "皖南-皖北断面",
+    current: "当前负载 78%",
+    threshold: "接近预警阈值 80%",
+    action: "建议关注晚高峰送电安排",
+    level: "medium",
+  },
+  {
+    id: "rw-3",
+    title: "备用偏紧",
+    period: "19:30-21:00",
+    current: "正备用 1,820 MW",
+    threshold: "低于预设阈值 2,000 MW",
+    action: "建议预留响应空间",
+    level: "medium",
+  },
+  {
+    id: "rw-4",
+    title: "必开机组状态提醒",
+    period: "全日",
+    current: "必开 6 台 / 必停 2 台",
+    threshold: "较 D-1 新增必开 1 台",
+    action: "建议复核中长期匹配",
+    level: "medium",
+  },
+];
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "destructive" | "success" }) {
   const cls =
