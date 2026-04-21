@@ -40,6 +40,7 @@ import {
   C_SUCCESS,
   C_WARNING,
 } from "@/components/market/charts";
+import { SpreadFactorMatrix } from "@/components/market/SpreadFactorMatrix";
 import type { RangeKey } from "@/components/market/ChartToolbar";
 
 interface ChartCfg {
@@ -289,7 +290,8 @@ export default function MarketInfo() {
           />
         </ChartCard>
 
-        {/* 2. 负荷预测 vs 实际 */}
+        {/* 1.1 价差影响因子对照（SP1：仅展示已确认数据列） */}
+        <SpreadFactorMatrix granularity={priceCfg.granularity} />
         <ChartCard
           index={2}
           chartId="load-forecast"
