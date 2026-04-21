@@ -201,19 +201,16 @@ export default function PolicyCenter() {
               </div>
             ))}
 
-          {active !== "policy" && (
-            <div className="max-w-2xl mx-auto space-y-3">
-              <div className="rounded-lg border bg-card shadow-notion p-4">
-                <p className="text-xs text-muted-foreground mb-1.5">示例问答</p>
-                <p className="text-sm font-medium mb-2">
-                  {active === "qa" && "今天 18:00-20:00 实时价差为什么变大？"}
-                  {active === "chart" && "请解读今天的日前出清曲线"}
-                  {active === "review" && "复盘 7-14 全天交易表现"}
+          {active === "review" && (
+            <div className="max-w-2xl mx-auto">
+              <div className="rounded-lg border bg-card shadow-notion p-12 text-center">
+                <Construction className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-base font-semibold mb-2">🚧 复盘助手开发中</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  该能力将在后续版本中上线
                 </p>
-                <p className="text-sm text-foreground/85 leading-relaxed">
-                  根据当前数据：晚高峰时段总负荷达 4850 MW，新能源出力快速回落 (-65%)，
-                  竞价空间从 1200 MW 收窄至 480 MW，叠加联络线外送计划下调，实时电价
-                  上行 12.4%，与日前价差扩大至 +47 元/MWh。
+                <p className="text-xs text-muted-foreground">
+                  预计包含：交易日复盘、价差成因归因、异常时段定位、与算法预测对比
                 </p>
               </div>
             </div>
