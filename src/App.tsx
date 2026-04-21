@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { CalculatorLayout } from "@/components/layout/CalculatorLayout";
+import { CalculatorShell } from "@/components/layout/CalculatorShell";
 import { ProvinceProvider } from "@/contexts/ProvinceContext";
 import PolicyCenter from "./pages/PolicyCenter";
 import PolicyDetail from "./pages/PolicyDetail";
@@ -51,30 +51,30 @@ const App = () => (
                   <Route path="/tools/market" element={<MarketInfo />} />
                   <Route path="/tools/prediction" element={<Prediction />} />
 
-                  {/* 结算计算器 - 嵌套二级侧边栏 + 多级路由 */}
+                  {/* 结算计算器 - 两栏布局：左侧全局导航 + 右侧主内容（顶部 tabs） */}
                   <Route
                     path="/tools/calculator"
                     element={<Navigate to="/tools/calculator/customers" replace />}
                   />
                   <Route
                     path="/tools/calculator/customers"
-                    element={<CalculatorLayout><CustomersPage /></CalculatorLayout>}
+                    element={<CalculatorShell><CustomersPage /></CalculatorShell>}
                   />
                   <Route
                     path="/tools/calculator/runs"
-                    element={<CalculatorLayout><RunsPage /></CalculatorLayout>}
+                    element={<CalculatorShell><RunsPage /></CalculatorShell>}
                   />
                   <Route
                     path="/tools/calculator/runs/:runId/results"
-                    element={<CalculatorLayout><RunResultPage /></CalculatorLayout>}
+                    element={<CalculatorShell inner><RunResultPage /></CalculatorShell>}
                   />
                   <Route
                     path="/tools/calculator/policies"
-                    element={<CalculatorLayout><PoliciesPage /></CalculatorLayout>}
+                    element={<CalculatorShell><PoliciesPage /></CalculatorShell>}
                   />
                   <Route
                     path="/tools/calculator/batches"
-                    element={<CalculatorLayout><BatchesPage /></CalculatorLayout>}
+                    element={<CalculatorShell><BatchesPage /></CalculatorShell>}
                   />
 
                   <Route path="/tools/calendar" element={<TradeCalendar />} />
