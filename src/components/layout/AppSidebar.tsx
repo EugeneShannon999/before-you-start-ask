@@ -290,7 +290,7 @@ function AiPanel() {
                         if (policyMultiSelect) {
                           togglePolicySelect(p.id);
                         } else {
-                          navigate(`/ai/policy?cap=policy&pid=${p.id}`);
+                          navigate(`/ai/policy?pid=${p.id}`);
                         }
                       }}
                       className="flex-1 min-w-0 text-left"
@@ -372,7 +372,7 @@ function AiPanel() {
                 onStartRename={() => startRename(s.id, s.title)}
                 onTogglePin={() => togglePin(s.id)}
                 onRemove={() => remove(s.id)}
-                onOpen={() => navigate(`/ai/policy?cap=policy&sid=${s.id}`)}
+                onOpen={() => navigate(`/ai/policy?sid=${s.id}`)}
               />
             ))}
           </div>
@@ -413,7 +413,7 @@ function AiPanel() {
                 onStartRename={() => startRename(s.id, s.title)}
                 onTogglePin={() => togglePin(s.id)}
                 onRemove={() => remove(s.id)}
-                onOpen={() => navigate(`/ai/policy?cap=policy&sid=${s.id}`)}
+                onOpen={() => navigate(`/ai/policy?sid=${s.id}`)}
               />
             ))
           )}
