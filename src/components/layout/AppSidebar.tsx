@@ -93,9 +93,9 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarContent className="pt-0">
-        {/* Tab switcher：选中态展开图标+文字，未选中收为小图标按钮 */}
+        {/* Tab switcher：与顶栏同高，整行铺满侧边栏宽度 */}
         {!collapsed && (
-          <div className="flex items-stretch gap-0.5 p-1 border-b bg-secondary/30">
+          <div className="flex items-stretch gap-1 px-2 h-12 border-b bg-secondary/30 shrink-0">
             {tabConfig.map((tab) => {
               const active = activeTab === tab.key;
               return (
@@ -103,13 +103,13 @@ export function AppSidebar() {
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   title={tab.label}
-                  className={`flex items-center justify-center gap-1 h-6 rounded text-[11px] font-medium transition-all ${
+                  className={`my-1.5 flex items-center justify-center gap-1 rounded text-[11px] font-medium transition-all ${
                     active
-                      ? "flex-1 bg-card text-primary shadow-notion px-1.5"
-                      : "w-6 shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      ? "flex-1 bg-card text-primary shadow-notion px-2"
+                      : "w-7 shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary"
                   }`}
                 >
-                  <tab.icon className="h-3 w-3 shrink-0" />
+                  <tab.icon className="h-3.5 w-3.5 shrink-0" />
                   {active && <span className="truncate">{tab.label}</span>}
                 </button>
               );
