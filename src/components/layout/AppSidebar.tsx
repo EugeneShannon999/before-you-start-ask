@@ -41,9 +41,7 @@ interface NavItem {
 // 这里仍按 SP1 文案列出 4 个能力入口。
 const aiItems: NavItem[] = [
   { title: "政策 AI", url: "/ai/policy", icon: Brain },
-  { title: "交易问答", url: "/ai/policy", icon: MessageSquare },
-  { title: "图表解读", url: "/ai/policy", icon: PieChart },
-  { title: "复盘助手", url: "/ai/policy", icon: History },
+  { title: "复盘助手", url: "/ai/policy", icon: History, placeholder: true },
 ];
 
 const dashboardItems: NavItem[] = [
