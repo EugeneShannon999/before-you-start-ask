@@ -115,25 +115,26 @@ export function AppSidebar() {
 
         {groups.map((group) => (
           <SidebarGroup key={group.label}>
-            <SidebarGroupLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <SidebarGroupLabel className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-3 pt-3 pb-1">
               {!collapsed && group.label}
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-0.5 px-1.5">
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild className="h-7 px-2 text-xs">
                       <NavLink
                         to={item.url}
-                        className="hover:bg-secondary/80 transition-colors"
-                        activeClassName="bg-secondary text-primary font-medium"
+                        end
+                        className="relative rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
+                        activeClassName="!bg-sidebar-accent !text-primary font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-r before:bg-primary"
                       >
-                        <item.icon className="h-4 w-4 shrink-0" />
+                        <item.icon className="h-3.5 w-3.5 shrink-0" />
                         {!collapsed && (
-                          <span className="text-sm flex items-center gap-1.5">
+                          <span className="text-xs flex items-center gap-1.5">
                             {item.title}
                             {item.placeholder && (
-                              <span className="text-[10px] px-1 py-0.5 rounded bg-muted text-muted-foreground">
+                              <span className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground font-normal">
                                 占位
                               </span>
                             )}
