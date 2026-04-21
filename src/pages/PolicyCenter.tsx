@@ -178,7 +178,55 @@ export default function PolicyCenter() {
             <p className="text-sm text-muted-foreground">
               你好，我是「{current.name}」。基于最近 30 天的政策、出清和你的套餐数据回答。
             </p>
+
+            {/* P2 季度整合入口 - 仅 policy 能力下展示 */}
+            {active === "policy" && !incomingMsg && (
+              <button
+                onClick={triggerQuarterSummary}
+                className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-md border bg-card hover:bg-secondary text-xs text-foreground/80 hover:text-foreground transition-colors shadow-notion"
+              >
+                <CalendarRange className="h-3.5 w-3.5 text-primary" />
+                <span>查看本季度市场要闻整合</span>
+                <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground">
+                  P2 · {p2QuarterSummary.quarter} · {p2QuarterSummary.count} 条
+                </span>
+              </button>
+            )}
           </div>
+
+          {/* 入站消息上下文卡片 - 由 P0 弹窗 / P1 横条跳转进入时展示 */}
+          {incomingMsg && active === "policy" && (
+            <div className="max-w-2xl mx-auto">
+              <div className={`rounded-lg border p-4 shadow-notion ${
+                incomingMsg.level === "P0"
+                  ? "border-destructive/40 bg-destructive/5"
+                  : "border-primary/30 bg-primary/5"
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    incomingMsg.level === "P0"
+                      ? "bg-destructive/15 text-destructive"
+                      : "bg-primary/15 text-primary"
+                  }`}>
+                    {incomingMsg.level === "P0" ? (
+                      <AlertOctagon className="h-3 w-3" />
+                    ) : (
+                      <AlertTriangle className="h-3 w-3" />
+                    )}
+                    {incomingMsg.level} 消息
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {formatMsgTime(incomingMsg.publishedAt)} · {incomingMsg.source}
+                  </span>
+                </div>
+                <h3 className="text-sm font-semibold mb-1">{incomingMsg.title}</h3>
+                <p className="text-xs text-foreground/80 leading-relaxed">{incomingMsg.summary}</p>
+                <p className="text-[10px] text-muted-foreground mt-2 italic">
+                  AI 已对该消息预先解析（mock），下方对话框已预填提问，可直接发送。
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Policy cards as conversation messages */}
           {active === "policy" &&
