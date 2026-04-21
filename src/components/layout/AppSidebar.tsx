@@ -68,7 +68,7 @@ const pluginItems: NavItem[] = [
 ];
 
 const tabConfig: { key: SidebarTab; label: string; icon: LucideIcon }[] = [
-  { key: "ai", label: "AI", icon: Bot },
+  { key: "ai", label: "听雨", icon: Bot },
   { key: "dashboard", label: "看板", icon: LayoutDashboard },
   { key: "plugin", label: "插件", icon: Puzzle },
 ];
