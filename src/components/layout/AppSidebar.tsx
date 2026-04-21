@@ -152,9 +152,9 @@ export function AppSidebar() {
                   {isActive && (
                     <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
                   )}
-                  <item.icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="text-[11px] leading-none truncate">
-                    {item.title.replace(" ", "")}
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="text-xs leading-none truncate">
+                    {item.title}
                   </span>
                 </button>
               );
