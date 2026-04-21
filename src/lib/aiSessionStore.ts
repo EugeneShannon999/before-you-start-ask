@@ -24,6 +24,8 @@ export interface ChatSession {
   policyId?: string;
 }
 
+export type BulletinKind = "policy" | "notice";
+
 export interface HistoricalPolicy {
   id: string;
   title: string;
@@ -33,6 +35,8 @@ export interface HistoricalPolicy {
   oneLine: string;
   starred: boolean;
   pinned: boolean;
+  kind: BulletinKind; // 政策 / 公告
+  read: boolean; // 是否已读
 }
 
 // ---------- 默认 mock ----------
@@ -90,6 +94,8 @@ const DEFAULT_POLICIES: HistoricalPolicy[] = [
     oneLine: "中午 8 小时下偏差考核阈值由 55% 调整为 50%。",
     starred: true,
     pinned: true,
+    kind: "policy",
+    read: false,
   },
   {
     id: "pol-ah-002",
@@ -100,6 +106,8 @@ const DEFAULT_POLICIES: HistoricalPolicy[] = [
     oneLine: "明确中长期合约分时颗粒度由日级细化到 4 时段。",
     starred: false,
     pinned: false,
+    kind: "policy",
+    read: true,
   },
   {
     id: "pol-ah-003",
@@ -110,6 +118,8 @@ const DEFAULT_POLICIES: HistoricalPolicy[] = [
     oneLine: "新增分时报价档位，中标量按 15 分钟分解到曲线。",
     starred: false,
     pinned: false,
+    kind: "policy",
+    read: true,
   },
   {
     id: "pol-nat-001",
@@ -120,6 +130,8 @@ const DEFAULT_POLICIES: HistoricalPolicy[] = [
     oneLine: "明确跨省现货衔接、辅助服务分摊原则。",
     starred: true,
     pinned: false,
+    kind: "policy",
+    read: false,
   },
   {
     id: "pol-gd-001",
@@ -130,6 +142,8 @@ const DEFAULT_POLICIES: HistoricalPolicy[] = [
     oneLine: "考核分四段加权，夜段系数 1.3。",
     starred: false,
     pinned: false,
+    kind: "policy",
+    read: false,
   },
   {
     id: "pol-sd-001",
@@ -140,6 +154,57 @@ const DEFAULT_POLICIES: HistoricalPolicy[] = [
     oneLine: "整县项目并网容量上限调整，反送电纳入考核。",
     starred: false,
     pinned: false,
+    kind: "policy",
+    read: true,
+  },
+  // ---- 公告类 ----
+  {
+    id: "not-ah-001",
+    title: "【公告】安徽电力交易平台 7-20 凌晨例行维护",
+    source: "安徽电力交易中心 运维部",
+    publishedAt: "2025-07-18T16:00:00+08:00",
+    province: "anhui",
+    oneLine: "00:00-04:00 平台暂停服务，建议提前完成报价。",
+    starred: false,
+    pinned: false,
+    kind: "notice",
+    read: false,
+  },
+  {
+    id: "not-ah-002",
+    title: "【公告】月度集中竞价时间窗调整通知",
+    source: "安徽电力交易中心",
+    publishedAt: "2025-07-05T09:30:00+08:00",
+    province: "anhui",
+    oneLine: "8 月起月度竞价提交截止时间由 17:00 改为 16:00。",
+    starred: false,
+    pinned: false,
+    kind: "notice",
+    read: true,
+  },
+  {
+    id: "not-nat-001",
+    title: "【公告】国家电网迎峰度夏有序用电预案启动",
+    source: "国家电网调度中心",
+    publishedAt: "2025-07-10T08:00:00+08:00",
+    province: "all",
+    oneLine: "全国多省进入有序用电响应，关注负荷高峰时段曲线。",
+    starred: false,
+    pinned: false,
+    kind: "notice",
+    read: false,
+  },
+  {
+    id: "not-gd-001",
+    title: "【公告】广东电力市场结算账期变更",
+    source: "广东电力交易中心",
+    publishedAt: "2025-06-28T14:20:00+08:00",
+    province: "guangdong",
+    oneLine: "M+10 改为 M+8 工作日完成月度结算。",
+    starred: false,
+    pinned: false,
+    kind: "notice",
+    read: true,
   },
 ];
 
@@ -228,5 +293,18 @@ export function useHistoricalPolicies() {
     setPolicies((p) => p.filter((x) => !set.has(x.id)));
   }, []);
 
-  return { policies, toggleStar, togglePin, removeMany };
+  const markRead = useCallback((id: string, read = true) => {
+    setPolicies((p) => p.map((x) => (x.id === id ? { ...x, read } : x)));
+  }, []);
+
+  const markAllRead = useCallback((ids?: string[]) => {
+    if (!ids) {
+      setPolicies((p) => p.map((x) => ({ ...x, read: true })));
+      return;
+    }
+    const set = new Set(ids);
+    setPolicies((p) => p.map((x) => (set.has(x.id) ? { ...x, read: true } : x)));
+  }, []);
+
+  return { policies, toggleStar, togglePin, removeMany, markRead, markAllRead };
 }

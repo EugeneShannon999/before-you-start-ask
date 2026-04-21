@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Puzzle,
   History,
+  Megaphone,
   Plus,
   Pin,
   PinOff,
@@ -202,19 +203,19 @@ function AiPanel() {
         </button>
       </div>
 
-      {/* 历史政策（独立入口按钮） */}
+      {/* 布告栏（独立入口按钮） */}
       <div className="px-2 pt-2">
         <button
           onClick={() => navigate("/ai/policies")}
-          title="历史政策"
+          title="布告栏"
           className={`w-full h-9 flex items-center gap-2 px-2.5 rounded-md text-left transition-colors ${
             policiesActive
               ? "bg-primary/10 text-primary font-medium"
               : "text-foreground/80 hover:bg-secondary/60 hover:text-foreground"
           }`}
         >
-          <History className={`h-4 w-4 shrink-0 ${policiesActive ? "text-primary" : ""}`} />
-          <span className="text-[13px] leading-none truncate flex-1">历史政策</span>
+          <Megaphone className={`h-4 w-4 shrink-0 ${policiesActive ? "text-primary" : ""}`} />
+          <span className="text-[13px] leading-none truncate flex-1">布告栏</span>
         </button>
       </div>
 
@@ -313,7 +314,6 @@ function SessionRow({
 }: SessionRowProps) {
   return (
     <div className="group relative flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-secondary/60">
-      {s.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
       <button
         onClick={() => !renaming && onOpen()}
         className="flex-1 min-w-0 text-left flex flex-col gap-0.5"
