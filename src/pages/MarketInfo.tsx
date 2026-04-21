@@ -27,7 +27,7 @@ import {
 } from "@/lib/marketMocks";
 import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
 import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
-import { CurrentPeriodBar } from "@/components/market/CurrentPeriodBar";
+
 import { ChartCard } from "@/components/market/ChartCard";
 import { WorkbenchLayout, WorkbenchPanel } from "@/components/layout/WorkbenchLayout";
 import {
@@ -159,11 +159,6 @@ export default function MarketInfo() {
                 </span>
                 <span className="px-1.5 py-0.5 rounded bg-success/10 text-success">公开披露</span>
               </div>
-            </WorkbenchPanel>
-
-            {/* 当前选中时段摘要 */}
-            <WorkbenchPanel title="当前时段" compact>
-              <CurrentPeriodBar granularity={globalGranularity} />
             </WorkbenchPanel>
 
             {/* 行情摘要卡片 */}
