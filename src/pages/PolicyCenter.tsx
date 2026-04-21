@@ -8,7 +8,6 @@ import {
   ExternalLink,
   CornerDownRight,
   Sparkles,
-  Plus,
   Construction,
   CalendarRange,
   AlertOctagon,
@@ -31,15 +30,6 @@ const capabilities: CapabilityDef[] = [
   { key: "policy", name: "政策 AI", icon: Brain, desc: "解读最新政策与影响" },
   { key: "review", name: "复盘助手", icon: History, desc: "复盘某日交易与价差成因", placeholder: true },
 ];
-
-const recentSessions: Record<Capability, { id: string; title: string; ts: string }[]> = {
-  policy: [
-    { id: "p1", title: "7月安徽偏差考核新规解读", ts: "10:32" },
-    { id: "p2", title: "全国统一电力市场征求意见影响", ts: "昨天" },
-    { id: "p3", title: "广东现货分段考核机制", ts: "2天前" },
-  ],
-  review: [],
-};
 
 interface PolicyCard {
   id: string;
@@ -84,9 +74,12 @@ const evidencePanel = {
 };
 
 export default function PolicyCenter() {
-  const [active, setActive] = useState<Capability>("policy");
-  const [input, setInput] = useState("");
   const [searchParams] = useSearchParams();
+  const capParam = (searchParams.get("cap") as Capability) || "policy";
+  const active: Capability = capabilities.find((c) => c.key === capParam && !c.placeholder)
+    ? capParam
+    : "policy";
+  const [input, setInput] = useState("");
   const incomingMsgId = searchParams.get("msgId");
 
   // 由 P0 弹窗 / P1 横条跳转进入时，定位对应消息并预填 prompt
@@ -97,7 +90,6 @@ export default function PolicyCenter() {
 
   useEffect(() => {
     if (incomingMsg) {
-      setActive("policy");
       setInput(`请深入解读这条${incomingMsg.level}消息：${incomingMsg.title}`);
     }
   }, [incomingMsg]);
@@ -112,58 +104,7 @@ export default function PolicyCenter() {
 
   return (
     <div className="flex h-[calc(100vh-3rem)]">
-      {/* Left: capability list */}
-      <aside className="w-56 border-r bg-muted/30 flex flex-col shrink-0">
-        <div className="p-2.5 border-b">
-          <button className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:opacity-90">
-            <Plus className="h-3.5 w-3.5" />
-            新建会话
-          </button>
-        </div>
-        <div className="p-1.5">
-          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 py-1">
-            AI 能力
-          </p>
-          {capabilities.map((c) => (
-            <button
-              key={c.key}
-              onClick={() => !c.placeholder && setActive(c.key)}
-              disabled={c.placeholder}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors ${
-                active === c.key
-                  ? "bg-secondary text-primary font-medium"
-                  : c.placeholder
-                  ? "text-muted-foreground/50 cursor-not-allowed"
-                  : "hover:bg-secondary/60 text-foreground/80"
-              }`}
-            >
-              <c.icon className="h-3.5 w-3.5 shrink-0" />
-              <span className="text-xs flex-1 truncate">{c.name}</span>
-              {c.placeholder && (
-                <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground">
-                  占位
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-        <div className="p-2 mt-2 border-t flex-1 overflow-auto">
-          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 py-1.5">
-            最近会话
-          </p>
-          {recentSessions[active].map((s) => (
-            <button
-              key={s.id}
-              className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-sm rounded-md hover:bg-secondary/60 text-left"
-            >
-              <span className="truncate text-foreground/80">{s.title}</span>
-              <span className="text-[10px] text-muted-foreground shrink-0">{s.ts}</span>
-            </button>
-          ))}
-        </div>
-      </aside>
-
-      {/* Center: conversation */}
+      {/* Center: conversation（左侧 AI 能力 / 最近会话已合并到全局 AppSidebar） */}
       <main className="flex-1 flex flex-col min-w-0 bg-background">
         <header className="h-12 border-b flex items-center px-5 gap-2 shrink-0">
           <current.icon className="h-4 w-4 text-primary" />
