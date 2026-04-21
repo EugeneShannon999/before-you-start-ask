@@ -86,6 +86,27 @@ const evidencePanel = {
 export default function PolicyCenter() {
   const [active, setActive] = useState<Capability>("policy");
   const [input, setInput] = useState("");
+  const [searchParams] = useSearchParams();
+  const incomingMsgId = searchParams.get("msgId");
+
+  // 由 P0 弹窗 / P1 横条跳转进入时，定位对应消息并预填 prompt
+  // 备注：SP2 接入后端时改为按 msgId 拉取完整解析记录并自动开启会话
+  const incomingMsg =
+    p0Messages.find((m) => m.id === incomingMsgId) ||
+    p1Messages.find((m) => m.id === incomingMsgId);
+
+  useEffect(() => {
+    if (incomingMsg) {
+      setActive("policy");
+      setInput(`请深入解读这条${incomingMsg.level}消息：${incomingMsg.title}`);
+    }
+  }, [incomingMsg]);
+
+  const triggerQuarterSummary = () => {
+    setInput(
+      `请整合 ${p2QuarterSummary.quarter} 季度的 ${p2QuarterSummary.count} 条 P2 市场要闻，重点覆盖：${p2QuarterSummary.topics.join("、")}`
+    );
+  };
 
   const current = capabilities.find((c) => c.key === active)!;
 
