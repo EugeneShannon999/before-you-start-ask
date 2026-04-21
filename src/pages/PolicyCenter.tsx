@@ -105,7 +105,6 @@ export default function PolicyCenter() {
         </header>
 
         <div className="flex-1 overflow-auto px-6 py-6 space-y-5">
-        <div className="flex-1 overflow-auto px-6 py-6 space-y-5">
           {/* ---------- 历史政策详情视图（pid 模式）---------- */}
           {incomingPolicy && active === "policy" && (
             <div className="max-w-3xl mx-auto space-y-4">
