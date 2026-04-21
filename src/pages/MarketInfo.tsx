@@ -26,6 +26,7 @@ import {
   renewable96,
 } from "@/lib/marketMocks";
 import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
+import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
 import { MarketEventTicker } from "@/components/market/MarketEventTicker";
 import { CurrentPeriodBar } from "@/components/market/CurrentPeriodBar";
 import { ChartCard } from "@/components/market/ChartCard";
@@ -50,6 +51,7 @@ interface ChartCfg {
 const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true });
 
 export default function MarketInfo() {
+  const { province, setProvince } = useProvince();
   const [globalGranularity, setGlobalGranularity] = useState<Granularity>("hour");
   const [boundaryExpanded, setBoundaryExpanded] = useState(false);
 
@@ -110,7 +112,7 @@ export default function MarketInfo() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h1 className="text-xl font-semibold">市场看板</h1>
             <div className="flex items-center gap-2 flex-wrap">
-              <Select defaultValue="anhui">
+              <Select value={province} onValueChange={(v) => setProvince(v as ProvinceCode)}>
                 <SelectTrigger className="h-8 w-24 text-xs"><MapPin className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="anhui">安徽</SelectItem>
