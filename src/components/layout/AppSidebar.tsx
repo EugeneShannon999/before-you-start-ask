@@ -158,6 +158,7 @@ export function AppSidebar() {
 // 左侧只做"选择对象"，处理动作（星标 / 置顶 / 分析 / 追问 / 删除）放右侧主区
 // ============================================================
 function AiPanel({ currentPid }: { currentPid: string | null }) {
+  // currentPid: 当前 URL 选中的历史政策 id（用于左侧高亮）
   const navigate = useNavigate();
   const { province, label: provinceLabel } = useProvince();
   const { sessions, togglePin, rename, remove, create } = useChatSessions();
