@@ -19,13 +19,15 @@ import {
   CircleX,
   CircleDashed,
 } from "lucide-react";
-import { WorkbenchLayout, WorkbenchPanel } from "@/components/layout/WorkbenchLayout";
 
 // ============================================================
-// 插件管理 (SP1) - 三栏工作台版式
+// 插件管理 (SP1) - 两栏版式
 // ------------------------------------------------------------
-//   中栏：插件状态 + 同步规则配置 + 主操作按钮（下载安装包 / 全部手动同步）
-//   右栏：同步数据表 + 失败项提示
+//   左：全局导航（AppLayout 提供）
+//   右：主工作区
+//     · 顶部一排状态/操作/规则三张并排卡片（窄屏堆叠）
+//     · 下方失败提示
+//     · 主同步数据表（全宽，避免被中栏挤窄）
 //
 // 来源类型口径（SP1 仅这 3 类）：公开API / 页面抓取 / 规则计算
 // 不再使用「插件同步」（属于接入方式而非数据来源）
@@ -67,94 +69,89 @@ export default function PluginManagement() {
   const failRows = syncRows.filter((r) => r.status === "fail" || r.status === "delay");
 
   return (
-    <WorkbenchLayout
-      middle={
-        <>
-          {/* 标题 + 主操作 */}
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold">插件管理</h1>
+    <div className="px-6 py-5 space-y-4">
+      {/* 标题 */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">插件管理</h1>
+      </div>
+
+      {/* 顶部三卡：状态 / 操作 / 同步规则 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* 插件状态 */}
+        <Panel title="插件状态">
+          <div className="space-y-2.5 text-sm">
+            <StatusField label="插件在线状态">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-success" />
+                <span className="font-medium">已连接</span>
+              </span>
+            </StatusField>
+            <StatusField label="交易中心登录状态">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-success" />
+                <span className="font-medium">已登录</span>
+                <span className="text-xs text-muted-foreground">安徽交易中心</span>
+              </span>
+            </StatusField>
+            <StatusField label="浏览器连接">
+              <span className="font-medium">Chrome 120.0</span>
+            </StatusField>
+            <StatusField label="最近心跳时间">
+              <span className="font-mono text-xs">2025-07-15 10:32:18</span>
+            </StatusField>
+            <StatusField label="最近同步时间">
+              <span className="font-mono text-xs">2025-07-15 10:30:00</span>
+            </StatusField>
           </div>
+        </Panel>
 
-          {/* 插件状态 */}
-          <WorkbenchPanel title="插件状态">
-            <div className="space-y-2.5 text-sm">
-              <StatusField label="插件在线状态">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-success" />
-                  <span className="font-medium">已连接</span>
-                </span>
-              </StatusField>
-              <StatusField label="交易中心登录状态">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-success" />
-                  <span className="font-medium">已登录</span>
-                  <span className="text-xs text-muted-foreground">安徽交易中心</span>
-                </span>
-              </StatusField>
-              <StatusField label="浏览器连接">
-                <span className="font-medium">Chrome 120.0</span>
-              </StatusField>
-              <StatusField label="最近心跳时间">
-                <span className="font-mono text-xs">2025-07-15 10:32:18</span>
-              </StatusField>
-              <StatusField label="最近同步时间">
-                <span className="font-mono text-xs">2025-07-15 10:30:00</span>
-              </StatusField>
+        {/* 操作 */}
+        <Panel title="操作">
+          <div className="flex flex-col gap-2">
+            <Button variant="outline" size="sm" className="justify-start text-sm">
+              <Download className="h-3.5 w-3.5 mr-2" /> 下载插件安装包
+            </Button>
+            <Button variant="outline" size="sm" className="justify-start text-sm">
+              <RefreshCw className="h-3.5 w-3.5 mr-2" /> 全部手动同步
+            </Button>
+          </div>
+        </Panel>
+
+        {/* 同步规则配置 */}
+        <Panel title="同步规则配置">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">自动同步</Label>
+              <Switch defaultChecked />
             </div>
-          </WorkbenchPanel>
-
-          {/* 主操作 */}
-          <WorkbenchPanel title="操作">
-            <div className="flex flex-col gap-2">
-              <Button variant="outline" size="sm" className="justify-start text-sm">
-                <Download className="h-3.5 w-3.5 mr-2" /> 下载插件安装包
-              </Button>
-              <Button variant="outline" size="sm" className="justify-start text-sm">
-                <RefreshCw className="h-3.5 w-3.5 mr-2" /> 全部手动同步
-              </Button>
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-sm text-muted-foreground">同步频率</Label>
+              <Select defaultValue="daily">
+                <SelectTrigger className="w-32 h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">每日一次</SelectItem>
+                  <SelectItem value="twice">每日两次</SelectItem>
+                  <SelectItem value="hourly">每小时</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </WorkbenchPanel>
-
-          {/* 同步规则配置 */}
-          <WorkbenchPanel title="同步规则配置">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">自动同步</Label>
-                <Switch defaultChecked />
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <Label className="text-sm text-muted-foreground">同步频率</Label>
-                <Select defaultValue="daily">
-                  <SelectTrigger className="w-32 h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">每日一次</SelectItem>
-                    <SelectItem value="twice">每日两次</SelectItem>
-                    <SelectItem value="hourly">每小时</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <Label className="text-sm text-muted-foreground">同步时间</Label>
-                <Input className="w-32 h-8 text-sm" defaultValue="12:30" type="time" />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">同步前确认</Label>
-                <Switch defaultChecked />
-              </div>
-              <div className="pt-2 border-t">
-                <Button size="sm" className="w-full">保存配置</Button>
-              </div>
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-sm text-muted-foreground">同步时间</Label>
+              <Input className="w-32 h-8 text-sm" defaultValue="12:30" type="time" />
             </div>
-          </WorkbenchPanel>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">同步前确认</Label>
+              <Switch defaultChecked />
+            </div>
+            <div className="pt-2 border-t">
+              <Button size="sm" className="w-full">保存配置</Button>
+            </div>
+          </div>
+        </Panel>
+      </div>
 
-          <p className="text-[11px] text-muted-foreground px-1 leading-relaxed">
-            说明：本页仅展示 SP1 已接入的数据项。来源类型分为公开API、页面抓取、规则计算。失败或延迟原因可在「查看日志」中查看。
-          </p>
-        </>
-      }
-    >
       {/* 失败/延迟项提示 */}
       {failRows.length > 0 && (
         <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 flex items-center gap-2 text-xs">
@@ -171,7 +168,7 @@ export default function PluginManagement() {
         </div>
       )}
 
-      {/* 同步数据表（主区域） */}
+      {/* 同步数据表（主区域，全宽） */}
       <div className="rounded-lg border bg-card shadow-notion overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h2 className="text-sm font-semibold">同步数据</h2>
@@ -235,7 +232,22 @@ export default function PluginManagement() {
           </tbody>
         </table>
       </div>
-    </WorkbenchLayout>
+
+      <p className="text-[11px] text-muted-foreground px-1 leading-relaxed">
+        说明：本页仅展示 SP1 已接入的数据项。来源类型分为公开API、页面抓取、规则计算。失败或延迟原因可在「查看日志」中查看。
+      </p>
+    </div>
+  );
+}
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border bg-card shadow-notion p-4">
+      <h3 className="text-xs font-semibold text-foreground/90 uppercase tracking-wider mb-2.5">
+        {title}
+      </h3>
+      {children}
+    </div>
   );
 }
 
