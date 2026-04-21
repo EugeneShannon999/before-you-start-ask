@@ -13,8 +13,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     <SidebarProvider
       style={
         {
-          "--sidebar-width": "8.5rem",
-          "--sidebar-width-icon": "8.5rem",
+          "--sidebar-width": "15rem", // 240px - 全局导航栏宽度
+          "--sidebar-width-icon": "15rem",
         } as React.CSSProperties
       }
     >

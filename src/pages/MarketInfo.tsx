@@ -29,6 +29,7 @@ import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
 import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
 import { CurrentPeriodBar } from "@/components/market/CurrentPeriodBar";
 import { ChartCard } from "@/components/market/ChartCard";
+import { WorkbenchLayout, WorkbenchPanel } from "@/components/layout/WorkbenchLayout";
 import {
   PriceSpreadChart,
   LoadForecastChart,
@@ -105,65 +106,139 @@ export default function MarketInfo() {
 
   return (
     <MarketCursorProvider>
-      <div className="p-5 max-w-7xl mx-auto space-y-3">
-        {/* 顶部筛选 sticky */}
-        <div className="sticky top-0 z-20 -mx-5 px-5 pt-2 pb-2 bg-background/95 backdrop-blur space-y-2">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <h1 className="text-xl font-semibold">市场看板</h1>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Select value={province} onValueChange={(v) => setProvince(v as ProvinceCode)}>
-                <SelectTrigger className="h-8 w-24 text-xs"><MapPin className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="anhui">安徽</SelectItem>
-                  <SelectItem value="shandong">山东</SelectItem>
-                  <SelectItem value="guangdong">广东</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select defaultValue="2025-07-15">
-                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2025-07-15">2025-07-15</SelectItem>
-                  <SelectItem value="2025-07-14">2025-07-14</SelectItem>
-                </SelectContent>
-              </Select>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">交易日 D</span>
-              <div className="flex rounded-md border overflow-hidden text-xs">
-                <button
-                  onClick={() => setGlobalAll("15min")}
-                  className={`px-2 py-1 ${globalGranularity === "15min" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
-                >15分 · 96点</button>
-                <button
-                  onClick={() => setGlobalAll("hour")}
-                  className={`px-2 py-1 ${globalGranularity === "hour" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
-                >1小时 · 24点</button>
-              </div>
-              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3" /> 更新 10:32
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success">公开披露</span>
-            </div>
-          </div>
-          {/* 市场消息条已移除：全局 P1 横条已承载市场消息提示，避免重复 */}
-          {/* 当前时段联动摘要 */}
-          <CurrentPeriodBar granularity={globalGranularity} />
-        </div>
+      <WorkbenchLayout
+        middle={
+          <>
+            <h1 className="text-lg font-semibold">市场看板</h1>
 
-        {/* 指标卡 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {summary.map((card) => (
-            <div key={card.label} className="p-2.5 rounded-lg shadow-notion bg-card">
-              <p className="text-[11px] text-muted-foreground mb-0.5">{card.label}</p>
-              <p className="text-base font-semibold leading-tight">
-                {card.value}
-                <span className="text-[10px] font-normal text-muted-foreground ml-1">{card.unit}</span>
-              </p>
-              <p className={`text-[10px] mt-0.5 flex items-center gap-0.5 ${card.up ? "text-success" : "text-destructive"}`}>
-                {card.up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                {card.change}
-              </p>
-            </div>
-          ))}
-        </div>
+            {/* 筛选 */}
+            <WorkbenchPanel title="筛选">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">省份</span>
+                  <Select value={province} onValueChange={(v) => setProvince(v as ProvinceCode)}>
+                    <SelectTrigger className="h-8 w-32 text-xs"><MapPin className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="anhui">安徽</SelectItem>
+                      <SelectItem value="shandong">山东</SelectItem>
+                      <SelectItem value="guangdong">广东</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">日期</span>
+                  <Select defaultValue="2025-07-15">
+                    <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2025-07-15">2025-07-15</SelectItem>
+                      <SelectItem value="2025-07-14">2025-07-14</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">交易日</span>
+                  <span className="text-[11px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">D</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">粒度</span>
+                  <div className="flex rounded-md border overflow-hidden text-xs">
+                    <button
+                      onClick={() => setGlobalAll("15min")}
+                      className={`px-2 py-1 ${globalGranularity === "15min" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+                    >15分</button>
+                    <button
+                      onClick={() => setGlobalAll("hour")}
+                      className={`px-2 py-1 ${globalGranularity === "hour" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+                    >1小时</button>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t flex items-center justify-between text-[11px]">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> 更新 10:32
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-success/10 text-success">公开披露</span>
+              </div>
+            </WorkbenchPanel>
+
+            {/* 当前选中时段摘要 */}
+            <WorkbenchPanel title="当前时段" compact>
+              <CurrentPeriodBar granularity={globalGranularity} />
+            </WorkbenchPanel>
+
+            {/* 行情摘要卡片 */}
+            <WorkbenchPanel title="行情摘要">
+              <div className="grid grid-cols-2 gap-2">
+                {summary.map((card) => (
+                  <div key={card.label} className="p-2 rounded-md border bg-background">
+                    <p className="text-[10px] text-muted-foreground mb-0.5 truncate">{card.label}</p>
+                    <p className="text-sm font-semibold leading-tight">
+                      {card.value}
+                      <span className="text-[10px] font-normal text-muted-foreground ml-1">{card.unit}</span>
+                    </p>
+                    <p className={`text-[10px] mt-0.5 flex items-center gap-0.5 ${card.up ? "text-success" : "text-destructive"}`}>
+                      {card.up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {card.change}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </WorkbenchPanel>
+
+            {/* 公告信息 */}
+            <WorkbenchPanel title="公告信息">
+              <div className="space-y-1 max-h-64 overflow-auto">
+                {marketEvents.filter((e) => e.category === "公告" || e.category === "规则").map((a) => (
+                  <div key={a.id} className="py-2 border-b last:border-b-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <p className="text-[11px] font-medium leading-snug truncate flex-1">{a.title}</p>
+                      <span className="shrink-0 text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary">
+                        原生公告
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1">{a.detail}</p>
+                    <p className="text-[10px] text-muted-foreground/80 mt-0.5 font-mono">{a.time} · {a.source}</p>
+                  </div>
+                ))}
+              </div>
+            </WorkbenchPanel>
+
+            {/* 规则预警 */}
+            <WorkbenchPanel title="规则预警">
+              <div className="space-y-2">
+                {ruleWarnings.map((w) => (
+                  <div
+                    key={w.id}
+                    className={`p-2 rounded-md text-xs border ${
+                      w.level === "high"
+                        ? "border-destructive/30 bg-destructive/5"
+                        : "border-warning/30 bg-warning/5"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <AlertTriangle
+                        className={`h-3 w-3 shrink-0 ${
+                          w.level === "high" ? "text-destructive" : "text-warning"
+                        }`}
+                      />
+                      <p className="font-medium text-foreground flex-1 text-[11px]">{w.title}</p>
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                        规则计算
+                      </span>
+                    </div>
+                    <div className="pl-4 space-y-0.5 text-[10px] text-muted-foreground">
+                      <p><span className="text-foreground/70">时段：</span>{w.period}</p>
+                      <p><span className="text-foreground/70">当前值：</span>{w.current}</p>
+                      <p className="text-foreground/80"><span className="text-foreground/60">建议：</span>{w.action}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </WorkbenchPanel>
+          </>
+        }
+      >
+        {/* 右栏：主图表区 */}
 
         {/* 1. 电价与价差 */}
         <ChartCard
@@ -408,74 +483,8 @@ export default function MarketInfo() {
           )}
         </section>
 
-        {/* 6. 公告信息 / 规则预警 */}
-        {/* 备注：公告 = 原生公告（页面抓取/公开API），预警 = 规则计算（基于已落地数据）；
-            数据来源不明确的预警（如「新能源预测偏差」）SP1 暂不展示，待补实际数据来源后再开启 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <section className="rounded-lg shadow-notion bg-card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold">公告信息</h3>
-              <span className="text-[10px] text-muted-foreground">来源：交易中心 / 调度中心 公开披露</span>
-            </div>
-            <div className="space-y-1">
-              {marketEvents.filter((e) => e.category === "公告" || e.category === "规则").map((a) => (
-                <div key={a.id} className="flex items-start justify-between py-2 border-b last:border-b-0 gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <p className="text-xs font-medium leading-snug truncate">{a.title}</p>
-                      <span className="shrink-0 text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary">
-                        原生公告
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-1">
-                      {a.detail}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{a.source}</p>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground shrink-0 font-mono">{a.time}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-lg shadow-notion bg-card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold">规则预警</h3>
-              <span className="text-[10px] text-muted-foreground">基于已落地数据 + 预设阈值</span>
-            </div>
-            <div className="space-y-2">
-              {ruleWarnings.map((w) => (
-                <div
-                  key={w.id}
-                  className={`p-2.5 rounded-md text-xs border ${
-                    w.level === "high"
-                      ? "border-destructive/30 bg-destructive/5"
-                      : "border-warning/30 bg-warning/5"
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <AlertTriangle
-                      className={`h-3.5 w-3.5 shrink-0 ${
-                        w.level === "high" ? "text-destructive" : "text-warning"
-                      }`}
-                    />
-                    <p className="font-medium text-foreground flex-1">{w.title}</p>
-                    <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-                      规则计算
-                    </span>
-                  </div>
-                  <div className="pl-5 space-y-0.5 text-[11px] text-muted-foreground">
-                    <p><span className="text-foreground/70">时段：</span>{w.period}</p>
-                    <p><span className="text-foreground/70">当前值：</span>{w.current}</p>
-                    <p><span className="text-foreground/70">阈值/原因：</span>{w.threshold}</p>
-                    <p className="text-foreground/80"><span className="text-foreground/60">建议动作：</span>{w.action}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      </div>
+        {/* 公告信息 / 规则预警 已移到中栏控制区 */}
+      </WorkbenchLayout>
     </MarketCursorProvider>
   );
 }
