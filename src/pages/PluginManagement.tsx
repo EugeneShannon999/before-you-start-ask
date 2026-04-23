@@ -75,6 +75,24 @@ export default function PluginManagement() {
         <h1 className="text-lg font-semibold">插件管理</h1>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Panel title="方向 A · 爬虫插件">
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>· 收益结算数据抓取</p>
+            <p>· 交易平台数据收集处理</p>
+            <p className="text-[11px]">来源标识：页面抓取 / 公开API / 规则计算</p>
+          </div>
+        </Panel>
+        <Panel title="方向 B · 自动报价 / 自动售卖插件">
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>· SP3</p>
+            <p>· 风险评估中</p>
+            <p>· 暂不作为当前可用功能</p>
+            <p className="text-[11px]">待电力交易事业部部门变动及内部风险评估完成后再启动</p>
+          </div>
+        </Panel>
+      </div>
+
       {/* 顶部三卡：状态 / 操作 / 同步规则 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* 插件状态 */}

@@ -14,6 +14,7 @@ import { AlertTriangle, Info } from "lucide-react";
 
 type TabKey = "load" | "renewable" | "space" | "price" | "factor";
 type Granularity = "15min" | "hour";
+type HorizonKey = "2d" | "4d" | "7d";
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "load", label: "负荷预测" },
@@ -171,6 +172,7 @@ const C_DESTRUCTIVE = "hsl(var(--destructive))";
 export default function Prediction() {
   const [active, setActive] = useState<TabKey>("load");
   const [granularity, setGranularity] = useState<Granularity>("hour");
+  const [horizon, setHorizon] = useState<HorizonKey>("2d");
   const data = dataMap[active];
 
   const series: SeriesPoint[] = useMemo(
@@ -186,6 +188,21 @@ export default function Prediction() {
         <h1 className="text-xl font-semibold">算法预测</h1>
         <div className="flex items-center gap-3">
           <div className="flex rounded-md border overflow-hidden text-xs">
+            {[
+              { key: "2d", label: "2日" },
+              { key: "4d", label: "4日" },
+              { key: "7d", label: "7日" },
+            ].map((item) => (
+              <button
+                key={item.key}
+                onClick={() => setHorizon(item.key as HorizonKey)}
+                className={`px-2 py-1 ${horizon === item.key ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex rounded-md border overflow-hidden text-xs">
             <button
               onClick={() => setGranularity("15min")}
               className={`px-2 py-1 ${granularity === "15min" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
@@ -199,7 +216,7 @@ export default function Prediction() {
               1小时 · 24点
             </button>
           </div>
-          <p className="text-xs text-muted-foreground">专项预测钻取 · 主看盘请前往「市场看板」</p>
+          <p className="text-xs text-muted-foreground">专项预测钻取 · 当前展示周期：{horizon === "2d" ? "未来2日" : horizon === "4d" ? "未来4日" : "未来7日"}</p>
         </div>
       </div>
 

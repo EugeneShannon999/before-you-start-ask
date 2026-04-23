@@ -19,6 +19,8 @@ import BatchesPage from "./pages/calculator/BatchesPage";
 
 import PluginManagement from "./pages/PluginManagement";
 import MarketInfo from "./pages/MarketInfo";
+import WeatherBoard from "./pages/WeatherBoard";
+import TradeLedger from "./pages/TradeLedger";
 import ChartFullscreen from "./pages/market/ChartFullscreen";
 import Prediction from "./pages/Prediction";
 import TradeCalendar from "./pages/TradeCalendar";
@@ -51,7 +53,9 @@ const App = () => (
                   <Route path="/ai/sessions" element={<SessionsView />} />
                   <Route path="/ai/policies" element={<PoliciesListView />} />
                   <Route path="/tools/market" element={<MarketInfo />} />
+                  <Route path="/tools/weather" element={<WeatherBoard />} />
                   <Route path="/tools/prediction" element={<Prediction />} />
+                  <Route path="/tools/ledger" element={<TradeLedger />} />
 
                   {/* 结算计算器 - 两栏布局：左侧全局导航 + 右侧主内容（顶部 tabs） */}
                   <Route

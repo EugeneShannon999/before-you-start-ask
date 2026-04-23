@@ -1,10 +1,12 @@
-import { Construction, Zap, Clock, BarChart3, Shield } from "lucide-react";
+import { Construction, TriangleAlert } from "lucide-react";
 
 const features = [
-  { icon: Zap, title: "滚撮交易", desc: "实时撮合竞价交易" },
-  { icon: Clock, title: "挂单操作", desc: "限价挂单与撤单管理" },
-  { icon: BarChart3, title: "量化策略", desc: "自定义交易策略执行" },
-  { icon: Shield, title: "交易监控", desc: "实时交易状态追踪" },
+  "自动报价",
+  "自动售卖",
+  "自动买入",
+  "自动卖出",
+  "挂单",
+  "量化执行",
 ];
 
 export default function Trading() {
@@ -12,25 +14,25 @@ export default function Trading() {
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-xl font-semibold mb-4">交易执行</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
         {features.map((f) => (
-          <div key={f.title} className="p-4 rounded-lg shadow-notion bg-card text-center">
-            <f.icon className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm font-medium mb-1">{f.title}</p>
-            <p className="text-xs text-muted-foreground">{f.desc}</p>
+          <div key={f} className="p-4 rounded-lg shadow-notion bg-card text-center">
+            <Construction className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm font-medium">{f}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-lg shadow-notion bg-card p-12 text-center">
-        <Construction className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-        <h2 className="text-base font-semibold mb-2">🚧 功能开发中</h2>
-        <p className="text-sm text-muted-foreground mb-2">
-          该模块将在SP3版本中上线
+      <div className="rounded-lg shadow-notion bg-card p-12 text-center space-y-3">
+        <Construction className="h-10 w-10 text-muted-foreground mx-auto" />
+        <h2 className="text-base font-semibold">SP3：交易执行能力暂缓</h2>
+        <p className="text-sm text-muted-foreground">
+          自动报价、自动售卖、自动买入、自动卖出、挂单、量化执行暂不进入当前版本
         </p>
-        <p className="text-xs text-muted-foreground">
-          需要插件支持和U盾在线
-        </p>
+        <div className="inline-flex items-center gap-1.5 text-xs text-warning rounded-md bg-warning/10 px-3 py-1.5">
+          <TriangleAlert className="h-3.5 w-3.5" />
+          原因：涉及交易风险与组织权限，需等待部门变动和风险评估完成
+        </div>
       </div>
     </div>
   );
