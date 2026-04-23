@@ -24,7 +24,7 @@ import {
 const CHART_META: Record<string, { title: string; caption: string }> = {
   "price-spread": {
     title: "电价与价差",
-    caption: "日前 vs 实时 vs 价差 + 出清电量",
+    caption: "日前 vs 实时 vs 价差（日前电价 − 实时电价） + 出清电量",
   },
   "load-forecast": {
     title: "负荷预测 vs 实际",
