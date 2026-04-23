@@ -209,7 +209,7 @@ export function AppSidebar() {
 // 听雨面板：新建会话 + 历史政策入口 + 置顶/最近会话
 // （历史政策列表已迁出到 /ai/policies 主工作区）
 // ============================================================
-function AiPanel() {
+function AiPanel({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { sessions, togglePin, rename, remove, create } = useChatSessions();
@@ -253,18 +253,18 @@ function AiPanel() {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* 新建会话（主按钮） */}
-      <div className="px-2 py-2 border-b">
+      <div className={`${collapsed ? "px-1" : "px-2"} py-2 border-b`}>
         <button
           onClick={handleNewSession}
           className="w-full flex items-center justify-center gap-1.5 h-9 rounded-md bg-primary text-primary-foreground hover:opacity-90 text-xs font-medium"
         >
           <Plus className="h-3.5 w-3.5" />
-          新建会话
+          {!collapsed && "新建会话"}
         </button>
       </div>
 
       {/* 布告栏（独立入口按钮） */}
-      <div className="px-2 pt-2">
+      <div className={`${collapsed ? "px-1" : "px-2"} pt-2`}>
         <button
           onClick={() => navigate("/ai/policies")}
           title="布告栏"
@@ -275,12 +275,12 @@ function AiPanel() {
           }`}
         >
           <Megaphone className={`h-4 w-4 shrink-0 ${policiesActive ? "text-primary" : ""}`} />
-          <span className="text-[13px] leading-none truncate flex-1">布告栏</span>
+          {!collapsed && <span className="text-[13px] leading-none truncate flex-1">布告栏</span>}
         </button>
       </div>
 
       {/* 置顶会话 */}
-      {pinnedSessions.length > 0 && (
+      {!collapsed && pinnedSessions.length > 0 && (
         <div className="px-2 pt-3 pb-1.5">
           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 pb-1">
             置顶会话
@@ -305,7 +305,7 @@ function AiPanel() {
       )}
 
       {/* 最近会话 + hover 显示 View All */}
-      <div
+      {!collapsed && <div
         className="px-2 pt-3 pb-2 mt-1 flex-1 min-h-0 flex flex-col"
         onMouseEnter={() => setRecentHover(true)}
         onMouseLeave={() => setRecentHover(false)}
@@ -343,7 +343,7 @@ function AiPanel() {
             ))
           )}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
