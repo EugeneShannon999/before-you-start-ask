@@ -23,6 +23,9 @@ import {
   SPACE_WARN_THRESHOLD,
   load96,
   renewable96,
+  priceForecastLink24,
+  weather24,
+  type DataSourceTag,
 } from "@/lib/marketMocks";
 import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
 import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
@@ -102,6 +105,8 @@ export default function MarketInfo() {
     const avg = ratios.reduce((s, r) => s + r, 0) / ratios.length;
     return { peak: (peak * 100).toFixed(1), avg: (avg * 100).toFixed(1) };
   }, []);
+
+  const weatherSignals = useMemo(() => weather24.filter((row) => row.alert !== "无").slice(0, 4), []);
 
   return (
     <MarketCursorProvider>
@@ -208,6 +213,7 @@ export default function MarketInfo() {
                   />
                   <p className="font-medium text-foreground flex-1 text-[11px]">{w.title}</p>
                   <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">规则计算</span>
+                  <span className="text-[9px] px-1 py-0.5 rounded bg-secondary text-muted-foreground shrink-0">公开API</span>
                 </div>
                 <div className="pl-4 space-y-0.5 text-[10px] text-muted-foreground">
                   <p><span className="text-foreground/70">时段：</span>{w.period}</p>
@@ -261,7 +267,9 @@ export default function MarketInfo() {
                   <span className="text-muted-foreground">{s.label}</span>
                 </label>
               ))}
-              <span className="text-muted-foreground ml-auto">价差 = 实时 − 日前</span>
+              <SourceBadge label="公开API" />
+              <SourceBadge label="规则计算" />
+              <span className="text-muted-foreground ml-auto">价差 = 日前电价 − 实时电价</span>
             </div>
           }
         >
@@ -274,6 +282,72 @@ export default function MarketInfo() {
             visibleSeries={priceSeries}
           />
         </ChartCard>
+
+        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <h3 className="text-sm font-semibold">电价预测联动</h3>
+              <p className="text-[11px] text-muted-foreground mt-1">保留主图之外，补充预测电价、预测偏差与候选影响因子。</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <SourceBadge label="公开API" />
+              <SourceBadge label="规则计算" />
+            </div>
+          </div>
+
+          <div className="grid gap-3 xl:grid-cols-[1.35fr_0.85fr]">
+            <div className="rounded-md border overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-secondary/50">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium">时段</th>
+                    <th className="text-right px-3 py-2 font-medium">日前电价</th>
+                    <th className="text-right px-3 py-2 font-medium">实时电价</th>
+                    <th className="text-right px-3 py-2 font-medium">价差</th>
+                    <th className="text-right px-3 py-2 font-medium">预测电价</th>
+                    <th className="text-right px-3 py-2 font-medium">预测偏差</th>
+                    <th className="text-left px-3 py-2 font-medium">候选影响因子</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {priceForecastLink24.slice(0, 8).map((row) => (
+                    <tr key={row.hour} className="border-t hover:bg-secondary/30">
+                      <td className="px-3 py-2 font-mono">{row.hourLabel}</td>
+                      <td className="px-3 py-2 text-right font-mono">{row.dayAhead}</td>
+                      <td className="px-3 py-2 text-right font-mono">{row.realtime}</td>
+                      <td className={`px-3 py-2 text-right font-mono ${row.spread >= 0 ? "text-destructive" : "text-success"}`}>{row.spread >= 0 ? "+" : ""}{row.spread}</td>
+                      <td className="px-3 py-2 text-right font-mono">{row.predictedPrice}</td>
+                      <td className={`px-3 py-2 text-right font-mono ${row.forecastDeviation >= 0 ? "text-destructive" : "text-success"}`}>{row.forecastDeviation >= 0 ? "+" : ""}{row.forecastDeviation}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{row.candidateFactor}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid gap-2">
+              <div className="rounded-md border bg-background p-3 space-y-2">
+                <p className="text-xs font-medium">气象联动提示</p>
+                {weatherSignals.map((item) => (
+                  <div key={item.hour} className="text-[11px] text-muted-foreground leading-relaxed">
+                    <span className="font-mono text-foreground mr-2">{item.hourLabel}</span>
+                    {item.alert} · 风速 {item.windSpeed.toFixed(1)} m/s · 辐照度 {item.irradiance} · 云量 {item.cloudCover}%
+                  </div>
+                ))}
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <SourceBadge label="公开API" />
+                  <SourceBadge label="页面抓取" />
+                </div>
+              </div>
+              <div className="rounded-md border bg-background p-3 space-y-2">
+                <p className="text-xs font-medium">关系链路</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">气象 → 新能源预测 → 市场数据 → 竞价空间 → 电价关系 → 策略</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">候选影响因子只做联动提示，不代表系统已确认真实原因。</p>
+                <SourceBadge label="规则计算" />
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* 1.1 价差影响因子对照（SP1：仅展示已确认数据列） */}
         <SpreadFactorMatrix granularity={priceCfg.granularity} />
@@ -356,6 +430,8 @@ export default function MarketInfo() {
                 新能源占负荷比例 · 峰值 <span className="font-mono text-foreground">{renRatio.peak}%</span>
                 {" / "}日均 <span className="font-mono text-foreground">{renRatio.avg}%</span>
               </span>
+              <SourceBadge label="公开API" />
+              <SourceBadge label="待确认数据源" />
             </div>
           }
         >
@@ -535,4 +611,8 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "de
       <p className={`text-sm font-mono font-semibold ${cls}`}>{value}</p>
     </div>
   );
+}
+
+function SourceBadge({ label }: { label: DataSourceTag }) {
+  return <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{label}</span>;
 }
