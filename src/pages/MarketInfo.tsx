@@ -111,25 +111,14 @@ export default function MarketInfo() {
   return (
     <MarketCursorProvider>
       <div className="px-6 py-5 space-y-4 min-h-[calc(100vh-5rem)]">
-        <header className="space-y-3 rounded-lg border bg-card p-4 shadow-notion">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-lg font-semibold">市场看板</h1>
-              <p className="text-xs text-muted-foreground mt-1">筛选后可连续向下查看全天走势与关键偏差。</p>
-            </div>
-            <div className="flex items-center gap-2 text-[11px]">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3" /> 更新 10:32
-              </span>
-              <span className="px-1.5 py-0.5 rounded bg-success/10 text-success">公开披露</span>
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-1.5">
+        <header className="rounded-lg border bg-card p-4 shadow-notion">
+          <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
+            <h1 className="text-lg font-semibold shrink-0">市场看板</h1>
+            <span className="text-xs text-muted-foreground shrink-0">筛选后可连续向下查看全天走势与关键偏差。</span>
+            <div className="flex items-center gap-2 shrink-0 ml-2">
               <span className="text-xs text-muted-foreground">省份</span>
               <Select value={province} onValueChange={(v) => setProvince(v as ProvinceCode)}>
-                <SelectTrigger className="h-9 w-full text-xs"><MapPin className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 w-28 text-xs"><MapPin className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="anhui">安徽</SelectItem>
                   <SelectItem value="shandong">山东</SelectItem>
@@ -137,49 +126,49 @@ export default function MarketInfo() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-1.5">
+            <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs text-muted-foreground">日期</span>
               <Select defaultValue="2025-07-15">
-                <SelectTrigger className="h-9 w-full text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="2025-07-15">2025-07-15</SelectItem>
                   <SelectItem value="2025-07-14">2025-07-14</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-1.5">
+            <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs text-muted-foreground">交易日</span>
-              <div className="h-9 rounded-md border bg-background px-3 flex items-center text-[11px] text-muted-foreground">D</div>
+              <div className="h-8 rounded-md border bg-background px-3 flex items-center text-[11px] text-muted-foreground">D</div>
             </div>
-
-            <div className="space-y-1.5">
+            <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs text-muted-foreground">粒度</span>
-              <div className="flex rounded-md border overflow-hidden text-xs h-9 bg-background">
+              <div className="flex rounded-md border overflow-hidden text-xs h-8 bg-background">
                 <button
                   onClick={() => setGlobalAll("15min")}
-                  className={`flex-1 ${globalGranularity === "15min" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+                  className={`px-3 ${globalGranularity === "15min" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
                 >15分</button>
                 <button
                   onClick={() => setGlobalAll("hour")}
-                  className={`flex-1 ${globalGranularity === "hour" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+                  className={`px-3 ${globalGranularity === "hour" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
                 >1小时</button>
               </div>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] shrink-0 ml-auto">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" /> 更新 10:32
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-success/10 text-success">公开披露</span>
             </div>
           </div>
         </header>
 
-        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">行情摘要</h2>
-            <span className="text-[11px] text-muted-foreground">筛选结果概览</span>
-          </div>
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        <section className="rounded-lg border bg-card p-4 shadow-notion">
+          <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
+            <h2 className="text-sm font-semibold shrink-0">行情摘要</h2>
             {summary.map((card) => (
-              <div key={card.label} className="p-3 rounded-md border bg-background">
-                <p className="text-[10px] text-muted-foreground mb-0.5 truncate">{card.label}</p>
-                <p className="text-base font-semibold leading-tight">
+              <div key={card.label} className="min-w-[128px] rounded-md border bg-background px-3 py-2 shrink-0">
+                <p className="text-[10px] text-muted-foreground truncate">{card.label}</p>
+                <p className="text-sm font-semibold leading-tight mt-1">
                   {card.value}
                   <span className="text-[10px] font-normal text-muted-foreground ml-1">{card.unit}</span>
                 </p>

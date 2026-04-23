@@ -13,7 +13,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       style={
         {
           "--sidebar-width": "15rem", // 240px - 全局导航栏宽度
-          "--sidebar-width-icon": "15rem",
+          "--sidebar-width-icon": "3rem",
         } as React.CSSProperties
       }
     >
