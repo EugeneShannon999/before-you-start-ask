@@ -19,7 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -79,6 +79,8 @@ function getTabFromPath(pathname: string): SidebarTab {
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
 
   const [activeTab, setActiveTab] = useState<SidebarTab>(() => getTabFromPath(location.pathname));
 
@@ -93,10 +95,10 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="none" className="border-r bg-sidebar">
+    <Sidebar collapsible="icon" className="border-r bg-sidebar">
       <SidebarContent className="p-0 flex flex-col items-stretch">
         {/* 一级 Tab */}
-        <div className="h-12 border-b flex items-stretch shrink-0 px-1.5 gap-1 py-1.5">
+        <div className={`h-12 border-b flex items-stretch shrink-0 gap-1 py-1.5 ${collapsed ? "px-1" : "px-1.5"}`}>
           {tabConfig.map((tab) => {
             const active = activeTab === tab.key;
             return (
@@ -104,23 +106,25 @@ export function AppSidebar() {
                 key={tab.key}
                 onClick={() => handleTabClick(tab.key)}
                 title={tab.label}
-                className={`relative h-full rounded-md flex items-center justify-center gap-1.5 transition-all duration-200 ${
+                  className={`relative h-full rounded-md flex items-center justify-center gap-1.5 transition-all duration-200 ${
                   active
-                    ? "flex-1 bg-primary/10 text-primary px-2"
-                    : "w-8 text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                      ? collapsed
+                        ? "w-9 bg-primary/10 text-primary"
+                        : "flex-1 bg-primary/10 text-primary px-2"
+                      : "w-8 text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                 }`}
               >
                 <tab.icon className="h-4 w-4 shrink-0" />
-                {active && <span className="text-xs font-medium truncate">{tab.label}</span>}
+                  {active && !collapsed && <span className="text-xs font-medium truncate">{tab.label}</span>}
               </button>
             );
           })}
         </div>
 
         {activeTab === "ai" ? (
-          <AiPanel />
+          <AiPanel collapsed={collapsed} />
         ) : (
-          <div className="flex-1 py-2 px-2 flex flex-col gap-3 overflow-auto">
+          <div className={`flex-1 py-2 flex flex-col gap-3 overflow-auto ${collapsed ? "px-1" : "px-2"}`}>
             <nav className="flex flex-col gap-0.5">
             {dashboardItems.map((item) => {
               const isActive = !item.placeholder && location.pathname.startsWith(item.url);
@@ -145,7 +149,7 @@ export function AppSidebar() {
                   }`}
                 >
                   <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
-                  <span className="text-[13px] leading-none truncate">
+                    <span className={`text-[13px] leading-none truncate ${collapsed ? "hidden" : ""}`}>
                     {item.title}
                   </span>
                 </button>
@@ -153,7 +157,7 @@ export function AppSidebar() {
             })}
             </nav>
 
-            <Card className="rounded-md border-border/80 shadow-none bg-card/70">
+            {!collapsed && <Card className="rounded-md border-border/80 shadow-none bg-card/70">
               <CardHeader className="px-3 py-3 space-y-1.5">
                 <CardTitle className="text-[12px] leading-none font-semibold text-foreground/90">
                   插件管理
@@ -193,7 +197,7 @@ export function AppSidebar() {
                   })}
                 </div>
               </CardContent>
-            </Card>
+            </Card>}
           </div>
         )}
       </SidebarContent>
