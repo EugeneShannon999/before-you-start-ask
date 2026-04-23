@@ -5,6 +5,8 @@ import {
   Calendar,
   Zap,
   Plug,
+  CloudSun,
+  BookOpenText,
   Bot,
   LayoutDashboard,
   History,
@@ -40,7 +42,9 @@ interface NavItem {
 
 const dashboardItems: NavItem[] = [
   { title: "市场看板", url: "/tools/market", icon: BarChart3 },
+  { title: "气象看板", url: "/tools/weather", icon: CloudSun },
   { title: "算法预测", url: "/tools/prediction", icon: LineChart },
+  { title: "交易日志 / 账本", url: "/tools/ledger", icon: BookOpenText },
   { title: "交易日历", url: "/tools/calendar", icon: Calendar },
   { title: "交易执行", url: "/tools/trading", icon: Zap, placeholder: true },
 ];
@@ -53,14 +57,14 @@ const pluginModules: Array<{
   placeholder?: boolean;
 }> = [
   {
-    title: "收益结算 & 询盘",
-    description: "整合结算计算与交易中心非公开数据抓取",
+    title: "爬虫插件",
+    description: "收益结算数据抓取、交易平台数据收集处理",
     icon: Plug,
     url: "/system/plugin",
   },
   {
-    title: "自动买卖机器人",
-    description: "预留模块，后续接入自动交易能力",
+    title: "自动报价 / 自动售卖插件",
+    description: "SP3 · 风险评估中，待部门变动与内部评估完成后启动",
     icon: History,
     placeholder: true,
   },
