@@ -19,7 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -79,6 +79,8 @@ function getTabFromPath(pathname: string): SidebarTab {
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
 
   const [activeTab, setActiveTab] = useState<SidebarTab>(() => getTabFromPath(location.pathname));
 
@@ -93,10 +95,10 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="none" className="border-r bg-sidebar">
+    <Sidebar collapsible="icon" className="border-r bg-sidebar">
       <SidebarContent className="p-0 flex flex-col items-stretch">
         {/* 一级 Tab */}
-        <div className="h-12 border-b flex items-stretch shrink-0 px-1.5 gap-1 py-1.5">
+        <div className={`h-12 border-b flex items-stretch shrink-0 gap-1 py-1.5 ${collapsed ? "px-1" : "px-1.5"}`}>
           {tabConfig.map((tab) => {
             const active = activeTab === tab.key;
             return (
@@ -104,23 +106,25 @@ export function AppSidebar() {
                 key={tab.key}
                 onClick={() => handleTabClick(tab.key)}
                 title={tab.label}
-                className={`relative h-full rounded-md flex items-center justify-center gap-1.5 transition-all duration-200 ${
+                  className={`relative h-full rounded-md flex items-center justify-center gap-1.5 transition-all duration-200 ${
                   active
-                    ? "flex-1 bg-primary/10 text-primary px-2"
-                    : "w-8 text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                      ? collapsed
+                        ? "w-9 bg-primary/10 text-primary"
+                        : "flex-1 bg-primary/10 text-primary px-2"
+                      : "w-8 text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                 }`}
               >
                 <tab.icon className="h-4 w-4 shrink-0" />
-                {active && <span className="text-xs font-medium truncate">{tab.label}</span>}
+                  {active && !collapsed && <span className="text-xs font-medium truncate">{tab.label}</span>}
               </button>
             );
           })}
         </div>
 
         {activeTab === "ai" ? (
-          <AiPanel />
+          <AiPanel collapsed={collapsed} />
         ) : (
-          <div className="flex-1 py-2 px-2 flex flex-col gap-3 overflow-auto">
+          <div className={`flex-1 py-2 flex flex-col gap-3 overflow-auto ${collapsed ? "px-1" : "px-2"}`}>
             <nav className="flex flex-col gap-0.5">
             {dashboardItems.map((item) => {
               const isActive = !item.placeholder && location.pathname.startsWith(item.url);
@@ -145,7 +149,7 @@ export function AppSidebar() {
                   }`}
                 >
                   <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
-                  <span className="text-[13px] leading-none truncate">
+                    <span className={`text-[13px] leading-none truncate ${collapsed ? "hidden" : ""}`}>
                     {item.title}
                   </span>
                 </button>
@@ -153,7 +157,7 @@ export function AppSidebar() {
             })}
             </nav>
 
-            <Card className="rounded-md border-border/80 shadow-none bg-card/70">
+            {!collapsed && <Card className="rounded-md border-border/80 shadow-none bg-card/70">
               <CardHeader className="px-3 py-3 space-y-1.5">
                 <CardTitle className="text-[12px] leading-none font-semibold text-foreground/90">
                   插件管理
@@ -193,7 +197,7 @@ export function AppSidebar() {
                   })}
                 </div>
               </CardContent>
-            </Card>
+            </Card>}
           </div>
         )}
       </SidebarContent>
@@ -205,7 +209,7 @@ export function AppSidebar() {
 // 听雨面板：新建会话 + 历史政策入口 + 置顶/最近会话
 // （历史政策列表已迁出到 /ai/policies 主工作区）
 // ============================================================
-function AiPanel() {
+function AiPanel({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { sessions, togglePin, rename, remove, create } = useChatSessions();
@@ -249,18 +253,18 @@ function AiPanel() {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* 新建会话（主按钮） */}
-      <div className="px-2 py-2 border-b">
+      <div className={`${collapsed ? "px-1" : "px-2"} py-2 border-b`}>
         <button
           onClick={handleNewSession}
           className="w-full flex items-center justify-center gap-1.5 h-9 rounded-md bg-primary text-primary-foreground hover:opacity-90 text-xs font-medium"
         >
           <Plus className="h-3.5 w-3.5" />
-          新建会话
+          {!collapsed && "新建会话"}
         </button>
       </div>
 
       {/* 布告栏（独立入口按钮） */}
-      <div className="px-2 pt-2">
+      <div className={`${collapsed ? "px-1" : "px-2"} pt-2`}>
         <button
           onClick={() => navigate("/ai/policies")}
           title="布告栏"
@@ -271,12 +275,12 @@ function AiPanel() {
           }`}
         >
           <Megaphone className={`h-4 w-4 shrink-0 ${policiesActive ? "text-primary" : ""}`} />
-          <span className="text-[13px] leading-none truncate flex-1">布告栏</span>
+          {!collapsed && <span className="text-[13px] leading-none truncate flex-1">布告栏</span>}
         </button>
       </div>
 
       {/* 置顶会话 */}
-      {pinnedSessions.length > 0 && (
+      {!collapsed && pinnedSessions.length > 0 && (
         <div className="px-2 pt-3 pb-1.5">
           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 pb-1">
             置顶会话
@@ -301,7 +305,7 @@ function AiPanel() {
       )}
 
       {/* 最近会话 + hover 显示 View All */}
-      <div
+      {!collapsed && <div
         className="px-2 pt-3 pb-2 mt-1 flex-1 min-h-0 flex flex-col"
         onMouseEnter={() => setRecentHover(true)}
         onMouseLeave={() => setRecentHover(false)}
@@ -339,7 +343,7 @@ function AiPanel() {
             ))
           )}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

@@ -6,20 +6,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { P1Ticker } from "@/components/messages/P1Ticker";
 
 export function AppTopBar() {
   const navigate = useNavigate();
 
   return (
     <header className="h-12 flex items-center border-b px-4 gap-3 shrink-0 bg-card">
-      <SidebarTrigger className="-ml-1" />
-      
-      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <span className="text-primary">⚡</span>
-        <span>电力交易管理系统</span>
-      </div>
+      <SidebarTrigger className="-ml-1 shrink-0" />
 
-      <div className="flex-1" />
+      <div className="min-w-0 flex-1">
+        <P1Ticker compact />
+      </div>
 
       <div className="flex items-center gap-3">
         <button className="relative p-1.5 rounded-md hover:bg-secondary transition-colors">
