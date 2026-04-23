@@ -1,5 +1,4 @@
 import { Search, Bell, Settings, LogOut } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useNavigate } from "react-router-dom";
 import {
@@ -20,15 +19,7 @@ export function AppTopBar() {
         <span>电力交易管理系统</span>
       </div>
 
-      <div className="flex-1 max-w-md mx-auto">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="搜索..."
-            className="h-8 pl-8 text-sm bg-secondary border-none"
-          />
-        </div>
-      </div>
+      <div className="flex-1" />
 
       <div className="flex items-center gap-3">
         <button className="relative p-1.5 rounded-md hover:bg-secondary transition-colors">
