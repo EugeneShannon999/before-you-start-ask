@@ -2,13 +2,11 @@ import { useMemo, useState, useEffect } from "react";
 import {
   BarChart3,
   LineChart,
-  Calculator,
   Calendar,
   Zap,
   Plug,
   Bot,
   LayoutDashboard,
-  Puzzle,
   History,
   Megaphone,
   Plus,
@@ -22,6 +20,7 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useChatSessions } from "@/lib/aiSessionStore";
 
-type SidebarTab = "ai" | "dashboard" | "plugin";
+type SidebarTab = "ai" | "dashboard";
 
 interface NavItem {
   title: string;
@@ -42,24 +41,38 @@ interface NavItem {
 const dashboardItems: NavItem[] = [
   { title: "市场看板", url: "/tools/market", icon: BarChart3 },
   { title: "算法预测", url: "/tools/prediction", icon: LineChart },
-  { title: "结算计算器", url: "/tools/calculator", icon: Calculator },
   { title: "交易日历", url: "/tools/calendar", icon: Calendar },
   { title: "交易执行", url: "/tools/trading", icon: Zap, placeholder: true },
 ];
 
-const pluginItems: NavItem[] = [
-  { title: "插件管理", url: "/system/plugin", icon: Plug },
+const pluginModules: Array<{
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  url?: string;
+  placeholder?: boolean;
+}> = [
+  {
+    title: "收益结算 & 询盘",
+    description: "整合结算计算与交易中心非公开数据抓取",
+    icon: Plug,
+    url: "/system/plugin",
+  },
+  {
+    title: "自动买卖机器人",
+    description: "预留模块，后续接入自动交易能力",
+    icon: History,
+    placeholder: true,
+  },
 ];
 
 const tabConfig: { key: SidebarTab; label: string; icon: LucideIcon }[] = [
   { key: "ai", label: "听雨", icon: Bot },
   { key: "dashboard", label: "看板", icon: LayoutDashboard },
-  { key: "plugin", label: "插件", icon: Puzzle },
 ];
 
 function getTabFromPath(pathname: string): SidebarTab {
   if (pathname.startsWith("/ai")) return "ai";
-  if (pathname.startsWith("/system/plugin")) return "plugin";
   return "dashboard";
 }
 
@@ -77,7 +90,6 @@ export function AppSidebar() {
     setActiveTab(tab);
     if (tab === "ai") navigate("/ai/policy");
     else if (tab === "dashboard") navigate(dashboardItems[0].url);
-    else if (tab === "plugin") navigate(pluginItems[0].url);
   };
 
   return (
@@ -108,8 +120,9 @@ export function AppSidebar() {
         {activeTab === "ai" ? (
           <AiPanel />
         ) : (
-          <nav className="flex-1 py-2 px-2 flex flex-col gap-0.5">
-            {(activeTab === "dashboard" ? dashboardItems : pluginItems).map((item) => {
+          <div className="flex-1 py-2 px-2 flex flex-col gap-3 overflow-auto">
+            <nav className="flex flex-col gap-0.5">
+            {dashboardItems.map((item) => {
               const isActive = !item.placeholder && location.pathname.startsWith(item.url);
               const handleClick = (e: React.MouseEvent) => {
                 if (item.placeholder) {
@@ -138,7 +151,50 @@ export function AppSidebar() {
                 </button>
               );
             })}
-          </nav>
+            </nav>
+
+            <Card className="rounded-md border-border/80 shadow-none bg-card/70">
+              <CardHeader className="px-3 py-3 space-y-1.5">
+                <CardTitle className="text-[12px] leading-none font-semibold text-foreground/90">
+                  插件管理
+                </CardTitle>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  看板侧的能力入口，聚合结算、询盘与后续自动交易模块。
+                </p>
+              </CardHeader>
+              <CardContent className="px-2.5 pb-2.5 pt-0">
+                <div className="flex flex-col gap-1.5">
+                  {pluginModules.map((module) => {
+                    const isActive = !!module.url && location.pathname.startsWith(module.url);
+                    return (
+                      <button
+                        key={module.title}
+                        onClick={() => module.url && navigate(module.url)}
+                        disabled={module.placeholder}
+                        className={`w-full rounded-md border px-2.5 py-2 text-left transition-colors ${
+                          isActive
+                            ? "border-primary/30 bg-primary/10 text-primary"
+                            : module.placeholder
+                              ? "border-border/60 text-muted-foreground/55 cursor-not-allowed"
+                              : "border-border/70 text-foreground/80 hover:bg-secondary/50 hover:text-foreground"
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <module.icon className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-medium leading-none truncate">{module.title}</p>
+                            <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                              {module.description}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </SidebarContent>
     </Sidebar>
