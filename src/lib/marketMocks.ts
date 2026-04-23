@@ -57,6 +57,43 @@ export interface BoundaryPoint {
   reserveNeg: number;
 }
 
+export type DataSourceTag = "公开API" | "页面抓取" | "规则计算" | "待确认数据源";
+
+export interface WeatherPoint {
+  hour: number;
+  hourLabel: string;
+  temperature: number;
+  windSpeed: number;
+  irradiance: number;
+  cloudCover: number;
+  precipitation: number;
+  alert: string;
+}
+
+export interface PriceForecastLinkRow {
+  hour: number;
+  hourLabel: string;
+  dayAhead: number;
+  realtime: number;
+  spread: number;
+  predictedPrice: number;
+  forecastDeviation: number;
+  candidateFactor: string;
+}
+
+export interface TradeLedgerRow {
+  date: string;
+  contract: string;
+  period: string;
+  side: "买入" | "卖出";
+  quantity: number;
+  dealPrice: number;
+  settlementPrice: number;
+  deviation: number;
+  pnl: number;
+  note: string;
+}
+
 const points96 = Array.from({ length: 96 }, (_, i) => i);
 
 export const SPACE_WARN_THRESHOLD = 800; // 竞价空间预警阈值 MW
@@ -74,7 +111,7 @@ export const price96: PricePoint[] = points96.map((i) => {
     period: String(i + 1),
     dayAhead,
     realtime,
-    spread: realtime - dayAhead,
+    spread: dayAhead - realtime,
     cleared,
   };
 });
@@ -231,7 +268,7 @@ export const spreadFactorHourly: SpreadFactorRow[] = Array.from({ length: 24 }, 
   const slice = (arr: number[]) => arr.slice(h * 4, h * 4 + 4);
   const avg = (arr: number[]) => arr.reduce((s, v) => s + v, 0) / arr.length;
 
-  const spread = Math.round(avg(slice(price96.map((p) => p.realtime - p.dayAhead))));
+  const spread = Math.round(avg(slice(price96.map((p) => p.dayAhead - p.realtime))));
   const loadDev = Math.round(avg(slice(load96.map((l) => l.deviation))));
   const tieActualAvg = avg(slice(boundary96.map((b) => b.tieLine)));
   const tiePlanAvg = avg(slice(tieLinePlan96));
@@ -261,12 +298,73 @@ const realtimeAvg = Math.round(price96.reduce((s, p) => s + p.realtime, 0) / 96)
 export const summary = [
   { label: "日前均价", value: dayAheadAvg, unit: "元/MWh", change: "+3.2%", up: true },
   { label: "实时均价", value: realtimeAvg, unit: "元/MWh", change: "-1.1%", up: false },
-  { label: "日前-实时价差", value: realtimeAvg - dayAheadAvg, unit: "元/MWh", change: "扩大", up: true },
+  { label: "日前-实时价差", value: dayAheadAvg - realtimeAvg, unit: "元/MWh", change: "扩大", up: true },
   { label: "最大负荷", value: Math.max(...load96.map((l) => l.actual)).toLocaleString(), unit: "MW", change: "+5.8%", up: true },
   { label: "新能源预测(峰)", value: Math.max(...renewable96.map((r) => r.total)).toLocaleString(), unit: "MW", change: "+2.1%", up: true },
   { label: "竞价空间(峰)", value: Math.max(...space96.map((b) => b.space)).toLocaleString(), unit: "MW", change: "—", up: true },
   { label: "正备用", value: 520, unit: "MW", change: "正常", up: true },
   { label: "负备用", value: 380, unit: "MW", change: "正常", up: true },
+];
+
+export const weatherSources: Array<{ name: string; source: DataSourceTag; status: string }> = [
+  { name: "EC", source: "公开API", status: "已接入" },
+  { name: "中科天机", source: "页面抓取", status: "已接入" },
+  { name: "相风科技", source: "待确认数据源", status: "预留" },
+];
+
+export const weather24: WeatherPoint[] = Array.from({ length: 24 }, (_, hour) => {
+  const idx = hour * 4;
+  const solar = renewable96[idx].solar;
+  const wind = renewable96[idx].wind;
+  const cloudCover = Math.max(8, Math.min(92, Math.round(82 - solar / 18 + seeded(hour + 900) * 14)));
+  const precipitation = Math.max(0, Number((seeded(hour + 940) * 2.6 - 0.4).toFixed(1)));
+  const temperature = Math.round(24 + Math.sin(((hour - 6) / 24) * Math.PI * 2) * 7 + seeded(hour + 980) * 2);
+  const windSpeed = Number((3.4 + wind / 250 + seeded(hour + 1020) * 1.8).toFixed(1));
+  const irradiance = Math.max(0, Math.round(solar * 0.9));
+  const alert = precipitation > 1.6 ? "短时降水预警" : windSpeed > 6.8 ? "大风关注" : cloudCover > 78 ? "厚云层关注" : "无";
+  return {
+    hour,
+    hourLabel: `${String(hour).padStart(2, "0")}:00`,
+    temperature,
+    windSpeed,
+    irradiance,
+    cloudCover,
+    precipitation,
+    alert,
+  };
+});
+
+export const priceForecastLink24: PriceForecastLinkRow[] = Array.from({ length: 24 }, (_, hour) => {
+  const base = aggregateToHour(price96, ["dayAhead", "realtime", "spread", "cleared"])[hour];
+  const weather = weather24[hour];
+  const space = aggregateToHour(space96, ["load", "renewable", "space"])[hour];
+  const adjustment = Math.round((weather.windSpeed - 5.5) * -6 + (weather.cloudCover - 55) * 0.4 + (800 - space.space) * 0.03);
+  const predictedPrice = base.dayAhead + adjustment;
+  const forecastDeviation = predictedPrice - base.realtime;
+  const candidateFactor =
+    weather.irradiance < 220 ? "辐照偏弱 / 光伏侧压力" :
+    weather.windSpeed > 6.8 ? "风速抬升 / 新能源侧修正" :
+    space.space < SPACE_WARN_THRESHOLD ? "竞价空间偏紧" :
+    Math.abs(base.spread) > 28 ? "价差延续" : "多因子综合";
+  return {
+    hour,
+    hourLabel: base.hourLabel,
+    dayAhead: base.dayAhead,
+    realtime: base.realtime,
+    spread: base.spread,
+    predictedPrice,
+    forecastDeviation,
+    candidateFactor,
+  };
+});
+
+export const tradeLedgerRows: TradeLedgerRow[] = [
+  { date: "2025-07-15", contract: "皖电现货·日前", period: "09:00-10:00", side: "卖出", quantity: 1200, dealPrice: 426, settlementPrice: 418, deviation: 8, pnl: 9600, note: "负荷兑现高于预期" },
+  { date: "2025-07-15", contract: "皖电现货·实时", period: "18:00-19:00", side: "买入", quantity: 800, dealPrice: 482, settlementPrice: 496, deviation: -14, pnl: -11200, note: "晚峰补仓" },
+  { date: "2025-07-14", contract: "月度集中竞价", period: "13-16时段", side: "卖出", quantity: 3000, dealPrice: 392, settlementPrice: 401, deviation: -9, pnl: -27000, note: "高云量导致修正" },
+  { date: "2025-07-14", contract: "省间交易·外送", period: "20:00-22:00", side: "卖出", quantity: 1800, dealPrice: 438, settlementPrice: 431, deviation: 7, pnl: 12600, note: "联络线偏差收窄" },
+  { date: "2025-07-13", contract: "皖电现货·实时", period: "11:00-12:00", side: "买入", quantity: 650, dealPrice: 355, settlementPrice: 348, deviation: 7, pnl: 4550, note: "午间回落" },
+  { date: "2025-07-13", contract: "辅助服务分摊", period: "全日", side: "卖出", quantity: 2200, dealPrice: 88, settlementPrice: 92, deviation: -4, pnl: -8800, note: "分摊上修" },
 ];
 
 // 边界静态信息（卡片）
