@@ -15,7 +15,11 @@ import { useProvince } from "@/contexts/ProvinceContext";
  *   - P0 不区分省份，由 P0Alert 单独广播
  * SP2：订阅 messages 表 level='P1' AND (province=$current OR province='all') ORDER BY created_at DESC LIMIT 5
  */
-export function P1Ticker() {
+interface P1TickerProps {
+  compact?: boolean;
+}
+
+export function P1Ticker({ compact = false }: P1TickerProps) {
   const navigate = useNavigate();
   const { province } = useProvince();
   const [idx, setIdx] = useState(0);
@@ -51,7 +55,11 @@ export function P1Ticker() {
   };
 
   return (
-    <div className="h-8 border-b bg-secondary/40 flex items-center px-4 gap-2 shrink-0 text-xs">
+    <div
+      className={compact
+        ? "h-8 flex items-center gap-2 shrink-0 text-xs min-w-0"
+        : "h-8 border-b bg-secondary/40 flex items-center px-4 gap-2 shrink-0 text-xs"}
+    >
       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium text-[10px] shrink-0">
         <AlertTriangle className="h-3 w-3" />
         P1
@@ -67,7 +75,7 @@ export function P1Ticker() {
         className="flex-1 min-w-0 flex items-center gap-2 text-left hover:text-primary transition-colors group"
       >
         <span className="truncate font-medium text-foreground/90">{msg.title}</span>
-        <span className="text-muted-foreground shrink-0 hidden md:inline">· {msg.summary}</span>
+        <span className="text-muted-foreground shrink-0 hidden xl:inline">· {msg.summary}</span>
         <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:text-primary shrink-0 ml-auto" />
       </button>
 
