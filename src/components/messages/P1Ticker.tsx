@@ -5,8 +5,8 @@ import { p1Messages, formatMsgTime } from "@/lib/messageMocks";
 import { useProvince } from "@/contexts/ProvinceContext";
 
 /**
- * P1 全局横条 - 单条轮播
- * 位置：AppTopBar 下方、主内容上方
+ * P1 AI 提醒 - 单条轮播
+ * 位置：嵌入 AppTopBar；对应业务页同步展示，消息盒子只留痕
  * 行为：
  *   - 5s 切换一条；点击跳转 /ai/policy?msgId=xxx
  *   - 时间在最前面（与消息列表口径一致）
@@ -14,6 +14,7 @@ import { useProvince } from "@/contexts/ProvinceContext";
  *   - 最多展示 5 条（mock 已限制；后端口径同样按 limit 5 拉取）
  *   - P0 不区分省份，由 P0Alert 单独广播
  * SP2：订阅 messages 表 level='P1' AND (province=$current OR province='all') ORDER BY created_at DESC LIMIT 5
+ * 消息分流：P0=顶部AI提醒/推送/看板强提醒；P1=AI提醒+业务页+消息盒子留痕；P2=默认只进消息盒子
  */
 interface P1TickerProps {
   compact?: boolean;
