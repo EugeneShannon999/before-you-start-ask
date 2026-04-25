@@ -128,8 +128,8 @@ export function AppSidebar() {
         {activeTab === "ai" ? (
           <AiPanel collapsed={collapsed} />
         ) : (
-          <div className={`flex-1 py-2 flex flex-col gap-3 overflow-auto ${collapsed ? "px-1" : "px-2"}`}>
-            <nav className="flex flex-col gap-0.5">
+          <div className={`flex-1 min-h-0 py-2 flex flex-col gap-3 ${collapsed ? "px-1" : "px-2"}`}>
+            <nav className="flex flex-col gap-0.5 overflow-auto">
             {dashboardItems.map((item) => {
               const isActive = !item.placeholder && location.pathname.startsWith(item.url);
               const handleClick = (e: React.MouseEvent) => {
@@ -161,7 +161,7 @@ export function AppSidebar() {
             })}
             </nav>
 
-            {!collapsed && <Card className="rounded-md border-border/80 shadow-none bg-card/70">
+            {!collapsed && <Card className="mt-auto rounded-md border-border/80 shadow-none bg-card/70 shrink-0">
               <CardHeader className="px-3 py-3 space-y-1.5">
                 <CardTitle className="text-[12px] leading-none font-semibold text-foreground/90">
                   插件管理
