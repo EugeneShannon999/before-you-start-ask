@@ -127,20 +127,16 @@ export default function MarketInfo() {
               </Select>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-muted-foreground">周期</span>
+              <span className="text-xs text-muted-foreground">时间段</span>
               <Select defaultValue="today">
-                <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="today">今日</SelectItem>
+                  <SelectItem value="today">今日 00:00-24:00</SelectItem>
                   <SelectItem value="2d">近 2 日</SelectItem>
                   <SelectItem value="4d">近 4 日</SelectItem>
                   <SelectItem value="7d">近 7 日</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-muted-foreground">交易日</span>
-              <div className="h-8 rounded-md border bg-background px-3 flex items-center text-[11px] text-muted-foreground">D</div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs text-muted-foreground">粒度</span>
