@@ -114,7 +114,6 @@ export default function MarketInfo() {
         <header className="rounded-lg border bg-card p-4 shadow-notion">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
             <h1 className="text-lg font-semibold shrink-0">市场看板</h1>
-            <span className="text-xs text-muted-foreground shrink-0">筛选后可连续向下查看全天走势与关键偏差。</span>
             <div className="flex items-center gap-2 shrink-0 ml-2">
               <span className="text-xs text-muted-foreground">省份</span>
               <Select value={province} onValueChange={(v) => setProvince(v as ProvinceCode)}>
