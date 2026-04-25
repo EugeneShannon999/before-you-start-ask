@@ -13,13 +13,13 @@ import { Button } from "@/components/ui/button";
 import { p0Messages, formatMsgTime } from "@/lib/messageMocks";
 
 /**
- * P0 紧急消息 - 站内弹窗（SP1 原型）
+ * P0 紧急消息 - 顶部 AI 提醒 / 推送 / 看板强提醒（SP1 原型）
  * 行为：进入应用 1.5s 后弹出最新一条 P0；用户确认后本会话不再弹。
  *
  * SP2 升级路径：
  *   - 接入 Web Push (Service Worker + VAPID) 推浏览器系统通知
  *   - 接入移动端推送通道（待定：APNs / FCM / 短信兜底）
- *   - 关键时段（如开市/收市前 15min）强制 P0 横幅常驻
+ *   - 关键时段（如开市/收市前 15min）强制 P0 横幅常驻 / 看板强提醒
  */
 const STORAGE_KEY = "p0_dismissed_session";
 

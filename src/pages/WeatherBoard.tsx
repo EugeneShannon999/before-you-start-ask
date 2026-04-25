@@ -20,10 +20,10 @@ export default function WeatherBoard() {
             <h1 className="text-lg font-semibold">气象看板</h1>
             <p className="text-xs text-muted-foreground mt-1">围绕气象 → 新能源预测 → 市场数据 → 竞价空间 → 电价关系 → 策略的链路展示。</p>
           </div>
-          <span className="text-[11px] px-2 py-1 rounded bg-secondary text-muted-foreground">首版字段 · SP1</span>
+            <span className="text-[11px] px-2 py-1 rounded bg-secondary text-muted-foreground">首版字段 · 规则计算</span>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-3">
+        <div className="grid gap-2 md:grid-cols-2">
           {weatherSources.map((item) => (
             <div key={item.name} className="rounded-md border bg-background p-3">
               <div className="flex items-center justify-between gap-2">
@@ -39,7 +39,7 @@ export default function WeatherBoard() {
       <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-sm font-semibold">联动提示</h2>
-          <span className="text-[11px] text-muted-foreground">规则计算</span>
+          <span className="text-[11px] text-muted-foreground">规则计算 · 非复杂 AI 算法</span>
         </div>
         <div className="grid gap-2 xl:grid-cols-5">
           {weatherLinks.map((item) => (
@@ -106,6 +106,7 @@ export default function WeatherBoard() {
               <p className="text-xs font-medium">{row.hourLabel}</p>
               <p className="text-[11px] text-muted-foreground mt-1">{row.alert}</p>
               <p className="text-[10px] text-muted-foreground mt-2">风速 {row.windSpeed.toFixed(1)} m/s · 云量 {row.cloudCover}% · 降水 {row.precipitation.toFixed(1)} mm</p>
+              <p className="text-[10px] text-muted-foreground mt-1">来源：公开API / 页面抓取 · 规则计算</p>
             </div>
           ))}
         </div>

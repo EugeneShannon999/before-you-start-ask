@@ -309,7 +309,6 @@ export const summary = [
 export const weatherSources: Array<{ name: string; source: DataSourceTag; status: string }> = [
   { name: "EC", source: "公开API", status: "已接入" },
   { name: "中科天机", source: "页面抓取", status: "已接入" },
-  { name: "相风科技", source: "待确认数据源", status: "预留" },
 ];
 
 export const weather24: WeatherPoint[] = Array.from({ length: 24 }, (_, hour) => {
@@ -321,7 +320,8 @@ export const weather24: WeatherPoint[] = Array.from({ length: 24 }, (_, hour) =>
   const temperature = Math.round(24 + Math.sin(((hour - 6) / 24) * Math.PI * 2) * 7 + seeded(hour + 980) * 2);
   const windSpeed = Number((3.4 + wind / 250 + seeded(hour + 1020) * 1.8).toFixed(1));
   const irradiance = Math.max(0, Math.round(solar * 0.9));
-  const alert = precipitation > 1.6 ? "短时降水预警" : windSpeed > 6.8 ? "大风关注" : cloudCover > 78 ? "厚云层关注" : "无";
+  const factors = [windSpeed > 6.8, precipitation > 1.6, cloudCover > 78, irradiance < 180, temperature >= 34 || temperature <= 18].filter(Boolean).length;
+  const alert = factors >= 2 ? "多因素叠加影响新能源出力" : precipitation > 1.6 ? "短时降水预警" : windSpeed > 6.8 ? "大风关注" : cloudCover > 78 ? "厚云层关注" : temperature >= 34 || temperature <= 18 ? "温度异常关注" : "无";
   return {
     hour,
     hourLabel: `${String(hour).padStart(2, "0")}:00`,
