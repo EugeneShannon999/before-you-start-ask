@@ -127,12 +127,14 @@ export default function MarketInfo() {
               </Select>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-muted-foreground">日期</span>
-              <Select defaultValue="2025-07-15">
-                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+              <span className="text-xs text-muted-foreground">周期</span>
+              <Select defaultValue="today">
+                <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2025-07-15">2025-07-15</SelectItem>
-                  <SelectItem value="2025-07-14">2025-07-14</SelectItem>
+                  <SelectItem value="today">今日</SelectItem>
+                  <SelectItem value="2d">近 2 日</SelectItem>
+                  <SelectItem value="4d">近 4 日</SelectItem>
+                  <SelectItem value="7d">近 7 日</SelectItem>
                 </SelectContent>
               </Select>
             </div>
