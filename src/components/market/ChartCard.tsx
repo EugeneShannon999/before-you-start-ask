@@ -13,12 +13,12 @@ export interface ChartCardProps {
   chartId: string;
   title: string;
   caption?: string;
-  granularity: Granularity;
-  onGranularityChange: (g: Granularity) => void;
-  range: RangeKey;
-  onRangeChange: (r: RangeKey) => void;
-  showLegend: boolean;
-  onToggleLegend: () => void;
+  granularity?: Granularity;
+  onGranularityChange?: (g: Granularity) => void;
+  range?: RangeKey;
+  onRangeChange?: (r: RangeKey) => void;
+  showLegend?: boolean;
+  onToggleLegend?: () => void;
   // 数据表内容
   tableHeader: string[];
   tableRows: (string | number)[][];
