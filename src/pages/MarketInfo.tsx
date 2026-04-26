@@ -747,6 +747,33 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "de
   );
 }
 
+function SeriesToggles({
+  series,
+  onChange,
+  items,
+}: {
+  series: Record<string, boolean>;
+  onChange: (next: any) => void;
+  items: Array<{ k: string; label: string; color: string }>;
+}) {
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      {items.map((s) => (
+        <label key={s.k} className="inline-flex items-center gap-1 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={series[s.k]}
+            onChange={(e) => onChange({ ...series, [s.k]: e.target.checked })}
+            className="h-3 w-3"
+          />
+          <span className="inline-block h-2 w-3 rounded-sm" style={{ background: s.color }} />
+          <span className="text-muted-foreground">{s.label}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 function SourceBadge({ label }: { label: DataSourceTag }) {
   return <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{label}</span>;
 }
