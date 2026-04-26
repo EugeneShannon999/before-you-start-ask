@@ -451,11 +451,22 @@ export default function MarketInfo() {
             ...loadDs.load.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, ((p.deviation / p.predicted) * 100).toFixed(2)]),
           ]}
           footer={
-            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
-              <Stat label="最大正偏差" value={`+${loadStats.maxPos} MW`} tone="destructive" />
-              <Stat label="最大负偏差" value={`${loadStats.maxNeg} MW`} tone="success" />
-              <Stat label="平均偏差" value={`${loadStats.avg > 0 ? "+" : ""}${loadStats.avg} MW`} />
-              <Stat label="平均偏差率" value={`${loadStats.avgPct}%`} />
+            <div className="mt-2 space-y-2 text-[11px]">
+              <SeriesToggles
+                series={loadSeries}
+                onChange={setLoadSeries}
+                items={[
+                  { k: "predicted", label: "预测负荷", color: C_PRIMARY },
+                  { k: "actual", label: "实际负荷", color: C_PRIMARY },
+                  { k: "deviation", label: "偏差", color: "hsl(var(--destructive))" },
+                ]}
+              />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <Stat label="最大正偏差" value={`+${loadStats.maxPos} MW`} tone="destructive" />
+                <Stat label="最大负偏差" value={`${loadStats.maxNeg} MW`} tone="success" />
+                <Stat label="平均偏差" value={`${loadStats.avg > 0 ? "+" : ""}${loadStats.avg} MW`} />
+                <Stat label="平均偏差率" value={`${loadStats.avgPct}%`} />
+              </div>
             </div>
           }
         >
@@ -560,6 +571,19 @@ export default function MarketInfo() {
             ["时段", "预测", "实际", "偏差", "预警"],
             ...spaceDs.space.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? 1 : 0]),
           ]}
+          footer={
+            <div className="mt-2 text-[11px]">
+              <SeriesToggles
+                series={spaceSeries}
+                onChange={setSpaceSeries}
+                items={[
+                  { k: "predicted", label: "预测竞价空间", color: C_PRIMARY },
+                  { k: "actual", label: "实际竞价空间", color: C_SUCCESS },
+                  { k: "deviation", label: "偏差", color: "hsl(var(--destructive))" },
+                ]}
+              />
+            </div>
+          }
         >
           <BiddingSpaceChart
             data={zoomData(spaceDs.space)}
