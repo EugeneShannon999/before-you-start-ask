@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -48,6 +49,7 @@ interface ChartCfg {
   granularity: Granularity;
   range: RangeKey;
   showLegend: boolean;
+  zoomWindow: { start: number; end: number };
 }
 
 const getCurrentBusinessDate = () => {
@@ -61,14 +63,17 @@ const rangeDays: Record<RangeKey, number> = { "1d": 1, "2d": 2, "4d": 4, "7d": 7
 type MainChartId = "price-spread" | "load-forecast" | "renewable-output" | "bidding-space";
 const STORAGE_KEY = "market-board-interaction-state:v1";
 
-const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true });
+const DEFAULT_ZOOM_WINDOW = { start: 0, end: 100 };
+const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true, zoomWindow: DEFAULT_ZOOM_WINDOW });
 const restoreCfg = (cfg: ChartCfg | undefined, g: Granularity): ChartCfg => ({
   granularity: g,
   range: cfg?.range ?? "1d",
   showLegend: cfg?.showLegend ?? true,
+  zoomWindow: cfg?.zoomWindow ?? DEFAULT_ZOOM_WINDOW,
 });
 
 export default function MarketInfo() {
+  const navigate = useNavigate();
   const { province, setProvince } = useProvince();
   const businessDate = useMemo(() => getCurrentBusinessDate(), []);
   const saved = useMemo(() => {
