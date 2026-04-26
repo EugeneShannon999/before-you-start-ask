@@ -60,21 +60,12 @@ function getLinkedWeatherRows(rows: WeatherPoint[], source: string, pointScope: 
   return adjusted;
 }
 
-function getCoreCards(row: WeatherPoint) {
-  return [
-    { label: "直接辐射", value: formatValue(row.directRadiation, " W/㎡"), group: "光伏", source: "公开API" },
-    { label: "短波辐射", value: formatValue(row.shortwaveRadiation, " W/㎡"), group: "光伏", source: "公开API" },
-    { label: "低云量", value: `${row.lowCloudCover}%`, group: "光伏", source: "页面抓取" },
-    { label: "总云量", value: `${row.cloudCover}%`, group: "光伏", source: "页面抓取" },
-    { label: "2米气温", value: `${row.temperature}℃`, group: "负荷", source: "公开API" },
-    { label: "2米相对湿度", value: `${row.humidity2m}%`, group: "负荷", source: "公开API" },
-    { label: "2米露点温度", value: `${row.dewPoint2m}℃`, group: "负荷", source: "公开API" },
-    { label: "降雨量", value: `${row.precipitation.toFixed(1)} mm`, group: "降水", source: "页面抓取" },
-    { label: "地表总降水率", value: `${row.surfacePrecipRate.toFixed(2)} mm/h`, group: "降水", source: "页面抓取" },
-    { label: "10米风速", value: `${row.wind10mSpeed.toFixed(1)} m/s`, group: "风电", source: "公开API" },
-    { label: "100米风速", value: `${row.wind100mSpeed.toFixed(1)} m/s`, group: "风电", source: "规则计算" },
-    { label: "综合预警等级", value: row.warningLevel, group: "预警", source: "规则计算" },
-  ];
+function getCoreCards(row: WeatherPoint, fieldGroup: string) {
+  const selected = fieldGroups[fieldGroup as keyof typeof fieldGroups];
+  return weatherFieldCatalog
+    .filter((item) => selected.includes(item.label) || item.label === "综合预警等级")
+    .slice(0, 12)
+    .map((item) => ({ ...item, value: item.getValue(row) }));
 }
 
 function SegmentedControl({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (value: string) => void }) {
