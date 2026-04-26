@@ -50,7 +50,13 @@ interface ChartCfg {
   showLegend: boolean;
 }
 
-const today = "2025-07-15";
+const getCurrentBusinessDate = () => {
+  const date = new Date();
+  const day = date.getDay();
+  if (day === 0) date.setDate(date.getDate() - 2);
+  if (day === 6) date.setDate(date.getDate() - 1);
+  return date.toISOString().slice(0, 10);
+};
 const rangeDays: Record<RangeKey, number> = { "1d": 1, "2d": 2, "4d": 4, "7d": 7 };
 type MainChartId = "price-spread" | "load-forecast" | "renewable-output" | "bidding-space";
 const STORAGE_KEY = "market-board-interaction-state:v1";
@@ -59,23 +65,24 @@ const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d",
 
 export default function MarketInfo() {
   const { province, setProvince } = useProvince();
+  const businessDate = useMemo(() => getCurrentBusinessDate(), []);
   const saved = useMemo(() => {
     if (typeof window === "undefined") return null;
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch { return null; }
   }, []);
   const [globalGranularity, setGlobalGranularity] = useState<Granularity>(saved?.granularity ?? "hour");
   const [boundaryExpanded, setBoundaryExpanded] = useState(false);
-  const [startDate, setStartDate] = useState(saved?.startDate ?? today);
-  const [endDate, setEndDate] = useState(saved?.endDate ?? today);
+  const [startDate, setStartDate] = useState(saved?.startDate ?? businessDate);
+  const [endDate, setEndDate] = useState(saved?.endDate ?? businessDate);
   const [activeChart, setActiveChart] = useState<MainChartId | null>(saved?.activeChart ?? null);
   const [expandedChart, setExpandedChart] = useState<MainChartId | null>(saved?.expandedChart ?? null);
   const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? { start: 0, end: 100 });
 
   // 每图独立配置（粒度可被全局或单独控制）
-  const [priceCfg, setPriceCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
-  const [loadCfg, setLoadCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
-  const [renCfg, setRenCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
-  const [spaceCfg, setSpaceCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
+  const [priceCfg, setPriceCfg] = useState<ChartCfg>(saved?.chartCfgs?.price ?? initialCfg(globalGranularity));
+  const [loadCfg, setLoadCfg] = useState<ChartCfg>(saved?.chartCfgs?.load ?? initialCfg(globalGranularity));
+  const [renCfg, setRenCfg] = useState<ChartCfg>(saved?.chartCfgs?.renewable ?? initialCfg(globalGranularity));
+  const [spaceCfg, setSpaceCfg] = useState<ChartCfg>(saved?.chartCfgs?.space ?? initialCfg(globalGranularity));
 
   // 系列可见性
   const [priceSeries, setPriceSeries] = useState(saved?.priceSeries ?? { dayAhead: true, realtime: true, spread: true, cleared: true });
@@ -92,7 +99,7 @@ export default function MarketInfo() {
   };
 
   const applyQuickRange = (days: number) => {
-    const end = new Date(`${today}T00:00:00`);
+    const end = new Date(`${businessDate}T00:00:00`);
     const start = new Date(end);
     start.setDate(end.getDate() - days + 1);
     setStartDate(start.toISOString().slice(0, 10));
@@ -134,10 +141,11 @@ export default function MarketInfo() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       province, startDate, endDate, granularity: globalGranularity,
+      chartCfgs: { price: priceCfg, load: loadCfg, renewable: renCfg, space: spaceCfg },
       priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
       activeChart, expandedChart,
     }));
-  }, [province, startDate, endDate, globalGranularity, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart]);
+  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart]);
 
   // 各图数据
   const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
@@ -176,10 +184,10 @@ export default function MarketInfo() {
 
   const weatherSignals = useMemo(() => weather24.filter((row) => row.alert !== "无").slice(0, 4), []);
   const forecastSummary = useMemo(() => [
-    { label: "负荷预测均值", stat: summarizeForecast(loadForecast), unit: "MW" },
-    { label: "新能源预测均值", stat: summarizeForecast(renForecast), unit: "MW" },
-    { label: "竞价空间预测", stat: summarizeForecast(spaceForecast), unit: "MW" },
-    { label: "电价预测均值", stat: summarizeForecast(priceForecast), unit: "元/MWh" },
+    { label: "负荷预测均值", stat: summarizeForecast(loadForecast), unit: "MW", source: "预测模块", lag: "实际滞后约15-60分钟" },
+    { label: "新能源预测均值", stat: summarizeForecast(renForecast), unit: "MW", source: "预测模块", lag: "场站实测回传后校验" },
+    { label: "竞价空间预测", stat: summarizeForecast(spaceForecast), unit: "MW", source: "规则计算", lag: "随负荷/新能源预测同步" },
+    { label: "电价预测均值", stat: summarizeForecast(priceForecast), unit: "元/MWh", source: "预测模块", lag: "出清披露后对照" },
   ], [loadForecast, renForecast, spaceForecast, priceForecast]);
 
   return (
