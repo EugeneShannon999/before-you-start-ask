@@ -188,7 +188,7 @@ export default function ChartFullscreen() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <Select defaultValue="anhui">
+            <Select value={province} onValueChange={(v) => setProvince(v as ProvinceCode)}>
               <SelectTrigger className="h-7 w-20 text-xs"><MapPin className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="anhui">安徽</SelectItem>
@@ -196,13 +196,9 @@ export default function ChartFullscreen() {
                 <SelectItem value="guangdong">广东</SelectItem>
               </SelectContent>
             </Select>
-            <Select defaultValue="2025-07-15">
-              <SelectTrigger className="h-7 w-32 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="2025-07-15">2025-07-15</SelectItem>
-                <SelectItem value="2025-07-14">2025-07-14</SelectItem>
-              </SelectContent>
-            </Select>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-7 rounded border bg-background px-2 text-xs" />
+            <span className="text-xs text-muted-foreground">-</span>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-7 rounded border bg-background px-2 text-xs" />
             <div className="flex rounded border overflow-hidden text-xs">
               <button
                 onClick={() => setGranularity("15min")}
@@ -212,7 +208,12 @@ export default function ChartFullscreen() {
                 onClick={() => setGranularity("hour")}
                 className={`px-2 py-1 ${granularity === "hour" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
               >1小时 · 24点</button>
+              <button
+                onClick={() => setGranularity("day")}
+                className={`px-2 py-1 ${granularity === "day" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+              >24小时</button>
             </div>
+            <span className="text-[10px] text-muted-foreground">窗口 {zoomWindow.start}% - {zoomWindow.end}%</span>
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" /> 更新 10:32
             </span>
@@ -221,7 +222,10 @@ export default function ChartFullscreen() {
 
         {/* 主图 */}
         <main className="flex-1 p-6">
-          <div className="h-full rounded-lg shadow-notion bg-card p-5">
+          <div
+            className="h-full rounded-lg shadow-notion bg-card p-5"
+            onWheel={(event) => { event.preventDefault(); handleZoomWheel(event.deltaY); }}
+          >
             {renderChart()}
           </div>
         </main>
