@@ -63,11 +63,26 @@ export interface WeatherPoint {
   hour: number;
   hourLabel: string;
   temperature: number;
+  humidity2m: number;
+  dewPoint2m: number;
   windSpeed: number;
+  wind10mSpeed: number;
+  wind100mSpeed: number;
   irradiance: number;
+  directRadiation: number;
+  shortwaveRadiation: number;
+  lowCloudCover: number;
+  midCloudCover: number;
+  highCloudCover: number;
   cloudCover: number;
   precipitation: number;
+  surfacePrecipRate: number;
   alert: string;
+  warningLevel: "正常" | "区域提示" | "市场级提示";
+  triggerReason: string;
+  affectedArea: string;
+  impactTarget: "光伏" | "风电" | "负荷" | "市场波动";
+  priorityHint: string;
 }
 
 export interface PriceForecastLinkRow {
@@ -315,22 +330,52 @@ export const weather24: WeatherPoint[] = Array.from({ length: 24 }, (_, hour) =>
   const idx = hour * 4;
   const solar = renewable96[idx].solar;
   const wind = renewable96[idx].wind;
-  const cloudCover = Math.max(8, Math.min(92, Math.round(82 - solar / 18 + seeded(hour + 900) * 14)));
+  const lowCloudCover = Math.max(5, Math.min(88, Math.round(72 - solar / 22 + seeded(hour + 900) * 18)));
+  const midCloudCover = Math.max(6, Math.min(86, Math.round(48 + seeded(hour + 910) * 28)));
+  const highCloudCover = Math.max(8, Math.min(92, Math.round(36 + seeded(hour + 920) * 36)));
+  const cloudCover = Math.max(lowCloudCover, Math.round((lowCloudCover + midCloudCover + highCloudCover) / 2.4));
   const precipitation = Math.max(0, Number((seeded(hour + 940) * 2.6 - 0.4).toFixed(1)));
   const temperature = Math.round(24 + Math.sin(((hour - 6) / 24) * Math.PI * 2) * 7 + seeded(hour + 980) * 2);
-  const windSpeed = Number((3.4 + wind / 250 + seeded(hour + 1020) * 1.8).toFixed(1));
+  const humidity2m = Math.max(38, Math.min(96, Math.round(58 + precipitation * 12 + cloudCover * 0.22 + seeded(hour + 990) * 10)));
+  const dewPoint2m = Math.round(temperature - (100 - humidity2m) / 5);
+  const wind10mSpeed = Number((3.4 + wind / 260 + seeded(hour + 1020) * 1.6).toFixed(1));
+  const wind100mSpeed = Number((wind10mSpeed * 1.42 + seeded(hour + 1030) * 1.1).toFixed(1));
+  const windSpeed = wind10mSpeed;
   const irradiance = Math.max(0, Math.round(solar * 0.9));
-  const factors = [windSpeed > 6.8, precipitation > 1.6, cloudCover > 78, irradiance < 180, temperature >= 34 || temperature <= 18].filter(Boolean).length;
-  const alert = factors >= 2 ? "多因素叠加影响新能源出力" : precipitation > 1.6 ? "短时降水预警" : windSpeed > 6.8 ? "大风关注" : cloudCover > 78 ? "厚云层关注" : temperature >= 34 || temperature <= 18 ? "温度异常关注" : "无";
+  const directRadiation = Math.max(0, Math.round(irradiance * (1 - lowCloudCover / 130)));
+  const shortwaveRadiation = Math.max(0, Math.round(irradiance * (1 - cloudCover / 180) + seeded(hour + 960) * 35));
+  const surfacePrecipRate = Number((precipitation / 1.5 + seeded(hour + 970) * 0.25).toFixed(2));
+  const factors = [wind100mSpeed > 8.6, precipitation > 1.6, cloudCover > 78, directRadiation < 180, temperature >= 34 || temperature <= 18].filter(Boolean).length;
+  const alert = factors >= 2 ? "多因素叠加影响新能源出力" : precipitation > 1.6 ? "短时降水预警" : wind100mSpeed > 8.6 ? "大风关注" : cloudCover > 78 ? "厚云层关注" : temperature >= 34 || temperature <= 18 ? "温度异常关注" : "无";
+  const warningLevel = factors >= 3 ? "市场级提示" : factors >= 1 ? "区域提示" : "正常";
+  const impactTarget = factors >= 3 ? "市场波动" : directRadiation < 180 || cloudCover > 78 ? "光伏" : wind100mSpeed > 8.6 ? "风电" : temperature >= 34 || temperature <= 18 ? "负荷" : "光伏";
+  const affectedArea = warningLevel === "市场级提示" ? "皖北、皖中多区域" : impactTarget === "负荷" ? "合肥负荷中心" : impactTarget === "风电" ? "沿江风电区域" : "皖北新能源场站";
+  const triggerReason = alert === "无" ? "未触发业务阈值或分位兜底" : `${alert} · 阈值配置预留`;
+  const priorityHint = factors >= 2 ? "与新能源预测偏差或负荷偏差同向时提高提醒优先级" : "常规留痕";
   return {
     hour,
     hourLabel: `${String(hour).padStart(2, "0")}:00`,
     temperature,
+    humidity2m,
+    dewPoint2m,
     windSpeed,
+    wind10mSpeed,
+    wind100mSpeed,
     irradiance,
+    directRadiation,
+    shortwaveRadiation,
+    lowCloudCover,
+    midCloudCover,
+    highCloudCover,
     cloudCover,
     precipitation,
+    surfacePrecipRate,
     alert,
+    warningLevel,
+    triggerReason,
+    affectedArea,
+    impactTarget,
+    priorityHint,
   };
 });
 
