@@ -52,12 +52,13 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 export function ChartCard(props: ChartCardProps) {
   const [tableOpen, setTableOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  const canZoom = props.active || props.expanded;
   const chartBody = (
     <div
       key={resetKey}
       onClick={props.onActivate}
-      onMouseEnter={props.onActivate}
       onWheel={(event) => {
+        if (!canZoom) return;
         event.preventDefault();
         props.onZoomWheel?.(event.deltaY);
       }}
