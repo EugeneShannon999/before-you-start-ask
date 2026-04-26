@@ -227,13 +227,8 @@ export default function MarketInfo() {
                 >24小时</button>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-muted-foreground">预测对照</span>
-              <div className="flex rounded-md border overflow-hidden text-xs h-8 bg-background">
-                {modeOptions.map((item) => (
-                  <button key={item.key} onClick={() => setForecastMode(item.key)} className={`px-2 ${forecastMode === item.key ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>{item.label}</button>
-                ))}
-              </div>
+            <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
+              缩放窗口 {zoomWindow.start}% - {zoomWindow.end}%
             </div>
             <div className="flex items-center gap-2 text-[11px] shrink-0 ml-auto">
               <span className="text-muted-foreground flex items-center gap-1">
