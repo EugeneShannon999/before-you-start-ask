@@ -2,7 +2,7 @@ import { ExternalLink, Download, Table2, RotateCcw, Eye, EyeOff } from "lucide-r
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Granularity } from "@/lib/marketMocks";
 
-export type RangeKey = "1d" | "7d" | "30d";
+export type RangeKey = "1d" | "2d" | "4d" | "7d";
 
 export interface ChartToolbarProps {
   chartId: string; // 用于新标签页 URL
@@ -55,7 +55,7 @@ export function ChartToolbar({
         </div>
         {/* 区间切换 */}
         <div className="flex rounded border overflow-hidden text-[10px] mr-1">
-          {(["1d", "7d", "30d"] as RangeKey[]).map((r) => (
+          {(["1d", "2d", "4d", "7d"] as RangeKey[]).map((r) => (
             <button
               key={r}
               onClick={() => onRangeChange(r)}
@@ -65,7 +65,7 @@ export function ChartToolbar({
                   : "hover:bg-secondary text-muted-foreground"
               }`}
             >
-              {r === "1d" ? "24h" : r === "7d" ? "7日" : "30日"}
+              {r === "1d" ? "今日" : r === "2d" ? "2日" : r === "4d" ? "4日" : "7日"}
             </button>
           ))}
         </div>
