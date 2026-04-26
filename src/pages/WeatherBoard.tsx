@@ -95,7 +95,7 @@ export default function WeatherBoard() {
 
   const linkedWeather = useMemo(() => getLinkedWeatherRows(weather24, source, pointScope, granularity), [source, pointScope, granularity]);
   const current = useMemo(() => linkedWeather.find((row) => row.warningLevel === "市场级提示") ?? linkedWeather.find((row) => row.warningLevel === "区域提示") ?? linkedWeather[0], [linkedWeather]);
-  const coreCards = useMemo(() => getCoreCards(current), [current]);
+  const coreCards = useMemo(() => getCoreCards(current, fieldGroup), [current, fieldGroup]);
   const warningRows = linkedWeather.filter((row) => row.warningLevel !== "正常").slice(0, 6);
 
   return (
