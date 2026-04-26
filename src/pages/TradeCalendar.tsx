@@ -22,19 +22,21 @@ const eventTone: Record<TradeCalendarEvent["type"], string> = {
 
 export default function TradeCalendar() {
   const [events, setEvents] = useState<TradeCalendarEvent[]>(defaultTradeCalendarEvents);
+  const [pendingUpload, setPendingUpload] = useState<TradeCalendarEvent[]>([]);
   const [pendingOcr, setPendingOcr] = useState<TradeCalendarEvent | null>(null);
+  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const eventsByDay = useMemo(() => events.reduce<Record<number, TradeCalendarEvent[]>>((acc, e) => {
     const day = Number(e.date.slice(-2));
     acc[day] = [...(acc[day] ?? []), e];
     return acc;
   }, {}), [events]);
-  const upcomingEvents = useMemo(() => events.filter((e) => e.date >= "2025-07-18").sort((a, b) => a.date.localeCompare(b.date)).slice(0, 6), [events]);
+  const upcomingEvents = useMemo(() => events.filter((e) => e.date >= todayIso).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 6), [events, todayIso]);
 
   const handleCalendarUpload = async (file?: File) => {
     if (!file) return;
     const text = await file.text();
     const parsed = parseTradeCalendarCsv(text, "Excel上传");
-    if (parsed.length) setEvents((prev) => [...prev, ...parsed]);
+    setPendingUpload(parsed);
   };
 
   const handleImageUpload = (file?: File) => {
@@ -59,7 +61,7 @@ export default function TradeCalendar() {
       <section className="rounded-lg shadow-notion bg-card p-4 flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="text-sm font-semibold">事件源接入</p>
-          <p className="text-xs text-muted-foreground mt-1">优先预留平台交易日历 API；Excel 上传生成事件；图片 OCR 后需人工确认。</p>
+          <p className="text-xs text-muted-foreground mt-1">上传链路：Excel上传 → 预览校验 → 确认生成；平台交易日历 API 预留优先，图片 OCR 作为次级入口。</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] px-2 py-1 rounded bg-secondary text-muted-foreground">平台API优先</span>
@@ -67,11 +69,26 @@ export default function TradeCalendar() {
             <FileSpreadsheet className="h-3.5 w-3.5" /> Excel上传
             <input type="file" accept=".csv,.tsv,.xls,.xlsx" className="hidden" onChange={(e) => handleCalendarUpload(e.target.files?.[0])} />
           </label>
-          <label className="h-8 px-3 rounded-md border inline-flex items-center gap-1.5 text-xs cursor-pointer hover:bg-secondary">
+          <label className="h-8 px-3 rounded-md border inline-flex items-center gap-1.5 text-xs cursor-pointer hover:bg-secondary text-muted-foreground">
             <ImageUp className="h-3.5 w-3.5" /> 图片OCR
             <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
           </label>
         </div>
+        {pendingUpload.length > 0 && (
+          <div className="w-full rounded-md border bg-background p-3 space-y-2 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium">预览校验 · {pendingUpload.length} 条待生成事件</span>
+              <Button size="sm" onClick={() => { setEvents((prev) => [...prev, ...pendingUpload]); setPendingUpload([]); }}><CheckCircle2 className="h-3.5 w-3.5 mr-1" />确认生成</Button>
+            </div>
+            <div className="grid gap-1 md:grid-cols-2">
+              {pendingUpload.slice(0, 4).map((event) => (
+                <div key={event.id} className="rounded border px-2 py-1 text-muted-foreground">
+                  {event.date} · {event.type} · {event.title} · {event.startTime}-{event.endTime}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {pendingOcr && (
           <div className="w-full rounded-md border bg-background p-3 flex items-center justify-between gap-2 text-xs">
             <span>{pendingOcr.title} · {pendingOcr.date} {pendingOcr.startTime}-{pendingOcr.endTime}</span>

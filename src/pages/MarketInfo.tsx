@@ -50,7 +50,13 @@ interface ChartCfg {
   showLegend: boolean;
 }
 
-const today = "2025-07-15";
+const getCurrentBusinessDate = () => {
+  const date = new Date();
+  const day = date.getDay();
+  if (day === 0) date.setDate(date.getDate() - 2);
+  if (day === 6) date.setDate(date.getDate() - 1);
+  return date.toISOString().slice(0, 10);
+};
 const rangeDays: Record<RangeKey, number> = { "1d": 1, "2d": 2, "4d": 4, "7d": 7 };
 type MainChartId = "price-spread" | "load-forecast" | "renewable-output" | "bidding-space";
 const STORAGE_KEY = "market-board-interaction-state:v1";
@@ -59,23 +65,24 @@ const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d",
 
 export default function MarketInfo() {
   const { province, setProvince } = useProvince();
+  const businessDate = useMemo(() => getCurrentBusinessDate(), []);
   const saved = useMemo(() => {
     if (typeof window === "undefined") return null;
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch { return null; }
   }, []);
   const [globalGranularity, setGlobalGranularity] = useState<Granularity>(saved?.granularity ?? "hour");
   const [boundaryExpanded, setBoundaryExpanded] = useState(false);
-  const [startDate, setStartDate] = useState(saved?.startDate ?? today);
-  const [endDate, setEndDate] = useState(saved?.endDate ?? today);
+  const [startDate, setStartDate] = useState(saved?.startDate ?? businessDate);
+  const [endDate, setEndDate] = useState(saved?.endDate ?? businessDate);
   const [activeChart, setActiveChart] = useState<MainChartId | null>(saved?.activeChart ?? null);
   const [expandedChart, setExpandedChart] = useState<MainChartId | null>(saved?.expandedChart ?? null);
   const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? { start: 0, end: 100 });
 
   // 每图独立配置（粒度可被全局或单独控制）
-  const [priceCfg, setPriceCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
-  const [loadCfg, setLoadCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
-  const [renCfg, setRenCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
-  const [spaceCfg, setSpaceCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
+  const [priceCfg, setPriceCfg] = useState<ChartCfg>(saved?.chartCfgs?.price ?? initialCfg(globalGranularity));
+  const [loadCfg, setLoadCfg] = useState<ChartCfg>(saved?.chartCfgs?.load ?? initialCfg(globalGranularity));
+  const [renCfg, setRenCfg] = useState<ChartCfg>(saved?.chartCfgs?.renewable ?? initialCfg(globalGranularity));
+  const [spaceCfg, setSpaceCfg] = useState<ChartCfg>(saved?.chartCfgs?.space ?? initialCfg(globalGranularity));
 
   // 系列可见性
   const [priceSeries, setPriceSeries] = useState(saved?.priceSeries ?? { dayAhead: true, realtime: true, spread: true, cleared: true });
@@ -92,7 +99,7 @@ export default function MarketInfo() {
   };
 
   const applyQuickRange = (days: number) => {
-    const end = new Date(`${today}T00:00:00`);
+    const end = new Date(`${businessDate}T00:00:00`);
     const start = new Date(end);
     start.setDate(end.getDate() - days + 1);
     setStartDate(start.toISOString().slice(0, 10));
@@ -134,10 +141,11 @@ export default function MarketInfo() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       province, startDate, endDate, granularity: globalGranularity,
+      chartCfgs: { price: priceCfg, load: loadCfg, renewable: renCfg, space: spaceCfg },
       priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
       activeChart, expandedChart,
     }));
-  }, [province, startDate, endDate, globalGranularity, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart]);
+  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart]);
 
   // 各图数据
   const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
@@ -176,10 +184,10 @@ export default function MarketInfo() {
 
   const weatherSignals = useMemo(() => weather24.filter((row) => row.alert !== "无").slice(0, 4), []);
   const forecastSummary = useMemo(() => [
-    { label: "负荷预测均值", stat: summarizeForecast(loadForecast), unit: "MW" },
-    { label: "新能源预测均值", stat: summarizeForecast(renForecast), unit: "MW" },
-    { label: "竞价空间预测", stat: summarizeForecast(spaceForecast), unit: "MW" },
-    { label: "电价预测均值", stat: summarizeForecast(priceForecast), unit: "元/MWh" },
+    { label: "负荷预测均值", stat: summarizeForecast(loadForecast), unit: "MW", source: "预测模块", lag: "实际滞后约15-60分钟" },
+    { label: "新能源预测均值", stat: summarizeForecast(renForecast), unit: "MW", source: "预测模块", lag: "场站实测回传后校验" },
+    { label: "竞价空间预测", stat: summarizeForecast(spaceForecast), unit: "MW", source: "规则计算", lag: "随负荷/新能源预测同步" },
+    { label: "电价预测均值", stat: summarizeForecast(priceForecast), unit: "元/MWh", source: "预测模块", lag: "出清披露后对照" },
   ], [loadForecast, renForecast, spaceForecast, priceForecast]);
 
   return (
@@ -241,9 +249,9 @@ export default function MarketInfo() {
 
         <section className="rounded-lg border bg-card p-4 shadow-notion">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-            <h2 className="text-sm font-semibold shrink-0">行情摘要</h2>
+            <h2 className="text-sm font-semibold shrink-0">预测快照</h2>
             {forecastSummary.map((card) => (
-              <div key={card.label} className="min-w-[128px] rounded-md border bg-background px-3 py-2 shrink-0">
+              <div key={card.label} className="min-w-[172px] rounded-md border bg-background px-3 py-2 shrink-0">
                 <p className="text-[10px] text-muted-foreground truncate">{card.label}</p>
                 <p className="text-sm font-semibold leading-tight mt-1">
                   {card.stat.avgPredicted.toLocaleString()}
@@ -252,6 +260,9 @@ export default function MarketInfo() {
                 <p className={`text-[10px] mt-1 flex items-center gap-0.5 ${card.stat.avgDeviation >= 0 ? "text-destructive" : "text-success"}`}>
                   {card.stat.avgDeviation >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                   偏差 {card.stat.avgDeviation >= 0 ? "+" : ""}{card.stat.avgDeviation} · {card.stat.avgAbsPct}%
+                </p>
+                <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">
+                  数据时点：{endDate} · {card.source} · {card.lag}
                 </p>
               </div>
             ))}
@@ -262,6 +273,7 @@ export default function MarketInfo() {
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4 text-warning" />
             <h2 className="text-sm font-semibold">规则预警</h2>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">规则框架版</span>
           </div>
           <div className="grid gap-2 xl:grid-cols-2">
             {ruleWarnings.map((w) => (
@@ -285,6 +297,7 @@ export default function MarketInfo() {
                   <p><span className="text-foreground/70">规则名：</span>{w.title}</p>
                   <p><span className="text-foreground/70">当前值：</span>{w.current}</p>
                   <p><span className="text-foreground/70">阈值：</span>{w.threshold}</p>
+                  <p><span className="text-foreground/70">阈值来源：</span>{w.thresholdSource}</p>
                   <p><span className="text-foreground/70">时间段：</span>{w.period}</p>
                   <p><span className="text-foreground/70">数据来源：</span>{w.source}</p>
                   <p><span className="text-foreground/70">计算口径：</span>{w.method}</p>
@@ -683,6 +696,7 @@ interface RuleWarning {
   period: string;
   current: string;
   threshold: string;
+  thresholdSource: "业务阈值" | "历史P95" | "官方预警" | "待配置";
   source: DataSourceTag;
   method: string;
   action: string;
@@ -696,6 +710,7 @@ const ruleWarnings: RuleWarning[] = [
     period: "18:00-20:00",
     current: "当前价差 +47 元/MWh",
     threshold: "超过预设阈值 ±30 元/MWh",
+    thresholdSource: "业务阈值",
     source: "公开API",
     method: "日前电价 − 实时电价，按当前粒度聚合",
     action: "建议关注晚间申报策略",
@@ -707,6 +722,7 @@ const ruleWarnings: RuleWarning[] = [
     period: "皖南-皖北断面",
     current: "当前负载 78%",
     threshold: "接近预警阈值 80%",
+    thresholdSource: "历史P95",
     source: "公开API",
     method: "断面实时负载率与业务阈值比对",
     action: "建议关注晚高峰送电安排",
@@ -718,6 +734,7 @@ const ruleWarnings: RuleWarning[] = [
     period: "19:30-21:00",
     current: "正备用 1,820 MW",
     threshold: "低于预设阈值 2,000 MW",
+    thresholdSource: "业务阈值",
     source: "公开API",
     method: "正备用容量低于业务阈值触发",
     action: "建议预留响应空间",
@@ -729,6 +746,7 @@ const ruleWarnings: RuleWarning[] = [
     period: "全日",
     current: "必开 6 台 / 必停 2 台",
     threshold: "较 D-1 新增必开 1 台",
+    thresholdSource: "待配置",
     source: "规则计算",
     method: "必开必停台数与 D-1 计划差异比对",
     action: "建议复核中长期匹配",
