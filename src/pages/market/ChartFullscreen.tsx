@@ -77,11 +77,18 @@ export default function ChartFullscreen() {
   const meta = CHART_META[chartId];
   const forecastKind = chartKeyMap[chartId];
   const series = useMemo(() => forecastKind ? getForecastSeries(forecastKind, startDate, endDate, granularity) : [], [forecastKind, startDate, endDate, granularity]);
+  const chartData = useMemo(() => {
+    if (chartId === "price-spread") {
+      return series.map((p) => ({ ...p, dayAhead: p.predicted, realtime: p.actual, spread: p.deviation, cleared: Math.max(400, Math.round(p.predicted * 2.2)) }));
+    }
+    if (chartId === "bidding-space") return series.map((p) => ({ ...p, warning: p.predicted < SPACE_WARN_THRESHOLD }));
+    return series;
+  }, [chartId, series]);
   const zoomData = useMemo(() => {
-    const start = Math.floor((zoomWindow.start / 100) * series.length);
-    const end = Math.max(start + 1, Math.ceil((zoomWindow.end / 100) * series.length));
-    return series.slice(start, end);
-  }, [series, zoomWindow]);
+    const start = Math.floor((zoomWindow.start / 100) * chartData.length);
+    const end = Math.max(start + 1, Math.ceil((zoomWindow.end / 100) * chartData.length));
+    return chartData.slice(start, end);
+  }, [chartData, zoomWindow]);
   const xKey = granularity === "day" ? "dayLabel" as const : "label" as const;
   const xInterval = granularity === "15min" ? 15 : granularity === "hour" ? 5 : 0;
   const periodLabel = (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "";
@@ -113,6 +120,23 @@ export default function ChartFullscreen() {
     }));
   }, [province, startDate, endDate, granularity, zoomWindow, chartId, saved]);
 
+  const applyZoomDrivenGranularity = (next: { start: number; end: number }) => {
+    const width = next.end - next.start;
+    setGranularity(width <= 35 ? "15min" : width <= 70 ? "hour" : "day");
+  };
+
+  const handleZoomWheel = (deltaY: number) => {
+    setZoomWindow((current) => {
+      const width = current.end - current.start;
+      const nextWidth = Math.max(8, Math.min(100, width + (deltaY > 0 ? 10 : -10)));
+      const center = (current.start + current.end) / 2;
+      const start = Math.max(0, Math.min(100 - nextWidth, center - nextWidth / 2));
+      const next = { start: Math.round(start), end: Math.round(start + nextWidth) };
+      applyZoomDrivenGranularity(next);
+      return next;
+    });
+  };
+
   if (!meta) {
     return (
       <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
@@ -125,21 +149,21 @@ export default function ChartFullscreen() {
   const renderChart = () => {
     const common = {
       data: [] as any[],
-      xKey: ds.xKey,
-      xInterval: ds.xInterval,
-      periodLabel: ds.periodLabel,
+      xKey,
+      xInterval,
+      periodLabel,
       height: 0,
     };
     const h = Math.max(400, typeof window !== "undefined" ? window.innerHeight - 240 : 600);
     switch (chartId) {
       case "price-spread":
-        return <PriceSpreadChart {...common} data={ds.price} height={h} />;
+        return <PriceSpreadChart {...common} data={zoomData} height={h} />;
       case "load-forecast":
-        return <LoadForecastChart {...common} data={ds.load} height={h} />;
+        return <LoadForecastChart {...common} data={zoomData} height={h} />;
       case "renewable-output":
-        return <RenewableChart {...common} data={ds.renewable} height={h} />;
+        return <RenewableChart {...common} data={zoomData} height={h} />;
       case "bidding-space":
-        return <BiddingSpaceChart {...common} data={ds.space} threshold={SPACE_WARN_THRESHOLD} height={h} />;
+        return <BiddingSpaceChart {...common} data={zoomData} threshold={SPACE_WARN_THRESHOLD} height={h} />;
     }
   };
 
