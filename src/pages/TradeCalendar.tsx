@@ -35,7 +35,7 @@ export default function TradeCalendar() {
   const handleCalendarUpload = async (file?: File) => {
     if (!file) return;
     const text = await file.text();
-    const parsed = parseTradeCalendarCsv(text, "Excel上传");
+    const parsed = parseTradeCalendarCsv(text, "上传");
     setPendingUpload(parsed);
   };
 
@@ -50,7 +50,7 @@ export default function TradeCalendar() {
       endTime: "17:00",
       provinceMarket: "安徽电力市场",
       remindAt: "提前2小时",
-      source: "图片OCR",
+      source: "OCR",
     });
   };
 
