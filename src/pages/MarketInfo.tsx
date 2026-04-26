@@ -208,7 +208,7 @@ export default function MarketInfo() {
       <div className="px-6 py-5 space-y-4 min-h-[calc(100vh-5rem)]">
         <header className="rounded-lg border bg-card p-4 shadow-notion">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-            <h1 className="text-lg font-semibold shrink-0">市场看板</h1>
+            <h1 className="text-lg font-semibold shrink-0">交易员判断工作台</h1>
             <div className="flex items-center gap-2 shrink-0 ml-2">
               <span className="text-xs text-muted-foreground">省份</span>
               <Select value={province} onValueChange={(v) => setProvince(v as ProvinceCode)}>
@@ -258,6 +258,9 @@ export default function MarketInfo() {
               <span className="px-1.5 py-0.5 rounded bg-success/10 text-success">公开披露</span>
             </div>
           </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            口径：用于交易前判断，不表达为实时行情终端；顶部日期范围、快捷项和粒度是四张主图唯一时间控制源。
+          </p>
         </header>
 
         <section className="rounded-lg border bg-card p-4 shadow-notion">
@@ -372,6 +375,7 @@ export default function MarketInfo() {
               <SourceBadge label="公开API" />
               <SourceBadge label="规则计算" />
               <span className="text-muted-foreground ml-auto">价差 = 日前电价 − 实时电价</span>
+              <span className="text-muted-foreground">数据时点：{endDate} · 滞后披露/规则计算</span>
             </div>
           }
         >
@@ -390,7 +394,7 @@ export default function MarketInfo() {
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <h3 className="text-sm font-semibold">电价预测联动</h3>
-              <p className="text-[11px] text-muted-foreground mt-1">保留主图之外，补充预测电价、预测偏差与候选影响因子。</p>
+              <p className="text-[11px] text-muted-foreground mt-1">补充预测电价、预测偏差与候选影响因子；当前为规则框架版，不代表已确认真实原因。</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <SourceBadge label="公开API" />
