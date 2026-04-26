@@ -5,13 +5,13 @@ import { Granularity } from "@/lib/marketMocks";
 export type RangeKey = "1d" | "2d" | "4d" | "7d";
 
 export interface ChartToolbarProps {
-  chartId: string; // 用于新标签页 URL
-  granularity: Granularity;
-  onGranularityChange: (g: Granularity) => void;
-  range: RangeKey;
-  onRangeChange: (r: RangeKey) => void;
-  showLegend: boolean;
-  onToggleLegend: () => void;
+  chartId?: string;
+  granularity?: Granularity;
+  onGranularityChange?: (g: Granularity) => void;
+  range?: RangeKey;
+  onRangeChange?: (r: RangeKey) => void;
+  showLegend?: boolean;
+  onToggleLegend?: () => void;
   onShowTable: () => void;
   onDownload: () => void;
   onReset: () => void;
