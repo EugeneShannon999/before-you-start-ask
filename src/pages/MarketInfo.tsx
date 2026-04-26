@@ -719,7 +719,7 @@ interface RuleWarning {
   period: string;
   current: string;
   threshold: string;
-  thresholdSource: "业务阈值" | "历史P95" | "官方预警" | "待配置";
+  thresholdSource: "业务阈值" | "历史P90-P95" | "官方预警" | "待配置";
   source: DataSourceTag;
   method: string;
   action: string;
@@ -745,7 +745,7 @@ const ruleWarnings: RuleWarning[] = [
     period: "皖南-皖北断面",
     current: "当前负载 78%",
     threshold: "接近预警阈值 80%",
-    thresholdSource: "历史P95",
+    thresholdSource: "历史P90-P95",
     source: "公开API",
     method: "断面实时负载率与业务阈值比对",
     action: "建议关注晚高峰送电安排",
@@ -757,7 +757,7 @@ const ruleWarnings: RuleWarning[] = [
     period: "19:30-21:00",
     current: "正备用 1,820 MW",
     threshold: "低于预设阈值 2,000 MW",
-    thresholdSource: "业务阈值",
+    thresholdSource: "官方预警",
     source: "公开API",
     method: "正备用容量低于业务阈值触发",
     action: "建议预留响应空间",
