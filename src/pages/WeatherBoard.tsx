@@ -24,6 +24,24 @@ const weatherLinks = [
 
 const formatValue = (value: number, unit: string) => `${value.toLocaleString()}${unit}`;
 
+function getLinkedWeatherRows(rows: WeatherPoint[], source: string, pointScope: string, granularity: string) {
+  const sourceFactor = source === "中科天机" ? 1.04 : 1;
+  const pointFactor = pointScope === "新能源场站 / 区域点位" ? 1.08 : pointScope === "负荷中心点位" ? 0.96 : 1;
+  const adjusted = rows.map((row) => ({
+    ...row,
+    directRadiation: Math.round(row.directRadiation * (pointScope === "负荷中心点位" ? 0.92 : sourceFactor)),
+    shortwaveRadiation: Math.round(row.shortwaveRadiation * sourceFactor),
+    temperature: Math.round(row.temperature + (pointScope === "负荷中心点位" ? 1 : 0)),
+    humidity2m: Math.min(99, Math.round(row.humidity2m * (source === "中科天机" ? 1.02 : 1))),
+    precipitation: Number((row.precipitation * pointFactor).toFixed(1)),
+    surfacePrecipRate: Number((row.surfacePrecipRate * pointFactor).toFixed(2)),
+    wind10mSpeed: Number((row.wind10mSpeed * (pointScope === "新能源场站 / 区域点位" ? 1.12 : 1)).toFixed(1)),
+    wind100mSpeed: Number((row.wind100mSpeed * (pointScope === "新能源场站 / 区域点位" ? 1.12 : 1)).toFixed(1)),
+  }));
+  if (granularity === "日内") return adjusted.filter((_, index) => index % 3 === 0);
+  return adjusted;
+}
+
 function getCoreCards(row: WeatherPoint) {
   return [
     { label: "直接辐射", value: formatValue(row.directRadiation, " W/㎡"), group: "光伏", source: "公开API" },
