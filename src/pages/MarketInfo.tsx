@@ -683,6 +683,8 @@ interface RuleWarning {
   period: string;
   current: string;
   threshold: string;
+  source: DataSourceTag;
+  method: string;
   action: string;
   level: "high" | "medium";
 }
@@ -694,6 +696,8 @@ const ruleWarnings: RuleWarning[] = [
     period: "18:00-20:00",
     current: "当前价差 +47 元/MWh",
     threshold: "超过预设阈值 ±30 元/MWh",
+    source: "公开API",
+    method: "日前电价 − 实时电价，按当前粒度聚合",
     action: "建议关注晚间申报策略",
     level: "high",
   },
@@ -703,6 +707,8 @@ const ruleWarnings: RuleWarning[] = [
     period: "皖南-皖北断面",
     current: "当前负载 78%",
     threshold: "接近预警阈值 80%",
+    source: "公开API",
+    method: "断面实时负载率与业务阈值比对",
     action: "建议关注晚高峰送电安排",
     level: "medium",
   },
@@ -712,6 +718,8 @@ const ruleWarnings: RuleWarning[] = [
     period: "19:30-21:00",
     current: "正备用 1,820 MW",
     threshold: "低于预设阈值 2,000 MW",
+    source: "公开API",
+    method: "正备用容量低于业务阈值触发",
     action: "建议预留响应空间",
     level: "medium",
   },
@@ -721,6 +729,8 @@ const ruleWarnings: RuleWarning[] = [
     period: "全日",
     current: "必开 6 台 / 必停 2 台",
     threshold: "较 D-1 新增必开 1 台",
+    source: "规则计算",
+    method: "必开必停台数与 D-1 计划差异比对",
     action: "建议复核中长期匹配",
     level: "medium",
   },
