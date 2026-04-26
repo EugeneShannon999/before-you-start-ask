@@ -148,7 +148,7 @@ export default function PolicyCenter() {
                     </p>
                   </div>
                   <p className="text-[10px] text-muted-foreground italic pt-1">
-                    该整合由 AI 在每季度末自动生成（mock），下方可继续追问。
+                    来源：P2 留痕消息 · 时间：{p2QuarterSummary.quarter} · AI 短解读框架版；点击原文后再展开长文。
                   </p>
                 </div>
               </div>
@@ -195,7 +195,7 @@ export default function PolicyCenter() {
               <div className="max-w-2xl mx-auto flex justify-end">
                 <div className="flex items-start gap-2 max-w-[85%]">
                   <div className="rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs leading-relaxed">
-                    请深入解读这条 {incomingMsg.level} 消息：{incomingMsg.title}
+                    请短解读这条 {incomingMsg.level} 消息：{incomingMsg.title}
                   </div>
                   <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
                     <User className="h-3.5 w-3.5 text-foreground/70" />

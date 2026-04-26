@@ -66,7 +66,7 @@ export function P0Alert() {
         </DialogHeader>
 
         <div className="text-xs text-muted-foreground border-l-2 border-muted pl-2.5 py-0.5">
-          来源：{msg.source}
+          来源：{msg.source} · 时间：{formatMsgTime(msg.publishedAt)} · P0 哨兵式提醒
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">

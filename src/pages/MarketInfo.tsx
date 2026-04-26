@@ -62,6 +62,11 @@ type MainChartId = "price-spread" | "load-forecast" | "renewable-output" | "bidd
 const STORAGE_KEY = "market-board-interaction-state:v1";
 
 const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true });
+const restoreCfg = (cfg: ChartCfg | undefined, g: Granularity): ChartCfg => ({
+  granularity: g,
+  range: cfg?.range ?? "1d",
+  showLegend: cfg?.showLegend ?? true,
+});
 
 export default function MarketInfo() {
   const { province, setProvince } = useProvince();
@@ -75,14 +80,14 @@ export default function MarketInfo() {
   const [startDate, setStartDate] = useState(saved?.startDate ?? businessDate);
   const [endDate, setEndDate] = useState(saved?.endDate ?? businessDate);
   const [activeChart, setActiveChart] = useState<MainChartId | null>(saved?.activeChart ?? null);
-  const [expandedChart, setExpandedChart] = useState<MainChartId | null>(saved?.expandedChart ?? null);
+  const [expandedChart, setExpandedChart] = useState<MainChartId | null>(null);
   const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? { start: 0, end: 100 });
 
   // 每图独立配置（粒度可被全局或单独控制）
-  const [priceCfg, setPriceCfg] = useState<ChartCfg>(saved?.chartCfgs?.price ?? initialCfg(globalGranularity));
-  const [loadCfg, setLoadCfg] = useState<ChartCfg>(saved?.chartCfgs?.load ?? initialCfg(globalGranularity));
-  const [renCfg, setRenCfg] = useState<ChartCfg>(saved?.chartCfgs?.renewable ?? initialCfg(globalGranularity));
-  const [spaceCfg, setSpaceCfg] = useState<ChartCfg>(saved?.chartCfgs?.space ?? initialCfg(globalGranularity));
+  const [priceCfg, setPriceCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.price, globalGranularity));
+  const [loadCfg, setLoadCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.load, globalGranularity));
+  const [renCfg, setRenCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.renewable, globalGranularity));
+  const [spaceCfg, setSpaceCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.space, globalGranularity));
 
   // 系列可见性
   const [priceSeries, setPriceSeries] = useState(saved?.priceSeries ?? { dayAhead: true, realtime: true, spread: true, cleared: true });
@@ -143,7 +148,7 @@ export default function MarketInfo() {
       province, startDate, endDate, granularity: globalGranularity,
       chartCfgs: { price: priceCfg, load: loadCfg, renewable: renCfg, space: spaceCfg },
       priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
-      activeChart, expandedChart,
+      activeChart, lastExpandedChart: expandedChart,
     }));
   }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart]);
 
@@ -189,13 +194,21 @@ export default function MarketInfo() {
     { label: "竞价空间预测", stat: summarizeForecast(spaceForecast), unit: "MW", source: "规则计算", lag: "随负荷/新能源预测同步" },
     { label: "电价预测均值", stat: summarizeForecast(priceForecast), unit: "元/MWh", source: "预测模块", lag: "出清披露后对照" },
   ], [loadForecast, renForecast, spaceForecast, priceForecast]);
+  const boundaryMeta: Record<string, { sourceType: "公开披露" | "预测推导" | "插件增强"; note: string }> = {
+    联络线外送计划: { sourceType: "公开披露", note: "公开披露版，非实时终端" },
+    "皖南-皖北断面限额": { sourceType: "插件增强", note: "当前为示例口径，实时断面待插件数据" },
+    必开机组容量: { sourceType: "公开披露", note: "调度披露后人工/接口同步" },
+    必停机组容量: { sourceType: "公开披露", note: "检修计划披露版" },
+    非市场化机组出力: { sourceType: "预测推导", note: "规则推导，待补真实来源" },
+    备用容量: { sourceType: "插件增强", note: "满血版依赖实时/插件数据" },
+  };
 
   return (
     <MarketCursorProvider>
       <div className="px-6 py-5 space-y-4 min-h-[calc(100vh-5rem)]">
         <header className="rounded-lg border bg-card p-4 shadow-notion">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-            <h1 className="text-lg font-semibold shrink-0">市场看板</h1>
+            <h1 className="text-lg font-semibold shrink-0">交易员判断工作台</h1>
             <div className="flex items-center gap-2 shrink-0 ml-2">
               <span className="text-xs text-muted-foreground">省份</span>
               <Select value={province} onValueChange={(v) => setProvince(v as ProvinceCode)}>
@@ -245,6 +258,9 @@ export default function MarketInfo() {
               <span className="px-1.5 py-0.5 rounded bg-success/10 text-success">公开披露</span>
             </div>
           </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            口径：用于交易前判断，不表达为实时行情终端；顶部日期范围、快捷项和粒度是四张主图唯一时间控制源。
+          </p>
         </header>
 
         <section className="rounded-lg border bg-card p-4 shadow-notion">
@@ -359,6 +375,7 @@ export default function MarketInfo() {
               <SourceBadge label="公开API" />
               <SourceBadge label="规则计算" />
               <span className="text-muted-foreground ml-auto">价差 = 日前电价 − 实时电价</span>
+              <span className="text-muted-foreground">数据时点：{endDate} · 滞后披露/规则计算</span>
             </div>
           }
         >
@@ -377,7 +394,7 @@ export default function MarketInfo() {
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <h3 className="text-sm font-semibold">电价预测联动</h3>
-              <p className="text-[11px] text-muted-foreground mt-1">保留主图之外，补充预测电价、预测偏差与候选影响因子。</p>
+              <p className="text-[11px] text-muted-foreground mt-1">补充预测电价、预测偏差与候选影响因子；当前为规则框架版，不代表已确认真实原因。</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <SourceBadge label="公开API" />
@@ -620,7 +637,7 @@ export default function MarketInfo() {
             <div className="flex items-baseline gap-2">
               <span className="text-xs font-mono text-muted-foreground">#5</span>
               <h3 className="text-sm font-semibold">市场运行与边界</h3>
-              <span className="text-[11px] text-muted-foreground">联络线 / 断面 / 必开必停 / 备用</span>
+              <span className="text-[11px] text-muted-foreground">公开披露版；实时/插件增强字段待补血</span>
             </div>
             <button
               onClick={() => setBoundaryExpanded((v) => !v)}
@@ -632,11 +649,17 @@ export default function MarketInfo() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {boundaryRows.map((row) => (
+            {boundaryRows.map((row) => {
+              const meta = boundaryMeta[row.item] ?? { sourceType: "公开披露" as const, note: "公开披露版" };
+              return (
               <div key={row.item} className="p-2.5 rounded-md border bg-background">
                 <p className="text-[11px] text-muted-foreground mb-0.5">{row.item}</p>
                 <p className="text-sm font-semibold">{row.value}</p>
                 <p className="text-[10px] text-muted-foreground">{row.note}</p>
+                <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-muted-foreground">
+                  <span className="rounded bg-secondary px-1.5 py-0.5">{meta.sourceType}</span>
+                  <span>{meta.note}</span>
+                </div>
                 {row.trendKey && (
                   <BoundaryMiniChart
                     data={boundaryDs.boundary as any[]}
@@ -645,7 +668,7 @@ export default function MarketInfo() {
                   />
                 )}
               </div>
-            ))}
+            );})}
           </div>
 
           {boundaryExpanded && (
@@ -696,7 +719,7 @@ interface RuleWarning {
   period: string;
   current: string;
   threshold: string;
-  thresholdSource: "业务阈值" | "历史P95" | "官方预警" | "待配置";
+  thresholdSource: "业务阈值" | "历史P90-P95" | "官方预警" | "待配置";
   source: DataSourceTag;
   method: string;
   action: string;
@@ -722,7 +745,7 @@ const ruleWarnings: RuleWarning[] = [
     period: "皖南-皖北断面",
     current: "当前负载 78%",
     threshold: "接近预警阈值 80%",
-    thresholdSource: "历史P95",
+    thresholdSource: "历史P90-P95",
     source: "公开API",
     method: "断面实时负载率与业务阈值比对",
     action: "建议关注晚高峰送电安排",
@@ -734,7 +757,7 @@ const ruleWarnings: RuleWarning[] = [
     period: "19:30-21:00",
     current: "正备用 1,820 MW",
     threshold: "低于预设阈值 2,000 MW",
-    thresholdSource: "业务阈值",
+    thresholdSource: "官方预警",
     source: "公开API",
     method: "正备用容量低于业务阈值触发",
     action: "建议预留响应空间",

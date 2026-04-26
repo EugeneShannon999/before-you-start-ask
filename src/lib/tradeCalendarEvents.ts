@@ -1,4 +1,4 @@
-export type CalendarEventSource = "平台API" | "Excel上传" | "图片OCR" | "内置样例";
+export type CalendarEventSource = "API" | "上传" | "OCR" | "插件" | "内置样例";
 
 export interface TradeCalendarEvent {
   id: string;
@@ -13,15 +13,15 @@ export interface TradeCalendarEvent {
 }
 
 export const defaultTradeCalendarEvents: TradeCalendarEvent[] = [
-  { id: "evt-1", date: "2025-07-03", type: "申报", title: "月度竞价申报截止", startTime: "09:00", endTime: "17:00", provinceMarket: "安徽电力市场", remindAt: "提前1日 09:00", source: "平台API" },
-  { id: "evt-2", date: "2025-07-07", type: "申报", title: "周竞价申报", startTime: "09:30", endTime: "16:00", provinceMarket: "安徽电力市场", remindAt: "提前4小时", source: "平台API" },
-  { id: "evt-3", date: "2025-07-14", type: "出清", title: "月度竞价出清", startTime: "10:00", endTime: "12:00", provinceMarket: "安徽电力市场", remindAt: "提前2小时", source: "平台API" },
-  { id: "evt-4", date: "2025-07-15", type: "合同", title: "中长期合同签订", startTime: "09:00", endTime: "18:00", provinceMarket: "安徽电力市场", remindAt: "提前1日 10:00", source: "平台API" },
-  { id: "evt-5", date: "2025-07-18", type: "申报", title: "周竞价申报（第3周）", startTime: "09:30", endTime: "16:00", provinceMarket: "安徽电力市场", remindAt: "提前4小时", source: "平台API" },
-  { id: "evt-6", date: "2025-07-19", type: "结算", title: "偏差考核结算数据发布", startTime: "10:00", endTime: "11:00", provinceMarket: "安徽电力市场", remindAt: "提前2小时", source: "平台API" },
-  { id: "evt-7", date: "2025-07-22", type: "结算", title: "6月月结算数据正式发布", startTime: "10:00", endTime: "12:00", provinceMarket: "安徽电力市场", remindAt: "提前2小时", source: "平台API" },
-  { id: "evt-8", date: "2025-07-25", type: "公告", title: "8月月度集中竞价交易公告", startTime: "15:00", endTime: "16:00", provinceMarket: "安徽电力市场", remindAt: "提前1小时", source: "平台API" },
-  { id: "evt-9", date: "2025-07-28", type: "申报", title: "月度竞价申报开始", startTime: "09:00", endTime: "17:00", provinceMarket: "安徽电力市场", remindAt: "提前1日 09:00", source: "平台API" },
+  { id: "evt-1", date: "2025-07-03", type: "申报", title: "月度竞价申报截止", startTime: "09:00", endTime: "17:00", provinceMarket: "安徽电力市场", remindAt: "提前1日 09:00", source: "API" },
+  { id: "evt-2", date: "2025-07-07", type: "申报", title: "周竞价申报", startTime: "09:30", endTime: "16:00", provinceMarket: "安徽电力市场", remindAt: "提前4小时", source: "API" },
+  { id: "evt-3", date: "2025-07-14", type: "出清", title: "月度竞价出清", startTime: "10:00", endTime: "12:00", provinceMarket: "安徽电力市场", remindAt: "提前2小时", source: "API" },
+  { id: "evt-4", date: "2025-07-15", type: "合同", title: "中长期合同签订", startTime: "09:00", endTime: "18:00", provinceMarket: "安徽电力市场", remindAt: "提前1日 10:00", source: "API" },
+  { id: "evt-5", date: "2025-07-18", type: "申报", title: "周竞价申报（第3周）", startTime: "09:30", endTime: "16:00", provinceMarket: "安徽电力市场", remindAt: "提前4小时", source: "API" },
+  { id: "evt-6", date: "2025-07-19", type: "结算", title: "偏差考核结算数据发布", startTime: "10:00", endTime: "11:00", provinceMarket: "安徽电力市场", remindAt: "提前2小时", source: "API" },
+  { id: "evt-7", date: "2025-07-22", type: "结算", title: "6月月结算数据正式发布", startTime: "10:00", endTime: "12:00", provinceMarket: "安徽电力市场", remindAt: "提前2小时", source: "API" },
+  { id: "evt-8", date: "2025-07-25", type: "公告", title: "8月月度集中竞价交易公告", startTime: "15:00", endTime: "16:00", provinceMarket: "安徽电力市场", remindAt: "提前1小时", source: "API" },
+  { id: "evt-9", date: "2025-07-28", type: "申报", title: "月度竞价申报开始", startTime: "09:00", endTime: "17:00", provinceMarket: "安徽电力市场", remindAt: "提前1日 09:00", source: "API" },
 ];
 
 const typeKeywords: Array<[TradeCalendarEvent["type"], RegExp]> = [
@@ -36,7 +36,7 @@ function inferType(title: string): TradeCalendarEvent["type"] {
   return typeKeywords.find(([, re]) => re.test(title))?.[0] ?? "公告";
 }
 
-export function parseTradeCalendarCsv(text: string, source: CalendarEventSource = "Excel上传"): TradeCalendarEvent[] {
+export function parseTradeCalendarCsv(text: string, source: CalendarEventSource = "上传"): TradeCalendarEvent[] {
   const rows = text.split(/\r?\n/).map((line) => line.split(/,|\t/).map((v) => v.trim())).filter((row) => row.some(Boolean));
   if (rows.length < 2) return [];
   const header = rows[0];
