@@ -49,7 +49,7 @@ export function parseTradeCalendarCsv(text: string, source: CalendarEventSource 
     const date = pick(row, ["日期", "交易日"]) || row[0] || "2025-07-01";
     return {
       id: `upload-${Date.now()}-${idx}`,
-      date: date.replaceAll("/", "-").slice(0, 10),
+      date: date.replace(/\//g, "-").slice(0, 10),
       type: (pick(row, ["类型"]) as TradeCalendarEvent["type"]) || inferType(title),
       title,
       startTime: pick(row, ["开始"]) || "09:00",
