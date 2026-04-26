@@ -18,7 +18,6 @@ import {
 import {
   getDataset,
   Granularity,
-  summary,
   boundaryRows,
   SPACE_WARN_THRESHOLD,
   load96,
@@ -27,6 +26,7 @@ import {
   weather24,
   type DataSourceTag,
 } from "@/lib/marketMocks";
+import { getForecastSeries, summarizeForecast, type ForecastMode } from "@/lib/predictionOutputs";
 import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
 import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
 
@@ -50,12 +50,23 @@ interface ChartCfg {
   showLegend: boolean;
 }
 
+const today = "2025-07-15";
+const modeOptions: Array<{ key: ForecastMode; label: string }> = [
+  { key: "all", label: "同屏" },
+  { key: "predicted", label: "预测" },
+  { key: "actual", label: "实际" },
+  { key: "deviation", label: "偏差" },
+];
+
 const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true });
 
 export default function MarketInfo() {
   const { province, setProvince } = useProvince();
   const [globalGranularity, setGlobalGranularity] = useState<Granularity>("hour");
   const [boundaryExpanded, setBoundaryExpanded] = useState(false);
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
+  const [forecastMode, setForecastMode] = useState<ForecastMode>("all");
 
   // 每图独立配置（粒度可被全局或单独控制）
   const [priceCfg, setPriceCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
@@ -75,11 +86,23 @@ export default function MarketInfo() {
     setSpaceCfg((c) => ({ ...c, granularity: g }));
   };
 
+  const applyQuickRange = (days: number) => {
+    const end = new Date(`${today}T00:00:00`);
+    const start = new Date(end);
+    start.setDate(end.getDate() - days + 1);
+    setStartDate(start.toISOString().slice(0, 10));
+    setEndDate(end.toISOString().slice(0, 10));
+  };
+
   // 各图数据
-  const priceDs = useMemo(() => getDataset(priceCfg.granularity), [priceCfg.granularity]);
-  const loadDs = useMemo(() => getDataset(loadCfg.granularity), [loadCfg.granularity]);
-  const renDs = useMemo(() => getDataset(renCfg.granularity), [renCfg.granularity]);
-  const spaceDs = useMemo(() => getDataset(spaceCfg.granularity), [spaceCfg.granularity]);
+  const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
+  const loadForecast = useMemo(() => getForecastSeries("load", startDate, endDate, loadCfg.granularity), [startDate, endDate, loadCfg.granularity]);
+  const renForecast = useMemo(() => getForecastSeries("renewable", startDate, endDate, renCfg.granularity), [startDate, endDate, renCfg.granularity]);
+  const spaceForecast = useMemo(() => getForecastSeries("space", startDate, endDate, spaceCfg.granularity), [startDate, endDate, spaceCfg.granularity]);
+  const priceDs = useMemo(() => ({ price: priceForecast.map((p) => ({ ...p, dayAhead: p.predicted, realtime: p.actual, spread: p.deviation, cleared: Math.max(400, Math.round(p.predicted * 2.2)) })), xKey: priceCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: priceCfg.granularity === "15min" ? 15 : priceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [priceForecast, priceCfg.granularity]);
+  const loadDs = useMemo(() => ({ load: loadForecast, xKey: loadCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: loadCfg.granularity === "15min" ? 15 : loadCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [loadForecast, loadCfg.granularity]);
+  const renDs = useMemo(() => ({ renewable: renForecast, xKey: renCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: renCfg.granularity === "15min" ? 15 : renCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [renForecast, renCfg.granularity]);
+  const spaceDs = useMemo(() => ({ space: spaceForecast.map((p) => ({ ...p, warning: p.predicted < SPACE_WARN_THRESHOLD })), xKey: spaceCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: spaceCfg.granularity === "15min" ? 15 : spaceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [spaceForecast, spaceCfg.granularity]);
   // 边界使用全局粒度
   const boundaryDs = useMemo(() => getDataset(globalGranularity), [globalGranularity]);
 
@@ -107,6 +130,12 @@ export default function MarketInfo() {
   }, []);
 
   const weatherSignals = useMemo(() => weather24.filter((row) => row.alert !== "无").slice(0, 4), []);
+  const forecastSummary = useMemo(() => [
+    { label: "负荷预测均值", stat: summarizeForecast(loadForecast), unit: "MW" },
+    { label: "新能源预测均值", stat: summarizeForecast(renForecast), unit: "MW" },
+    { label: "竞价空间预测", stat: summarizeForecast(spaceForecast), unit: "MW" },
+    { label: "电价预测均值", stat: summarizeForecast(priceForecast), unit: "元/MWh" },
+  ], [loadForecast, renForecast, spaceForecast, priceForecast]);
 
   return (
     <MarketCursorProvider>
