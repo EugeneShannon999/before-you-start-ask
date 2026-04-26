@@ -33,6 +33,7 @@ export interface ChartCardProps {
   onExpand: () => void;
   onExpandedChange?: (open: boolean) => void;
   onZoomWheel?: (deltaY: number) => void;
+  onResetZoom?: () => void;
 }
 
 function downloadCsv(filename: string, rows: (string | number)[][]) {
@@ -51,13 +52,12 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 export function ChartCard(props: ChartCardProps) {
   const [tableOpen, setTableOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
-  const canZoom = props.active || props.expanded;
   const chartBody = (
     <div
       key={resetKey}
       onClick={props.onActivate}
+      onMouseEnter={props.onActivate}
       onWheel={(event) => {
-        if (!canZoom) return;
         event.preventDefault();
         props.onZoomWheel?.(event.deltaY);
       }}
@@ -91,7 +91,7 @@ export function ChartCard(props: ChartCardProps) {
           onToggleLegend={props.onToggleLegend}
           onShowTable={() => setTableOpen(true)}
           onDownload={() => downloadCsv(props.csvFilename, props.csvRows)}
-          onReset={() => setResetKey((k) => k + 1)}
+          onReset={() => { setResetKey((k) => k + 1); props.onResetZoom?.(); }}
           onExpand={props.onExpand}
         />
       </div>
