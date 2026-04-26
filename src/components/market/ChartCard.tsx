@@ -57,13 +57,26 @@ export function ChartCard(props: ChartCardProps) {
     <div
       key={resetKey}
       onClick={props.onActivate}
+      onPointerDownCapture={props.onActivate}
       onWheel={(event) => {
         if (!canZoom) return;
         event.preventDefault();
         props.onZoomWheel?.(event.deltaY);
       }}
-      className={props.active ? "rounded-md ring-1 ring-primary/40" : "rounded-md"}
+      role="button"
+      tabIndex={0}
+      aria-pressed={props.active}
+      className={`relative rounded-md transition-all ${
+        canZoom
+          ? "cursor-zoom-in ring-2 ring-primary/50 bg-primary/5"
+          : "cursor-pointer ring-1 ring-transparent hover:ring-border"
+      }`}
     >
+      <div className={`pointer-events-none absolute right-2 top-2 z-10 rounded bg-card/90 px-2 py-1 text-[10px] shadow-notion ${
+        canZoom ? "text-primary" : "text-muted-foreground"
+      }`}>
+        {canZoom ? "滚轮缩放已接管" : "点击图表区域后滚轮缩放"}
+      </div>
       {props.children}
     </div>
   );
