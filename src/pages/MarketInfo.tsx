@@ -126,16 +126,37 @@ export default function MarketInfo() {
     setGlobalAll(width <= 35 ? "15min" : width <= 70 ? "hour" : "day");
   };
 
-  const handleZoomWheel = (deltaY: number) => {
+  const syncActiveChartZoom = (next: { start: number; end: number }, chartId: MainChartId | null = activeChart) => {
+    if (chartId === "price-spread") setPriceCfg((c) => ({ ...c, zoomWindow: next }));
+    if (chartId === "load-forecast") setLoadCfg((c) => ({ ...c, zoomWindow: next }));
+    if (chartId === "renewable-output") setRenCfg((c) => ({ ...c, zoomWindow: next }));
+    if (chartId === "bidding-space") setSpaceCfg((c) => ({ ...c, zoomWindow: next }));
+  };
+
+  const handleZoomWheel = (deltaY: number, chartId?: MainChartId) => {
+    if (chartId) setActiveChart(chartId);
     setZoomWindow((current) => {
       const width = current.end - current.start;
-      const nextWidth = Math.max(18, Math.min(100, width + (deltaY > 0 ? 10 : -10)));
+      const nextWidth = Math.max(8, Math.min(100, width + (deltaY > 0 ? 10 : -10)));
       const center = (current.start + current.end) / 2;
       const start = Math.max(0, Math.min(100 - nextWidth, center - nextWidth / 2));
       const next = { start: Math.round(start), end: Math.round(start + nextWidth) };
       applyZoomDrivenGranularity(next);
+      syncActiveChartZoom(next, chartId ?? activeChart);
       return next;
     });
+  };
+
+  const resetZoom = (chartId?: MainChartId) => {
+    setZoomWindow(DEFAULT_ZOOM_WINDOW);
+    setGlobalAll("hour");
+    syncActiveChartZoom(DEFAULT_ZOOM_WINDOW, chartId ?? activeChart);
+  };
+
+  const openChartPage = (chartId: MainChartId) => {
+    setActiveChart(chartId);
+    syncActiveChartZoom(zoomWindow, chartId);
+    navigate(`/tools/market/chart/${chartId}`);
   };
 
   const zoomData = <T,>(items: T[]) => {
