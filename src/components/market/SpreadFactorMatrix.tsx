@@ -3,7 +3,7 @@ import {
   spreadFactorHourly,
   SPREAD_DRIVER_LABEL,
   type SpreadDriver,
-  type SpreadFactorRow,
+  type Granularity,
 } from "@/lib/marketMocks";
 import { useMarketCursor } from "@/contexts/MarketCursorContext";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ const driverBadge: Record<SpreadDriver, string> = {
 
 export interface SpreadFactorMatrixProps {
   /** 当 hour 粒度下，主图 hover/click 的 idx 即为小时；15min 时为 0..95，需除以 4 */
-  granularity: "15min" | "hour";
+  granularity: Granularity;
 }
 
 export function SpreadFactorMatrix({ granularity }: SpreadFactorMatrixProps) {
@@ -51,11 +51,11 @@ export function SpreadFactorMatrix({ granularity }: SpreadFactorMatrixProps) {
 
   // 主图 hover 索引 → 对应小时
   const activeHour =
-    hoverIdx == null ? null : granularity === "hour" ? hoverIdx : Math.floor(hoverIdx / 4);
+    hoverIdx == null ? null : granularity === "day" ? null : granularity === "hour" ? hoverIdx : Math.floor(hoverIdx / 4);
 
   const onRowEnter = (h: number) => {
     // 写回 cursor：hour 粒度直接写小时；15min 粒度写该小时的中点（h*4+2）
-    setHoverIdx(granularity === "hour" ? h : h * 4 + 2);
+    setHoverIdx(granularity === "day" ? null : granularity === "hour" ? h : h * 4 + 2);
   };
   const onRowLeave = () => setHoverIdx(null);
 

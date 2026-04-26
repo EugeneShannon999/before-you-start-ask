@@ -18,7 +18,6 @@ import {
 import {
   getDataset,
   Granularity,
-  summary,
   boundaryRows,
   SPACE_WARN_THRESHOLD,
   load96,
@@ -27,6 +26,7 @@ import {
   weather24,
   type DataSourceTag,
 } from "@/lib/marketMocks";
+import { getForecastSeries, summarizeForecast, type ForecastMode } from "@/lib/predictionOutputs";
 import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
 import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
 
@@ -50,12 +50,25 @@ interface ChartCfg {
   showLegend: boolean;
 }
 
+const today = "2025-07-15";
+const modeOptions: Array<{ key: ForecastMode; label: string }> = [
+  { key: "all", label: "同屏" },
+  { key: "predicted", label: "预测" },
+  { key: "actual", label: "实际" },
+  { key: "deviation", label: "偏差" },
+];
+
+const rangeDays: Record<RangeKey, number> = { "1d": 1, "2d": 2, "4d": 4, "7d": 7 };
+
 const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true });
 
 export default function MarketInfo() {
   const { province, setProvince } = useProvince();
   const [globalGranularity, setGlobalGranularity] = useState<Granularity>("hour");
   const [boundaryExpanded, setBoundaryExpanded] = useState(false);
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
+  const [forecastMode, setForecastMode] = useState<ForecastMode>("all");
 
   // 每图独立配置（粒度可被全局或单独控制）
   const [priceCfg, setPriceCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
@@ -75,11 +88,28 @@ export default function MarketInfo() {
     setSpaceCfg((c) => ({ ...c, granularity: g }));
   };
 
+  const applyQuickRange = (days: number) => {
+    const end = new Date(`${today}T00:00:00`);
+    const start = new Date(end);
+    start.setDate(end.getDate() - days + 1);
+    setStartDate(start.toISOString().slice(0, 10));
+    setEndDate(end.toISOString().slice(0, 10));
+  };
+
+  const applyChartRange = (range: RangeKey, setter: (fn: (c: ChartCfg) => ChartCfg) => void) => {
+    setter((c) => ({ ...c, range }));
+    applyQuickRange(rangeDays[range]);
+  };
+
   // 各图数据
-  const priceDs = useMemo(() => getDataset(priceCfg.granularity), [priceCfg.granularity]);
-  const loadDs = useMemo(() => getDataset(loadCfg.granularity), [loadCfg.granularity]);
-  const renDs = useMemo(() => getDataset(renCfg.granularity), [renCfg.granularity]);
-  const spaceDs = useMemo(() => getDataset(spaceCfg.granularity), [spaceCfg.granularity]);
+  const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
+  const loadForecast = useMemo(() => getForecastSeries("load", startDate, endDate, loadCfg.granularity), [startDate, endDate, loadCfg.granularity]);
+  const renForecast = useMemo(() => getForecastSeries("renewable", startDate, endDate, renCfg.granularity), [startDate, endDate, renCfg.granularity]);
+  const spaceForecast = useMemo(() => getForecastSeries("space", startDate, endDate, spaceCfg.granularity), [startDate, endDate, spaceCfg.granularity]);
+  const priceDs = useMemo(() => ({ price: priceForecast.map((p) => ({ ...p, dayAhead: p.predicted, realtime: p.actual, spread: p.deviation, cleared: Math.max(400, Math.round(p.predicted * 2.2)) })), xKey: priceCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: priceCfg.granularity === "15min" ? 15 : priceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [priceForecast, priceCfg.granularity]);
+  const loadDs = useMemo(() => ({ load: loadForecast, xKey: loadCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: loadCfg.granularity === "15min" ? 15 : loadCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [loadForecast, loadCfg.granularity]);
+  const renDs = useMemo(() => ({ renewable: renForecast, xKey: renCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: renCfg.granularity === "15min" ? 15 : renCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [renForecast, renCfg.granularity]);
+  const spaceDs = useMemo(() => ({ space: spaceForecast.map((p) => ({ ...p, warning: p.predicted < SPACE_WARN_THRESHOLD })), xKey: spaceCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: spaceCfg.granularity === "15min" ? 15 : spaceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [spaceForecast, spaceCfg.granularity]);
   // 边界使用全局粒度
   const boundaryDs = useMemo(() => getDataset(globalGranularity), [globalGranularity]);
 
@@ -107,6 +137,12 @@ export default function MarketInfo() {
   }, []);
 
   const weatherSignals = useMemo(() => weather24.filter((row) => row.alert !== "无").slice(0, 4), []);
+  const forecastSummary = useMemo(() => [
+    { label: "负荷预测均值", stat: summarizeForecast(loadForecast), unit: "MW" },
+    { label: "新能源预测均值", stat: summarizeForecast(renForecast), unit: "MW" },
+    { label: "竞价空间预测", stat: summarizeForecast(spaceForecast), unit: "MW" },
+    { label: "电价预测均值", stat: summarizeForecast(priceForecast), unit: "元/MWh" },
+  ], [loadForecast, renForecast, spaceForecast, priceForecast]);
 
   return (
     <MarketCursorProvider>
@@ -126,16 +162,15 @@ export default function MarketInfo() {
               </Select>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-muted-foreground">时间段</span>
-              <Select defaultValue="today">
-                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">今日 00:00-24:00</SelectItem>
-                  <SelectItem value="2d">近 2 日</SelectItem>
-                  <SelectItem value="4d">近 4 日</SelectItem>
-                  <SelectItem value="7d">近 7 日</SelectItem>
-                </SelectContent>
-              </Select>
+              <span className="text-xs text-muted-foreground">日期范围</span>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs" />
+              <span className="text-xs text-muted-foreground">-</span>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs" />
+              <div className="flex rounded-md border overflow-hidden text-xs h-8 bg-background">
+                {[{ d: 1, label: "今日" }, { d: 2, label: "近2日" }, { d: 4, label: "近4日" }, { d: 7, label: "近7日" }].map((item) => (
+                  <button key={item.d} onClick={() => applyQuickRange(item.d)} className="px-2 hover:bg-secondary">{item.label}</button>
+                ))}
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs text-muted-foreground">粒度</span>
@@ -148,6 +183,18 @@ export default function MarketInfo() {
                   onClick={() => setGlobalAll("hour")}
                   className={`px-3 ${globalGranularity === "hour" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
                 >1小时</button>
+                <button
+                  onClick={() => setGlobalAll("day")}
+                  className={`px-3 ${globalGranularity === "day" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+                >24小时</button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-muted-foreground">预测对照</span>
+              <div className="flex rounded-md border overflow-hidden text-xs h-8 bg-background">
+                {modeOptions.map((item) => (
+                  <button key={item.key} onClick={() => setForecastMode(item.key)} className={`px-2 ${forecastMode === item.key ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>{item.label}</button>
+                ))}
               </div>
             </div>
             <div className="flex items-center gap-2 text-[11px] shrink-0 ml-auto">
@@ -162,16 +209,16 @@ export default function MarketInfo() {
         <section className="rounded-lg border bg-card p-4 shadow-notion">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
             <h2 className="text-sm font-semibold shrink-0">行情摘要</h2>
-            {summary.map((card) => (
+            {forecastSummary.map((card) => (
               <div key={card.label} className="min-w-[128px] rounded-md border bg-background px-3 py-2 shrink-0">
                 <p className="text-[10px] text-muted-foreground truncate">{card.label}</p>
                 <p className="text-sm font-semibold leading-tight mt-1">
-                  {card.value}
+                  {card.stat.avgPredicted.toLocaleString()}
                   <span className="text-[10px] font-normal text-muted-foreground ml-1">{card.unit}</span>
                 </p>
-                <p className={`text-[10px] mt-1 flex items-center gap-0.5 ${card.up ? "text-success" : "text-destructive"}`}>
-                  {card.up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {card.change}
+                <p className={`text-[10px] mt-1 flex items-center gap-0.5 ${card.stat.avgDeviation >= 0 ? "text-destructive" : "text-success"}`}>
+                  {card.stat.avgDeviation >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  偏差 {card.stat.avgDeviation >= 0 ? "+" : ""}{card.stat.avgDeviation} · {card.stat.avgAbsPct}%
                 </p>
               </div>
             ))}
@@ -222,7 +269,7 @@ export default function MarketInfo() {
           granularity={priceCfg.granularity}
           onGranularityChange={(g) => setPriceCfg({ ...priceCfg, granularity: g })}
           range={priceCfg.range}
-          onRangeChange={(r) => setPriceCfg({ ...priceCfg, range: r })}
+          onRangeChange={(r) => applyChartRange(r, setPriceCfg)}
           showLegend={priceCfg.showLegend}
           onToggleLegend={() => setPriceCfg({ ...priceCfg, showLegend: !priceCfg.showLegend })}
           tableHeader={["时段", "日前(元/MWh)", "实时(元/MWh)", "价差", "出清(MWh)"]}
@@ -266,6 +313,7 @@ export default function MarketInfo() {
             periodLabel={priceDs.periodLabel}
             showLegend={priceCfg.showLegend}
             visibleSeries={priceSeries}
+            forecastMode={forecastMode}
           />
         </ChartCard>
 
@@ -345,7 +393,7 @@ export default function MarketInfo() {
           granularity={loadCfg.granularity}
           onGranularityChange={(g) => setLoadCfg({ ...loadCfg, granularity: g })}
           range={loadCfg.range}
-          onRangeChange={(r) => setLoadCfg({ ...loadCfg, range: r })}
+          onRangeChange={(r) => applyChartRange(r, setLoadCfg)}
           showLegend={loadCfg.showLegend}
           onToggleLegend={() => setLoadCfg({ ...loadCfg, showLegend: !loadCfg.showLegend })}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "偏差率"]}
@@ -372,6 +420,7 @@ export default function MarketInfo() {
             xInterval={loadDs.xInterval}
             periodLabel={loadDs.periodLabel}
             showLegend={loadCfg.showLegend}
+            forecastMode={forecastMode}
           />
         </ChartCard>
 
@@ -384,15 +433,15 @@ export default function MarketInfo() {
           granularity={renCfg.granularity}
           onGranularityChange={(g) => setRenCfg({ ...renCfg, granularity: g })}
           range={renCfg.range}
-          onRangeChange={(r) => setRenCfg({ ...renCfg, range: r })}
+          onRangeChange={(r) => applyChartRange(r, setRenCfg)}
           showLegend={renCfg.showLegend}
           onToggleLegend={() => setRenCfg({ ...renCfg, showLegend: !renCfg.showLegend })}
-          tableHeader={["时段", "风电(MW)", "光伏(MW)", "总出力(MW)"]}
-          tableRows={renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.wind, p.solar, p.total])}
+          tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "偏差率"]}
+          tableRows={renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, `${p.deviationPct}%`])}
           csvFilename="renewable.csv"
           csvRows={[
-            ["时段", "风电", "光伏", "总出力"],
-            ...renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.wind, p.solar, p.total]),
+            ["时段", "预测", "实际", "偏差", "偏差率"],
+            ...renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.deviationPct]),
           ]}
           footer={
             <div className="mt-2 flex items-center gap-3 flex-wrap text-[11px]">
@@ -428,6 +477,7 @@ export default function MarketInfo() {
             periodLabel={renDs.periodLabel}
             showLegend={renCfg.showLegend}
             visibleSeries={renSeries}
+            forecastMode={forecastMode}
           />
         </ChartCard>
 
@@ -440,17 +490,17 @@ export default function MarketInfo() {
           granularity={spaceCfg.granularity}
           onGranularityChange={(g) => setSpaceCfg({ ...spaceCfg, granularity: g })}
           range={spaceCfg.range}
-          onRangeChange={(r) => setSpaceCfg({ ...spaceCfg, range: r })}
+          onRangeChange={(r) => applyChartRange(r, setSpaceCfg)}
           showLegend={spaceCfg.showLegend}
           onToggleLegend={() => setSpaceCfg({ ...spaceCfg, showLegend: !spaceCfg.showLegend })}
-          tableHeader={["时段", "总负荷(MW)", "新能源(MW)", "竞价空间", "状态"]}
+          tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "状态"]}
           tableRows={spaceDs.space.map((p: any) => [
-            p.label ?? p.hourLabel, p.load, p.renewable, p.space, p.warning ? "⚠️ 预警" : "正常",
+            p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? "⚠️ 预警" : "正常",
           ])}
           csvFilename="bidding-space.csv"
           csvRows={[
-            ["时段", "总负荷", "新能源", "竞价空间", "预警"],
-            ...spaceDs.space.map((p: any) => [p.label ?? p.hourLabel, p.load, p.renewable, p.space, p.warning ? 1 : 0]),
+            ["时段", "预测", "实际", "偏差", "预警"],
+            ...spaceDs.space.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? 1 : 0]),
           ]}
         >
           <BiddingSpaceChart
@@ -460,6 +510,7 @@ export default function MarketInfo() {
             periodLabel={spaceDs.periodLabel}
             showLegend={spaceCfg.showLegend}
             threshold={SPACE_WARN_THRESHOLD}
+            forecastMode={forecastMode}
           />
         </ChartCard>
 
