@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -26,7 +26,7 @@ import {
   weather24,
   type DataSourceTag,
 } from "@/lib/marketMocks";
-import { getForecastSeries, summarizeForecast, type ForecastMode } from "@/lib/predictionOutputs";
+import { getForecastSeries, summarizeForecast } from "@/lib/predictionOutputs";
 import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
 import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
 
@@ -51,24 +51,25 @@ interface ChartCfg {
 }
 
 const today = "2025-07-15";
-const modeOptions: Array<{ key: ForecastMode; label: string }> = [
-  { key: "all", label: "同屏" },
-  { key: "predicted", label: "预测" },
-  { key: "actual", label: "实际" },
-  { key: "deviation", label: "偏差" },
-];
-
 const rangeDays: Record<RangeKey, number> = { "1d": 1, "2d": 2, "4d": 4, "7d": 7 };
+type MainChartId = "price-spread" | "load-forecast" | "renewable-output" | "bidding-space";
+const STORAGE_KEY = "market-board-interaction-state:v1";
 
 const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true });
 
 export default function MarketInfo() {
   const { province, setProvince } = useProvince();
-  const [globalGranularity, setGlobalGranularity] = useState<Granularity>("hour");
+  const saved = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch { return null; }
+  }, []);
+  const [globalGranularity, setGlobalGranularity] = useState<Granularity>(saved?.granularity ?? "hour");
   const [boundaryExpanded, setBoundaryExpanded] = useState(false);
-  const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState(today);
-  const [forecastMode, setForecastMode] = useState<ForecastMode>("all");
+  const [startDate, setStartDate] = useState(saved?.startDate ?? today);
+  const [endDate, setEndDate] = useState(saved?.endDate ?? today);
+  const [activeChart, setActiveChart] = useState<MainChartId | null>(saved?.activeChart ?? null);
+  const [expandedChart, setExpandedChart] = useState<MainChartId | null>(saved?.expandedChart ?? null);
+  const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? { start: 0, end: 100 });
 
   // 每图独立配置（粒度可被全局或单独控制）
   const [priceCfg, setPriceCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
@@ -77,8 +78,10 @@ export default function MarketInfo() {
   const [spaceCfg, setSpaceCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
 
   // 系列可见性
-  const [priceSeries, setPriceSeries] = useState({ dayAhead: true, realtime: true, spread: true, cleared: true });
-  const [renSeries, setRenSeries] = useState({ wind: true, solar: true, total: true });
+  const [priceSeries, setPriceSeries] = useState(saved?.priceSeries ?? { dayAhead: true, realtime: true, spread: true, cleared: true });
+  const [loadSeries, setLoadSeries] = useState(saved?.loadSeries ?? { predicted: true, actual: true, deviation: true });
+  const [renSeries, setRenSeries] = useState(saved?.renSeries ?? { predicted: true, actual: true, deviation: true });
+  const [spaceSeries, setSpaceSeries] = useState(saved?.spaceSeries ?? { predicted: true, actual: true, deviation: true });
 
   const setGlobalAll = (g: Granularity) => {
     setGlobalGranularity(g);
