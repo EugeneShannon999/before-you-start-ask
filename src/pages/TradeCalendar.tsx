@@ -61,16 +61,16 @@ export default function TradeCalendar() {
       <section className="rounded-lg shadow-notion bg-card p-4 flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="text-sm font-semibold">事件源接入</p>
-          <p className="text-xs text-muted-foreground mt-1">上传链路：Excel上传 → 预览校验 → 确认生成；平台交易日历 API 预留优先，图片 OCR 作为次级入口。</p>
+          <p className="text-xs text-muted-foreground mt-1">主路径：API/结构化来源自动生成；上传链路：上传文件 → 预览校验 → 确认生成日历；图片 OCR 为次级能力且需人工确认。</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] px-2 py-1 rounded bg-secondary text-muted-foreground">平台API优先</span>
+          <span className="text-[10px] px-2 py-1 rounded bg-secondary text-muted-foreground">API/结构化来源优先</span>
           <label className="h-8 px-3 rounded-md border inline-flex items-center gap-1.5 text-xs cursor-pointer hover:bg-secondary">
-            <FileSpreadsheet className="h-3.5 w-3.5" /> Excel上传
+            <FileSpreadsheet className="h-3.5 w-3.5" /> 上传 Excel
             <input type="file" accept=".csv,.tsv,.xls,.xlsx" className="hidden" onChange={(e) => handleCalendarUpload(e.target.files?.[0])} />
           </label>
           <label className="h-8 px-3 rounded-md border inline-flex items-center gap-1.5 text-xs cursor-pointer hover:bg-secondary text-muted-foreground">
-            <ImageUp className="h-3.5 w-3.5" /> 图片OCR
+            <ImageUp className="h-3.5 w-3.5" /> 图片 OCR
             <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
           </label>
         </div>
@@ -83,7 +83,7 @@ export default function TradeCalendar() {
             <div className="grid gap-1 md:grid-cols-2">
               {pendingUpload.slice(0, 4).map((event) => (
                 <div key={event.id} className="rounded border px-2 py-1 text-muted-foreground">
-                  {event.date} · {event.type} · {event.title} · {event.startTime}-{event.endTime}
+                  {event.date} · {event.type} · {event.title} · {event.startTime}-{event.endTime} · 来源：{event.source}
                 </div>
               ))}
             </div>
@@ -91,7 +91,7 @@ export default function TradeCalendar() {
         )}
         {pendingOcr && (
           <div className="w-full rounded-md border bg-background p-3 flex items-center justify-between gap-2 text-xs">
-            <span>{pendingOcr.title} · {pendingOcr.date} {pendingOcr.startTime}-{pendingOcr.endTime}</span>
+            <span>{pendingOcr.title} · {pendingOcr.date} {pendingOcr.startTime}-{pendingOcr.endTime} · 来源：{pendingOcr.source}</span>
             <Button size="sm" onClick={() => { setEvents((prev) => [...prev, pendingOcr]); setPendingOcr(null); }}><CheckCircle2 className="h-3.5 w-3.5 mr-1" />确认生成</Button>
           </div>
         )}
