@@ -14,6 +14,24 @@ const fieldGroups = {
   风电相关: ["10米风", "100米风", "风速由 U/V 分量计算"],
 };
 
+const weatherFieldCatalog = [
+  { label: "直接辐射", group: "光伏", source: "公开API", getValue: (row: WeatherPoint) => formatValue(row.directRadiation, " W/㎡") },
+  { label: "短波辐射", group: "光伏", source: "公开API", getValue: (row: WeatherPoint) => formatValue(row.shortwaveRadiation, " W/㎡") },
+  { label: "低云量", group: "光伏", source: "页面抓取", getValue: (row: WeatherPoint) => `${row.lowCloudCover}%` },
+  { label: "中云量", group: "光伏", source: "页面抓取", getValue: (row: WeatherPoint) => `${row.midCloudCover}%` },
+  { label: "高云量", group: "光伏", source: "页面抓取", getValue: (row: WeatherPoint) => `${row.highCloudCover}%` },
+  { label: "总云量", group: "光伏", source: "页面抓取", getValue: (row: WeatherPoint) => `${row.cloudCover}%` },
+  { label: "2米气温", group: "负荷", source: "公开API", getValue: (row: WeatherPoint) => `${row.temperature}℃` },
+  { label: "2米相对湿度", group: "负荷", source: "公开API", getValue: (row: WeatherPoint) => `${row.humidity2m}%` },
+  { label: "2米露点温度", group: "负荷", source: "公开API", getValue: (row: WeatherPoint) => `${row.dewPoint2m}℃` },
+  { label: "降雨量", group: "降水", source: "页面抓取", getValue: (row: WeatherPoint) => `${row.precipitation.toFixed(1)} mm` },
+  { label: "地表总降水率", group: "降水", source: "页面抓取", getValue: (row: WeatherPoint) => `${row.surfacePrecipRate.toFixed(2)} mm/h` },
+  { label: "10米风", group: "风电", source: "公开API", getValue: (row: WeatherPoint) => `${row.wind10mSpeed.toFixed(1)} m/s` },
+  { label: "100米风", group: "风电", source: "规则计算", getValue: (row: WeatherPoint) => `${row.wind100mSpeed.toFixed(1)} m/s` },
+  { label: "风速由 U/V 分量计算", group: "风电", source: "规则计算", getValue: (row: WeatherPoint) => `${row.wind100mSpeed.toFixed(1)} m/s` },
+  { label: "综合预警等级", group: "预警", source: "规则计算", getValue: (row: WeatherPoint) => row.warningLevel },
+];
+
 const weatherLinks = [
   { title: "气象异常", desc: "云量、辐射、风速、降水与温度进入规则计算。", source: "公开API / 页面抓取" },
   { title: "新能源预测偏差", desc: "光伏侧看辐射与云量，风电侧看10米/100米风速。", source: "规则计算" },
