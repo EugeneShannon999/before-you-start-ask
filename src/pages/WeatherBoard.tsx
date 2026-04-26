@@ -84,9 +84,10 @@ export default function WeatherBoard() {
   const [pointScope, setPointScope] = useState(pointOptions[0]);
   const [granularity, setGranularity] = useState(granularityOptions[0]);
 
-  const current = useMemo(() => weather24.find((row) => row.warningLevel === "市场级提示") ?? weather24.find((row) => row.warningLevel === "区域提示") ?? weather24[12], []);
+  const linkedWeather = useMemo(() => getLinkedWeatherRows(weather24, source, pointScope, granularity), [source, pointScope, granularity]);
+  const current = useMemo(() => linkedWeather.find((row) => row.warningLevel === "市场级提示") ?? linkedWeather.find((row) => row.warningLevel === "区域提示") ?? linkedWeather[0], [linkedWeather]);
   const coreCards = useMemo(() => getCoreCards(current), [current]);
-  const warningRows = weather24.filter((row) => row.warningLevel !== "正常").slice(0, 6);
+  const warningRows = linkedWeather.filter((row) => row.warningLevel !== "正常").slice(0, 6);
 
   return (
     <div className="px-6 py-5 space-y-4">
@@ -97,6 +98,10 @@ export default function WeatherBoard() {
             <p className="text-xs text-muted-foreground mt-1">交易前判断入口：气象 → 新能源预测 → 市场数据 → 竞价空间 → 电价关系 → 策略。</p>
           </div>
           <span className="text-[11px] px-2 py-1 rounded bg-secondary text-muted-foreground">规则计算 · 阈值配置预留</span>
+        </div>
+
+        <div className="rounded-md border bg-background p-3 text-[11px] text-muted-foreground leading-relaxed">
+          当前为框架演示：数据源、点位口径、时间粒度会联动影响展示值与关注时段；区域暴露权重能力已预留，尚未按装机容量或负荷暴露加权。
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
@@ -236,7 +241,7 @@ export default function WeatherBoard() {
               </tr>
             </thead>
             <tbody>
-              {weather24.map((row) => (
+              {linkedWeather.map((row) => (
                 <tr key={row.hour} className="border-t hover:bg-secondary/30">
                   <td className="px-4 py-2 font-mono">{row.hourLabel}</td>
                   <td className="px-4 py-2 text-right">{row.directRadiation}</td>
