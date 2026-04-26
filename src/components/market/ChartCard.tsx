@@ -27,6 +27,12 @@ export interface ChartCardProps {
   csvRows: (string | number)[][]; // 含表头
   children: ReactNode;
   footer?: ReactNode;
+  expanded?: boolean;
+  active?: boolean;
+  onActivate?: () => void;
+  onExpand: () => void;
+  onExpandedChange?: (open: boolean) => void;
+  onZoomWheel?: (deltaY: number) => void;
 }
 
 function downloadCsv(filename: string, rows: (string | number)[][]) {
@@ -45,6 +51,21 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 export function ChartCard(props: ChartCardProps) {
   const [tableOpen, setTableOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  const canZoom = props.active || props.expanded;
+  const chartBody = (
+    <div
+      key={resetKey}
+      onClick={props.onActivate}
+      onWheel={(event) => {
+        if (!canZoom) return;
+        event.preventDefault();
+        props.onZoomWheel?.(event.deltaY);
+      }}
+      className={props.active ? "rounded-md ring-1 ring-primary/40" : "rounded-md"}
+    >
+      {props.children}
+    </div>
+  );
 
   return (
     <section className="rounded-lg shadow-notion bg-card p-4">
@@ -71,6 +92,7 @@ export function ChartCard(props: ChartCardProps) {
           onShowTable={() => setTableOpen(true)}
           onDownload={() => downloadCsv(props.csvFilename, props.csvRows)}
           onReset={() => setResetKey((k) => k + 1)}
+          onExpand={props.onExpand}
         />
       </div>
       {props.caption && (
@@ -78,7 +100,7 @@ export function ChartCard(props: ChartCardProps) {
           {props.caption}
         </p>
       )}
-      <div key={resetKey}>{props.children}</div>
+      {chartBody}
       {props.footer}
 
       <Dialog open={tableOpen} onOpenChange={setTableOpen}>
@@ -106,6 +128,14 @@ export function ChartCard(props: ChartCardProps) {
               </tbody>
             </table>
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={props.expanded} onOpenChange={props.onExpandedChange}>
+        <DialogContent className="max-w-[92vw]">
+          <DialogHeader>
+            <DialogTitle className="text-sm">{props.title}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[78vh] overflow-hidden">{chartBody}</div>
         </DialogContent>
       </Dialog>
     </section>

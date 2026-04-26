@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -26,7 +26,7 @@ import {
   weather24,
   type DataSourceTag,
 } from "@/lib/marketMocks";
-import { getForecastSeries, summarizeForecast, type ForecastMode } from "@/lib/predictionOutputs";
+import { getForecastSeries, summarizeForecast } from "@/lib/predictionOutputs";
 import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
 import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
 
@@ -51,24 +51,25 @@ interface ChartCfg {
 }
 
 const today = "2025-07-15";
-const modeOptions: Array<{ key: ForecastMode; label: string }> = [
-  { key: "all", label: "同屏" },
-  { key: "predicted", label: "预测" },
-  { key: "actual", label: "实际" },
-  { key: "deviation", label: "偏差" },
-];
-
 const rangeDays: Record<RangeKey, number> = { "1d": 1, "2d": 2, "4d": 4, "7d": 7 };
+type MainChartId = "price-spread" | "load-forecast" | "renewable-output" | "bidding-space";
+const STORAGE_KEY = "market-board-interaction-state:v1";
 
 const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true });
 
 export default function MarketInfo() {
   const { province, setProvince } = useProvince();
-  const [globalGranularity, setGlobalGranularity] = useState<Granularity>("hour");
+  const saved = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch { return null; }
+  }, []);
+  const [globalGranularity, setGlobalGranularity] = useState<Granularity>(saved?.granularity ?? "hour");
   const [boundaryExpanded, setBoundaryExpanded] = useState(false);
-  const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState(today);
-  const [forecastMode, setForecastMode] = useState<ForecastMode>("all");
+  const [startDate, setStartDate] = useState(saved?.startDate ?? today);
+  const [endDate, setEndDate] = useState(saved?.endDate ?? today);
+  const [activeChart, setActiveChart] = useState<MainChartId | null>(saved?.activeChart ?? null);
+  const [expandedChart, setExpandedChart] = useState<MainChartId | null>(saved?.expandedChart ?? null);
+  const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? { start: 0, end: 100 });
 
   // 每图独立配置（粒度可被全局或单独控制）
   const [priceCfg, setPriceCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
@@ -77,8 +78,10 @@ export default function MarketInfo() {
   const [spaceCfg, setSpaceCfg] = useState<ChartCfg>(initialCfg(globalGranularity));
 
   // 系列可见性
-  const [priceSeries, setPriceSeries] = useState({ dayAhead: true, realtime: true, spread: true, cleared: true });
-  const [renSeries, setRenSeries] = useState({ wind: true, solar: true, total: true });
+  const [priceSeries, setPriceSeries] = useState(saved?.priceSeries ?? { dayAhead: true, realtime: true, spread: true, cleared: true });
+  const [loadSeries, setLoadSeries] = useState(saved?.loadSeries ?? { predicted: true, actual: true, deviation: true });
+  const [renSeries, setRenSeries] = useState(saved?.renSeries ?? { predicted: true, actual: true, deviation: true });
+  const [spaceSeries, setSpaceSeries] = useState(saved?.spaceSeries ?? { predicted: true, actual: true, deviation: true });
 
   const setGlobalAll = (g: Granularity) => {
     setGlobalGranularity(g);
@@ -100,6 +103,41 @@ export default function MarketInfo() {
     setter((c) => ({ ...c, range }));
     applyQuickRange(rangeDays[range]);
   };
+
+  const applyZoomDrivenGranularity = (next: { start: number; end: number }) => {
+    const width = next.end - next.start;
+    setGlobalAll(width <= 35 ? "15min" : width <= 70 ? "hour" : "day");
+  };
+
+  const handleZoomWheel = (deltaY: number) => {
+    setZoomWindow((current) => {
+      const width = current.end - current.start;
+      const nextWidth = Math.max(18, Math.min(100, width + (deltaY > 0 ? 10 : -10)));
+      const center = (current.start + current.end) / 2;
+      const start = Math.max(0, Math.min(100 - nextWidth, center - nextWidth / 2));
+      const next = { start: Math.round(start), end: Math.round(start + nextWidth) };
+      applyZoomDrivenGranularity(next);
+      return next;
+    });
+  };
+
+  const zoomData = <T,>(items: T[]) => {
+    const start = Math.floor((zoomWindow.start / 100) * items.length);
+    const end = Math.max(start + 1, Math.ceil((zoomWindow.end / 100) * items.length));
+    return items.slice(start, end);
+  };
+
+  useEffect(() => {
+    if (saved?.province) setProvince(saved.province as ProvinceCode);
+  }, [saved?.province, setProvince]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      province, startDate, endDate, granularity: globalGranularity,
+      priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
+      activeChart, expandedChart,
+    }));
+  }, [province, startDate, endDate, globalGranularity, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart]);
 
   // 各图数据
   const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
@@ -189,13 +227,8 @@ export default function MarketInfo() {
                 >24小时</button>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-muted-foreground">预测对照</span>
-              <div className="flex rounded-md border overflow-hidden text-xs h-8 bg-background">
-                {modeOptions.map((item) => (
-                  <button key={item.key} onClick={() => setForecastMode(item.key)} className={`px-2 ${forecastMode === item.key ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>{item.label}</button>
-                ))}
-              </div>
+            <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
+              缩放窗口 {zoomWindow.start}% - {zoomWindow.end}%
             </div>
             <div className="flex items-center gap-2 text-[11px] shrink-0 ml-auto">
               <span className="text-muted-foreground flex items-center gap-1">
@@ -249,8 +282,12 @@ export default function MarketInfo() {
                   <span className="text-[9px] px-1 py-0.5 rounded bg-secondary text-muted-foreground shrink-0">公开API</span>
                 </div>
                 <div className="pl-4 space-y-0.5 text-[10px] text-muted-foreground">
-                  <p><span className="text-foreground/70">时段：</span>{w.period}</p>
+                  <p><span className="text-foreground/70">规则名：</span>{w.title}</p>
                   <p><span className="text-foreground/70">当前值：</span>{w.current}</p>
+                  <p><span className="text-foreground/70">阈值：</span>{w.threshold}</p>
+                  <p><span className="text-foreground/70">时间段：</span>{w.period}</p>
+                  <p><span className="text-foreground/70">数据来源：</span>{w.source}</p>
+                  <p><span className="text-foreground/70">计算口径：</span>{w.method}</p>
                   <p className="text-foreground/80"><span className="text-foreground/60">建议：</span>{w.action}</p>
                 </div>
               </div>
@@ -272,6 +309,12 @@ export default function MarketInfo() {
           onRangeChange={(r) => applyChartRange(r, setPriceCfg)}
           showLegend={priceCfg.showLegend}
           onToggleLegend={() => setPriceCfg({ ...priceCfg, showLegend: !priceCfg.showLegend })}
+          active={activeChart === "price-spread"}
+          expanded={expandedChart === "price-spread"}
+          onActivate={() => setActiveChart("price-spread")}
+          onExpand={() => { setActiveChart("price-spread"); setExpandedChart("price-spread"); }}
+          onExpandedChange={(open) => setExpandedChart(open ? "price-spread" : null)}
+          onZoomWheel={handleZoomWheel}
           tableHeader={["时段", "日前(元/MWh)", "实时(元/MWh)", "价差", "出清(MWh)"]}
           tableRows={priceDs.price.map((p: any) => [
             p.label ?? p.hourLabel, p.dayAhead, p.realtime, p.spread, p.cleared,
@@ -307,13 +350,13 @@ export default function MarketInfo() {
           }
         >
           <PriceSpreadChart
-            data={priceDs.price}
+            data={zoomData(priceDs.price)}
             xKey={priceDs.xKey}
             xInterval={priceDs.xInterval}
             periodLabel={priceDs.periodLabel}
             showLegend={priceCfg.showLegend}
             visibleSeries={priceSeries}
-            forecastMode={forecastMode}
+            forecastMode="all"
           />
         </ChartCard>
 
@@ -396,6 +439,12 @@ export default function MarketInfo() {
           onRangeChange={(r) => applyChartRange(r, setLoadCfg)}
           showLegend={loadCfg.showLegend}
           onToggleLegend={() => setLoadCfg({ ...loadCfg, showLegend: !loadCfg.showLegend })}
+          active={activeChart === "load-forecast"}
+          expanded={expandedChart === "load-forecast"}
+          onActivate={() => setActiveChart("load-forecast")}
+          onExpand={() => { setActiveChart("load-forecast"); setExpandedChart("load-forecast"); }}
+          onExpandedChange={(open) => setExpandedChart(open ? "load-forecast" : null)}
+          onZoomWheel={handleZoomWheel}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "偏差率"]}
           tableRows={loadDs.load.map((p: any) => [
             p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, `${((p.deviation / p.predicted) * 100).toFixed(2)}%`,
@@ -406,21 +455,33 @@ export default function MarketInfo() {
             ...loadDs.load.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, ((p.deviation / p.predicted) * 100).toFixed(2)]),
           ]}
           footer={
-            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
-              <Stat label="最大正偏差" value={`+${loadStats.maxPos} MW`} tone="destructive" />
-              <Stat label="最大负偏差" value={`${loadStats.maxNeg} MW`} tone="success" />
-              <Stat label="平均偏差" value={`${loadStats.avg > 0 ? "+" : ""}${loadStats.avg} MW`} />
-              <Stat label="平均偏差率" value={`${loadStats.avgPct}%`} />
+            <div className="mt-2 space-y-2 text-[11px]">
+              <SeriesToggles
+                series={loadSeries}
+                onChange={setLoadSeries}
+                items={[
+                  { k: "predicted", label: "预测负荷", color: C_PRIMARY },
+                  { k: "actual", label: "实际负荷", color: C_PRIMARY },
+                  { k: "deviation", label: "偏差", color: "hsl(var(--destructive))" },
+                ]}
+              />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <Stat label="最大正偏差" value={`+${loadStats.maxPos} MW`} tone="destructive" />
+                <Stat label="最大负偏差" value={`${loadStats.maxNeg} MW`} tone="success" />
+                <Stat label="平均偏差" value={`${loadStats.avg > 0 ? "+" : ""}${loadStats.avg} MW`} />
+                <Stat label="平均偏差率" value={`${loadStats.avgPct}%`} />
+              </div>
             </div>
           }
         >
           <LoadForecastChart
-            data={loadDs.load}
+            data={zoomData(loadDs.load)}
             xKey={loadDs.xKey}
             xInterval={loadDs.xInterval}
             periodLabel={loadDs.periodLabel}
             showLegend={loadCfg.showLegend}
-            forecastMode={forecastMode}
+            visibleSeries={loadSeries}
+            forecastMode="all"
           />
         </ChartCard>
 
@@ -436,6 +497,12 @@ export default function MarketInfo() {
           onRangeChange={(r) => applyChartRange(r, setRenCfg)}
           showLegend={renCfg.showLegend}
           onToggleLegend={() => setRenCfg({ ...renCfg, showLegend: !renCfg.showLegend })}
+          active={activeChart === "renewable-output"}
+          expanded={expandedChart === "renewable-output"}
+          onActivate={() => setActiveChart("renewable-output")}
+          onExpand={() => { setActiveChart("renewable-output"); setExpandedChart("renewable-output"); }}
+          onExpandedChange={(open) => setExpandedChart(open ? "renewable-output" : null)}
+          onZoomWheel={handleZoomWheel}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "偏差率"]}
           tableRows={renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, `${p.deviationPct}%`])}
           csvFilename="renewable.csv"
@@ -446,9 +513,9 @@ export default function MarketInfo() {
           footer={
             <div className="mt-2 flex items-center gap-3 flex-wrap text-[11px]">
               {[
-                { k: "wind", label: "风电", color: C_SUCCESS },
-                { k: "solar", label: "光伏", color: C_PRIMARY },
-                { k: "total", label: "总出力", color: "hsl(var(--destructive))" },
+                { k: "predicted", label: "预测新能源", color: C_PRIMARY },
+                { k: "actual", label: "实际新能源", color: C_SUCCESS },
+                { k: "deviation", label: "偏差", color: "hsl(var(--destructive))" },
               ].map((s) => (
                 <label key={s.k} className="inline-flex items-center gap-1 cursor-pointer select-none">
                   <input
@@ -471,13 +538,13 @@ export default function MarketInfo() {
           }
         >
           <RenewableChart
-            data={renDs.renewable}
+            data={zoomData(renDs.renewable)}
             xKey={renDs.xKey}
             xInterval={renDs.xInterval}
             periodLabel={renDs.periodLabel}
             showLegend={renCfg.showLegend}
             visibleSeries={renSeries}
-            forecastMode={forecastMode}
+            forecastMode="all"
           />
         </ChartCard>
 
@@ -493,6 +560,12 @@ export default function MarketInfo() {
           onRangeChange={(r) => applyChartRange(r, setSpaceCfg)}
           showLegend={spaceCfg.showLegend}
           onToggleLegend={() => setSpaceCfg({ ...spaceCfg, showLegend: !spaceCfg.showLegend })}
+          active={activeChart === "bidding-space"}
+          expanded={expandedChart === "bidding-space"}
+          onActivate={() => setActiveChart("bidding-space")}
+          onExpand={() => { setActiveChart("bidding-space"); setExpandedChart("bidding-space"); }}
+          onExpandedChange={(open) => setExpandedChart(open ? "bidding-space" : null)}
+          onZoomWheel={handleZoomWheel}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "状态"]}
           tableRows={spaceDs.space.map((p: any) => [
             p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? "⚠️ 预警" : "正常",
@@ -502,15 +575,29 @@ export default function MarketInfo() {
             ["时段", "预测", "实际", "偏差", "预警"],
             ...spaceDs.space.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? 1 : 0]),
           ]}
+          footer={
+            <div className="mt-2 text-[11px]">
+              <SeriesToggles
+                series={spaceSeries}
+                onChange={setSpaceSeries}
+                items={[
+                  { k: "predicted", label: "预测竞价空间", color: C_PRIMARY },
+                  { k: "actual", label: "实际竞价空间", color: C_SUCCESS },
+                  { k: "deviation", label: "偏差", color: "hsl(var(--destructive))" },
+                ]}
+              />
+            </div>
+          }
         >
           <BiddingSpaceChart
-            data={spaceDs.space}
+            data={zoomData(spaceDs.space)}
             xKey={spaceDs.xKey}
             xInterval={spaceDs.xInterval}
             periodLabel={spaceDs.periodLabel}
             showLegend={spaceCfg.showLegend}
             threshold={SPACE_WARN_THRESHOLD}
-            forecastMode={forecastMode}
+            visibleSeries={spaceSeries}
+            forecastMode="all"
           />
         </ChartCard>
 
@@ -596,6 +683,8 @@ interface RuleWarning {
   period: string;
   current: string;
   threshold: string;
+  source: DataSourceTag;
+  method: string;
   action: string;
   level: "high" | "medium";
 }
@@ -607,6 +696,8 @@ const ruleWarnings: RuleWarning[] = [
     period: "18:00-20:00",
     current: "当前价差 +47 元/MWh",
     threshold: "超过预设阈值 ±30 元/MWh",
+    source: "公开API",
+    method: "日前电价 − 实时电价，按当前粒度聚合",
     action: "建议关注晚间申报策略",
     level: "high",
   },
@@ -616,6 +707,8 @@ const ruleWarnings: RuleWarning[] = [
     period: "皖南-皖北断面",
     current: "当前负载 78%",
     threshold: "接近预警阈值 80%",
+    source: "公开API",
+    method: "断面实时负载率与业务阈值比对",
     action: "建议关注晚高峰送电安排",
     level: "medium",
   },
@@ -625,6 +718,8 @@ const ruleWarnings: RuleWarning[] = [
     period: "19:30-21:00",
     current: "正备用 1,820 MW",
     threshold: "低于预设阈值 2,000 MW",
+    source: "公开API",
+    method: "正备用容量低于业务阈值触发",
     action: "建议预留响应空间",
     level: "medium",
   },
@@ -634,6 +729,8 @@ const ruleWarnings: RuleWarning[] = [
     period: "全日",
     current: "必开 6 台 / 必停 2 台",
     threshold: "较 D-1 新增必开 1 台",
+    source: "规则计算",
+    method: "必开必停台数与 D-1 计划差异比对",
     action: "建议复核中长期匹配",
     level: "medium",
   },
@@ -646,6 +743,33 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "de
     <div className="p-2 rounded border bg-background">
       <p className="text-[10px] text-muted-foreground">{label}</p>
       <p className={`text-sm font-mono font-semibold ${cls}`}>{value}</p>
+    </div>
+  );
+}
+
+function SeriesToggles({
+  series,
+  onChange,
+  items,
+}: {
+  series: Record<string, boolean>;
+  onChange: (next: any) => void;
+  items: Array<{ k: string; label: string; color: string }>;
+}) {
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      {items.map((s) => (
+        <label key={s.k} className="inline-flex items-center gap-1 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={series[s.k]}
+            onChange={(e) => onChange({ ...series, [s.k]: e.target.checked })}
+            className="h-3 w-3"
+          />
+          <span className="inline-block h-2 w-3 rounded-sm" style={{ background: s.color }} />
+          <span className="text-muted-foreground">{s.label}</span>
+        </label>
+      ))}
     </div>
   );
 }

@@ -83,16 +83,16 @@ export function PriceSpreadChart({
           />
           {showLegend && <Legend wrapperStyle={{ fontSize: 11 }} />}
           <CursorRef data={data} />
-          {visibleSeries.cleared && forecastMode === "all" && (
+          {visibleSeries.cleared && (
             <Bar yAxisId="right" dataKey="cleared" name="出清电量" fill={C_MUTED} fillOpacity={0.18} />
           )}
-          {(visibleSeries.spread || forecastMode === "deviation") && forecastMode !== "predicted" && forecastMode !== "actual" && (
+          {visibleSeries.spread && (
             <Bar yAxisId="left" dataKey="spread" name="价差" fill={C_WARNING} fillOpacity={0.35} />
           )}
-          {visibleSeries.dayAhead && forecastMode !== "actual" && forecastMode !== "deviation" && (
+          {visibleSeries.dayAhead && (
             <Line yAxisId="left" type="monotone" dataKey="dayAhead" name="日前电价" stroke={C_PRIMARY} strokeWidth={2} dot={false} />
           )}
-          {visibleSeries.realtime && forecastMode !== "predicted" && forecastMode !== "deviation" && (
+          {visibleSeries.realtime && (
             <Line yAxisId="left" type="monotone" dataKey="realtime" name="实时电价" stroke={C_DESTRUCTIVE} strokeWidth={2} dot={false} />
           )}
         </ComposedChart>
@@ -104,8 +104,9 @@ export function PriceSpreadChart({
 // 2. 负荷预测 vs 实际
 export function LoadForecastChart({
   data, xKey, xInterval, showLegend = true, height = 230, periodLabel,
+  visibleSeries = { predicted: true, actual: true, deviation: true },
   forecastMode = "all",
-}: BaseChartProps & { forecastMode?: ForecastMode }) {
+}: BaseChartProps & { visibleSeries?: Record<string, boolean>; forecastMode?: ForecastMode }) {
   const sync = useHoverSync(data);
   return (
     <div style={{ height }}>
@@ -127,9 +128,9 @@ export function LoadForecastChart({
           />
           {showLegend && <Legend wrapperStyle={{ fontSize: 11 }} />}
           <CursorRef data={data} />
-          {forecastMode !== "actual" && forecastMode !== "deviation" && <Bar yAxisId="left" dataKey="predicted" name="预测负荷" fill={C_PRIMARY} fillOpacity={0.35} />}
-          {forecastMode !== "predicted" && forecastMode !== "deviation" && <Bar yAxisId="left" dataKey="actual" name="实际负荷" fill={C_PRIMARY} />}
-          {forecastMode !== "predicted" && forecastMode !== "actual" && <Line yAxisId="right" type="monotone" dataKey="deviation" name="偏差(MW)" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
+          {visibleSeries.predicted && <Bar yAxisId="left" dataKey="predicted" name="预测负荷" fill={C_PRIMARY} fillOpacity={0.35} />}
+          {visibleSeries.actual && <Bar yAxisId="left" dataKey="actual" name="实际负荷" fill={C_PRIMARY} />}
+          {visibleSeries.deviation && <Line yAxisId="right" type="monotone" dataKey="deviation" name="偏差(MW)" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
         </ComposedChart>
       </ResponsiveContainer>
     </div>
@@ -139,7 +140,7 @@ export function LoadForecastChart({
 // 3. 新能源出力
 export function RenewableChart({
   data, xKey, xInterval, showLegend = true, height = 220, periodLabel,
-  visibleSeries = { wind: true, solar: true, total: true },
+  visibleSeries = { wind: true, solar: true, total: true, predicted: true, actual: true, deviation: true },
   forecastMode = "all",
 }: BaseChartProps & { visibleSeries?: Record<string, boolean>; forecastMode?: ForecastMode }) {
   const sync = useHoverSync(data);
@@ -172,9 +173,9 @@ export function RenewableChart({
           <CursorRef data={data} />
           {"predicted" in (data[0] ?? {}) ? (
             <>
-              {forecastMode !== "actual" && forecastMode !== "deviation" && <Area type="monotone" dataKey="predicted" name="预测新能源" stroke={C_PRIMARY} fill="url(#ren-solar)" />}
-              {forecastMode !== "predicted" && forecastMode !== "deviation" && <Line type="monotone" dataKey="actual" name="实际新能源" stroke={C_SUCCESS} strokeWidth={2} dot={false} />}
-              {forecastMode !== "predicted" && forecastMode !== "actual" && <Line type="monotone" dataKey="deviation" name="偏差" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
+              {visibleSeries.predicted && <Area type="monotone" dataKey="predicted" name="预测新能源" stroke={C_PRIMARY} fill="url(#ren-solar)" />}
+              {visibleSeries.actual && <Line type="monotone" dataKey="actual" name="实际新能源" stroke={C_SUCCESS} strokeWidth={2} dot={false} />}
+              {visibleSeries.deviation && <Line type="monotone" dataKey="deviation" name="偏差" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
             </>
           ) : <>
           {visibleSeries.wind && (
@@ -197,8 +198,9 @@ export function RenewableChart({
 export function BiddingSpaceChart({
   data, xKey, xInterval, showLegend = true, height = 220, periodLabel,
   threshold = 800,
+  visibleSeries = { predicted: true, actual: true, deviation: true },
   forecastMode = "all",
-}: BaseChartProps & { threshold?: number; forecastMode?: ForecastMode }) {
+}: BaseChartProps & { threshold?: number; visibleSeries?: Record<string, boolean>; forecastMode?: ForecastMode }) {
   const sync = useHoverSync(data);
   // 找出预警区间（连续 warning=true 段）
   const warnRegions: { x1: any; x2: any }[] = [];
@@ -235,9 +237,9 @@ export function BiddingSpaceChart({
           <ReferenceLine y={threshold} stroke={C_DESTRUCTIVE} strokeDasharray="4 4" label={{ value: `预警 ${threshold} MW`, position: "right", fontSize: 10, fill: C_DESTRUCTIVE }} />
           <CursorRef data={data} />
           {"predicted" in (data[0] ?? {}) ? <>
-            {forecastMode !== "actual" && forecastMode !== "deviation" && <Area type="monotone" dataKey="predicted" name="预测竞价空间" stroke={C_PRIMARY} fill={C_PRIMARY} fillOpacity={0.2} />}
-            {forecastMode !== "predicted" && forecastMode !== "deviation" && <Line type="monotone" dataKey="actual" name="实际竞价空间" stroke={C_SUCCESS} strokeWidth={2} dot={false} />}
-            {forecastMode !== "predicted" && forecastMode !== "actual" && <Line type="monotone" dataKey="deviation" name="偏差" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
+            {visibleSeries.predicted && <Area type="monotone" dataKey="predicted" name="预测竞价空间" stroke={C_PRIMARY} fill={C_PRIMARY} fillOpacity={0.2} />}
+            {visibleSeries.actual && <Line type="monotone" dataKey="actual" name="实际竞价空间" stroke={C_SUCCESS} strokeWidth={2} dot={false} />}
+            {visibleSeries.deviation && <Line type="monotone" dataKey="deviation" name="偏差" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
           </> : <>
             <Line type="monotone" dataKey="load" name="总负荷预测" stroke={C_MUTED} strokeWidth={1.5} dot={false} />
             <Line type="monotone" dataKey="renewable" name="新能源预测" stroke={C_SUCCESS} strokeWidth={1.5} dot={false} />
