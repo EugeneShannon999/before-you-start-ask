@@ -1,5 +1,5 @@
 // 市场看板 mock 数据：96 点(15 分钟) + 小时聚合
-export type Granularity = "15min" | "hour";
+export type Granularity = "15min" | "hour" | "day";
 
 export function pointLabel(idx: number) {
   const totalMin = idx * 15;
@@ -220,6 +220,25 @@ export function getDataset(granularity: Granularity) {
       xKey: "label" as const,
       xInterval: 7,
       periodLabel: (p: any) => `时段 ${p.period}`,
+    };
+  }
+  if (granularity === "day") {
+    const dayAvg = <T extends { idx: number }>(arr: T[], numericKeys: (keyof T)[]) => {
+      const merged: any = { ...arr[0], label: "24小时", hourLabel: "全天", periodRange: "1-96" };
+      numericKeys.forEach((k) => {
+        merged[k] = Math.round(arr.reduce((s, p) => s + (p[k] as number), 0) / arr.length);
+      });
+      return [merged];
+    };
+    return {
+      price: dayAvg(price96, ["dayAhead", "realtime", "spread", "cleared"]),
+      load: dayAvg(load96, ["predicted", "actual", "deviation"]),
+      renewable: dayAvg(renewable96, ["solar", "wind", "total"]),
+      space: dayAvg(space96, ["load", "renewable", "space"]).map((s: any) => ({ ...s, warning: s.space < SPACE_WARN_THRESHOLD })),
+      boundary: dayAvg(boundary96, ["tieLine", "sectionLoad", "reservePos", "reserveNeg"]),
+      xKey: "label" as const,
+      xInterval: 0,
+      periodLabel: (p: any) => `时段 ${p.periodRange}`,
     };
   }
   return {
