@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, Clock, MapPin } from "lucide-react";
 import {
   Granularity,
-  getDataset,
   SPACE_WARN_THRESHOLD,
 } from "@/lib/marketMocks";
+import { getForecastSeries } from "@/lib/predictionOutputs";
+import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
 import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
 import {
   PriceSpreadChart,
@@ -40,15 +41,77 @@ const CHART_META: Record<string, { title: string; caption: string }> = {
   },
 };
 
+const STORAGE_KEY = "market-board-interaction-state:v1";
+const DEFAULT_ZOOM_WINDOW = { start: 0, end: 100 };
+const getCurrentBusinessDate = () => {
+  const date = new Date();
+  const day = date.getDay();
+  if (day === 0) date.setDate(date.getDate() - 2);
+  if (day === 6) date.setDate(date.getDate() - 1);
+  return date.toISOString().slice(0, 10);
+};
+
+const chartKeyMap: Record<string, "price" | "load" | "renewable" | "space"> = {
+  "price-spread": "price",
+  "load-forecast": "load",
+  "renewable-output": "renewable",
+  "bidding-space": "space",
+};
+
 export default function ChartFullscreen() {
   const { chartId = "" } = useParams();
   const [searchParams] = useSearchParams();
+  const { province, setProvince } = useProvince();
+  const saved = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch { return null; }
+  }, []);
+  const businessDate = useMemo(() => getCurrentBusinessDate(), []);
   const [granularity, setGranularity] = useState<Granularity>(
-    (searchParams.get("g") as Granularity) ?? "hour"
+    (searchParams.get("g") as Granularity) ?? saved?.granularity ?? "hour"
   );
+  const [startDate, setStartDate] = useState(saved?.startDate ?? businessDate);
+  const [endDate, setEndDate] = useState(saved?.endDate ?? businessDate);
+  const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? DEFAULT_ZOOM_WINDOW);
 
   const meta = CHART_META[chartId];
-  const ds = useMemo(() => getDataset(granularity), [granularity]);
+  const forecastKind = chartKeyMap[chartId];
+  const series = useMemo(() => forecastKind ? getForecastSeries(forecastKind, startDate, endDate, granularity) : [], [forecastKind, startDate, endDate, granularity]);
+  const zoomData = useMemo(() => {
+    const start = Math.floor((zoomWindow.start / 100) * series.length);
+    const end = Math.max(start + 1, Math.ceil((zoomWindow.end / 100) * series.length));
+    return series.slice(start, end);
+  }, [series, zoomWindow]);
+  const xKey = granularity === "day" ? "dayLabel" as const : "label" as const;
+  const xInterval = granularity === "15min" ? 15 : granularity === "hour" ? 5 : 0;
+  const periodLabel = (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "";
+
+  useEffect(() => {
+    if (saved?.province) setProvince(saved.province as ProvinceCode);
+  }, [saved?.province, setProvince]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !chartId) return;
+    const current = saved ?? {};
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...current,
+      province,
+      startDate,
+      endDate,
+      granularity,
+      zoomWindow,
+      activeChart: chartId,
+      lastExpandedChart: chartId,
+      chartCfgs: {
+        ...(current.chartCfgs ?? {}),
+        [chartKeyMap[chartId] ?? chartId]: {
+          ...(current.chartCfgs?.[chartKeyMap[chartId] ?? chartId] ?? {}),
+          granularity,
+          zoomWindow,
+        },
+      },
+    }));
+  }, [province, startDate, endDate, granularity, zoomWindow, chartId, saved]);
 
   if (!meta) {
     return (
