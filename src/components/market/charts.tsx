@@ -140,7 +140,7 @@ export function LoadForecastChart({
 // 3. 新能源出力
 export function RenewableChart({
   data, xKey, xInterval, showLegend = true, height = 220, periodLabel,
-  visibleSeries = { wind: true, solar: true, total: true },
+  visibleSeries = { wind: true, solar: true, total: true, predicted: true, actual: true, deviation: true },
   forecastMode = "all",
 }: BaseChartProps & { visibleSeries?: Record<string, boolean>; forecastMode?: ForecastMode }) {
   const sync = useHoverSync(data);
@@ -173,9 +173,9 @@ export function RenewableChart({
           <CursorRef data={data} />
           {"predicted" in (data[0] ?? {}) ? (
             <>
-              {forecastMode !== "actual" && forecastMode !== "deviation" && <Area type="monotone" dataKey="predicted" name="预测新能源" stroke={C_PRIMARY} fill="url(#ren-solar)" />}
-              {forecastMode !== "predicted" && forecastMode !== "deviation" && <Line type="monotone" dataKey="actual" name="实际新能源" stroke={C_SUCCESS} strokeWidth={2} dot={false} />}
-              {forecastMode !== "predicted" && forecastMode !== "actual" && <Line type="monotone" dataKey="deviation" name="偏差" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
+              {visibleSeries.predicted && <Area type="monotone" dataKey="predicted" name="预测新能源" stroke={C_PRIMARY} fill="url(#ren-solar)" />}
+              {visibleSeries.actual && <Line type="monotone" dataKey="actual" name="实际新能源" stroke={C_SUCCESS} strokeWidth={2} dot={false} />}
+              {visibleSeries.deviation && <Line type="monotone" dataKey="deviation" name="偏差" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
             </>
           ) : <>
           {visibleSeries.wind && (
@@ -198,8 +198,9 @@ export function RenewableChart({
 export function BiddingSpaceChart({
   data, xKey, xInterval, showLegend = true, height = 220, periodLabel,
   threshold = 800,
+  visibleSeries = { predicted: true, actual: true, deviation: true },
   forecastMode = "all",
-}: BaseChartProps & { threshold?: number; forecastMode?: ForecastMode }) {
+}: BaseChartProps & { threshold?: number; visibleSeries?: Record<string, boolean>; forecastMode?: ForecastMode }) {
   const sync = useHoverSync(data);
   // 找出预警区间（连续 warning=true 段）
   const warnRegions: { x1: any; x2: any }[] = [];
@@ -236,9 +237,9 @@ export function BiddingSpaceChart({
           <ReferenceLine y={threshold} stroke={C_DESTRUCTIVE} strokeDasharray="4 4" label={{ value: `预警 ${threshold} MW`, position: "right", fontSize: 10, fill: C_DESTRUCTIVE }} />
           <CursorRef data={data} />
           {"predicted" in (data[0] ?? {}) ? <>
-            {forecastMode !== "actual" && forecastMode !== "deviation" && <Area type="monotone" dataKey="predicted" name="预测竞价空间" stroke={C_PRIMARY} fill={C_PRIMARY} fillOpacity={0.2} />}
-            {forecastMode !== "predicted" && forecastMode !== "deviation" && <Line type="monotone" dataKey="actual" name="实际竞价空间" stroke={C_SUCCESS} strokeWidth={2} dot={false} />}
-            {forecastMode !== "predicted" && forecastMode !== "actual" && <Line type="monotone" dataKey="deviation" name="偏差" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
+            {visibleSeries.predicted && <Area type="monotone" dataKey="predicted" name="预测竞价空间" stroke={C_PRIMARY} fill={C_PRIMARY} fillOpacity={0.2} />}
+            {visibleSeries.actual && <Line type="monotone" dataKey="actual" name="实际竞价空间" stroke={C_SUCCESS} strokeWidth={2} dot={false} />}
+            {visibleSeries.deviation && <Line type="monotone" dataKey="deviation" name="偏差" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
           </> : <>
             <Line type="monotone" dataKey="load" name="总负荷预测" stroke={C_MUTED} strokeWidth={1.5} dot={false} />
             <Line type="monotone" dataKey="renewable" name="新能源预测" stroke={C_SUCCESS} strokeWidth={1.5} dot={false} />
