@@ -194,6 +194,14 @@ export default function MarketInfo() {
     { label: "竞价空间预测", stat: summarizeForecast(spaceForecast), unit: "MW", source: "规则计算", lag: "随负荷/新能源预测同步" },
     { label: "电价预测均值", stat: summarizeForecast(priceForecast), unit: "元/MWh", source: "预测模块", lag: "出清披露后对照" },
   ], [loadForecast, renForecast, spaceForecast, priceForecast]);
+  const boundaryMeta: Record<string, { sourceType: "公开披露" | "预测推导" | "插件增强"; note: string }> = {
+    联络线外送计划: { sourceType: "公开披露", note: "公开披露版，非实时终端" },
+    "皖南-皖北断面限额": { sourceType: "插件增强", note: "当前为示例口径，实时断面待插件数据" },
+    必开机组容量: { sourceType: "公开披露", note: "调度披露后人工/接口同步" },
+    必停机组容量: { sourceType: "公开披露", note: "检修计划披露版" },
+    非市场化机组出力: { sourceType: "预测推导", note: "规则推导，待补真实来源" },
+    备用容量: { sourceType: "插件增强", note: "满血版依赖实时/插件数据" },
+  };
 
   return (
     <MarketCursorProvider>
