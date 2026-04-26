@@ -155,16 +155,15 @@ export default function MarketInfo() {
               </Select>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-muted-foreground">时间段</span>
-              <Select defaultValue="today">
-                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">今日 00:00-24:00</SelectItem>
-                  <SelectItem value="2d">近 2 日</SelectItem>
-                  <SelectItem value="4d">近 4 日</SelectItem>
-                  <SelectItem value="7d">近 7 日</SelectItem>
-                </SelectContent>
-              </Select>
+              <span className="text-xs text-muted-foreground">日期范围</span>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs" />
+              <span className="text-xs text-muted-foreground">-</span>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs" />
+              <div className="flex rounded-md border overflow-hidden text-xs h-8 bg-background">
+                {[{ d: 1, label: "今日" }, { d: 2, label: "近2日" }, { d: 4, label: "近4日" }, { d: 7, label: "近7日" }].map((item) => (
+                  <button key={item.d} onClick={() => applyQuickRange(item.d)} className="px-2 hover:bg-secondary">{item.label}</button>
+                ))}
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs text-muted-foreground">粒度</span>
@@ -177,6 +176,18 @@ export default function MarketInfo() {
                   onClick={() => setGlobalAll("hour")}
                   className={`px-3 ${globalGranularity === "hour" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
                 >1小时</button>
+                <button
+                  onClick={() => setGlobalAll("day")}
+                  className={`px-3 ${globalGranularity === "day" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+                >24小时</button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-muted-foreground">预测对照</span>
+              <div className="flex rounded-md border overflow-hidden text-xs h-8 bg-background">
+                {modeOptions.map((item) => (
+                  <button key={item.key} onClick={() => setForecastMode(item.key)} className={`px-2 ${forecastMode === item.key ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>{item.label}</button>
+                ))}
               </div>
             </div>
             <div className="flex items-center gap-2 text-[11px] shrink-0 ml-auto">
@@ -191,16 +202,16 @@ export default function MarketInfo() {
         <section className="rounded-lg border bg-card p-4 shadow-notion">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
             <h2 className="text-sm font-semibold shrink-0">行情摘要</h2>
-            {summary.map((card) => (
+            {forecastSummary.map((card) => (
               <div key={card.label} className="min-w-[128px] rounded-md border bg-background px-3 py-2 shrink-0">
                 <p className="text-[10px] text-muted-foreground truncate">{card.label}</p>
                 <p className="text-sm font-semibold leading-tight mt-1">
-                  {card.value}
+                  {card.stat.avgPredicted.toLocaleString()}
                   <span className="text-[10px] font-normal text-muted-foreground ml-1">{card.unit}</span>
                 </p>
-                <p className={`text-[10px] mt-1 flex items-center gap-0.5 ${card.up ? "text-success" : "text-destructive"}`}>
-                  {card.up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {card.change}
+                <p className={`text-[10px] mt-1 flex items-center gap-0.5 ${card.stat.avgDeviation >= 0 ? "text-destructive" : "text-success"}`}>
+                  {card.stat.avgDeviation >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  偏差 {card.stat.avgDeviation >= 0 ? "+" : ""}{card.stat.avgDeviation} · {card.stat.avgAbsPct}%
                 </p>
               </div>
             ))}
