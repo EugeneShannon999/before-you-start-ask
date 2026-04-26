@@ -1,5 +1,7 @@
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileSpreadsheet, ImageUp, CheckCircle2 } from "lucide-react";
+import { defaultTradeCalendarEvents, parseTradeCalendarCsv, type TradeCalendarEvent } from "@/lib/tradeCalendarEvents";
 
 const days = ["一", "二", "三", "四", "五", "六", "日"];
 const calendar = [
@@ -10,29 +12,73 @@ const calendar = [
   [28, 29, 30, 31, null, null, null],
 ];
 
-const events: Record<number, { label: string; color: string }> = {
-  3: { label: "月度竞价申报截止", color: "bg-primary" },
-  7: { label: "周竞价申报", color: "bg-primary" },
-  14: { label: "月度竞价出清", color: "bg-primary" },
-  15: { label: "中长期合同签订", color: "bg-[hsl(var(--success))]" },
-  18: { label: "周竞价申报", color: "bg-primary" },
-  19: { label: "偏差考核结算", color: "bg-[hsl(var(--warning))]" },
-  22: { label: "月结算数据发布", color: "bg-[hsl(var(--warning))]" },
-  25: { label: "下月竞价公告", color: "bg-primary" },
-  28: { label: "月度竞价申报开始", color: "bg-[hsl(var(--success))]" },
+const eventTone: Record<TradeCalendarEvent["type"], string> = {
+  申报: "bg-primary",
+  出清: "bg-primary",
+  合同: "bg-success",
+  公告: "bg-success",
+  结算: "bg-warning",
 };
 
-const upcomingEvents = [
-  { date: "07-18 周五", title: "周竞价申报（第3周）", type: "申报", typeColor: "bg-primary" },
-  { date: "07-19 周六", title: "偏差考核结算数据发布", type: "结算", typeColor: "bg-[hsl(var(--warning))]" },
-  { date: "07-22 周二", title: "6月月结算数据正式发布", type: "结算", typeColor: "bg-[hsl(var(--warning))]" },
-  { date: "07-25 周五", title: "8月月度集中竞价交易公告", type: "公告", typeColor: "bg-[hsl(var(--success))]" },
-];
-
 export default function TradeCalendar() {
+  const [events, setEvents] = useState<TradeCalendarEvent[]>(defaultTradeCalendarEvents);
+  const [pendingOcr, setPendingOcr] = useState<TradeCalendarEvent | null>(null);
+  const eventsByDay = useMemo(() => events.reduce<Record<number, TradeCalendarEvent[]>>((acc, e) => {
+    const day = Number(e.date.slice(-2));
+    acc[day] = [...(acc[day] ?? []), e];
+    return acc;
+  }, {}), [events]);
+  const upcomingEvents = useMemo(() => events.filter((e) => e.date >= "2025-07-18").sort((a, b) => a.date.localeCompare(b.date)).slice(0, 6), [events]);
+
+  const handleCalendarUpload = async (file?: File) => {
+    if (!file) return;
+    const text = await file.text();
+    const parsed = parseTradeCalendarCsv(text, "Excel上传");
+    if (parsed.length) setEvents((prev) => [...prev, ...parsed]);
+  };
+
+  const handleImageUpload = (file?: File) => {
+    if (!file) return;
+    setPendingOcr({
+      id: `ocr-${Date.now()}`,
+      date: "2025-07-26",
+      type: "公告",
+      title: `${file.name} OCR待确认事件`,
+      startTime: "09:00",
+      endTime: "17:00",
+      provinceMarket: "安徽电力市场",
+      remindAt: "提前2小时",
+      source: "图片OCR",
+    });
+  };
+
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto space-y-4">
       <h1 className="text-xl font-semibold mb-4">交易日历</h1>
+
+      <section className="rounded-lg shadow-notion bg-card p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-sm font-semibold">事件源接入</p>
+          <p className="text-xs text-muted-foreground mt-1">优先预留平台交易日历 API；Excel 上传生成事件；图片 OCR 后需人工确认。</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] px-2 py-1 rounded bg-secondary text-muted-foreground">平台API优先</span>
+          <label className="h-8 px-3 rounded-md border inline-flex items-center gap-1.5 text-xs cursor-pointer hover:bg-secondary">
+            <FileSpreadsheet className="h-3.5 w-3.5" /> Excel上传
+            <input type="file" accept=".csv,.tsv,.xls,.xlsx" className="hidden" onChange={(e) => handleCalendarUpload(e.target.files?.[0])} />
+          </label>
+          <label className="h-8 px-3 rounded-md border inline-flex items-center gap-1.5 text-xs cursor-pointer hover:bg-secondary">
+            <ImageUp className="h-3.5 w-3.5" /> 图片OCR
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
+          </label>
+        </div>
+        {pendingOcr && (
+          <div className="w-full rounded-md border bg-background p-3 flex items-center justify-between gap-2 text-xs">
+            <span>{pendingOcr.title} · {pendingOcr.date} {pendingOcr.startTime}-{pendingOcr.endTime}</span>
+            <Button size="sm" onClick={() => { setEvents((prev) => [...prev, pendingOcr]); setPendingOcr(null); }}><CheckCircle2 className="h-3.5 w-3.5 mr-1" />确认生成</Button>
+          </div>
+        )}
+      </section>
 
       <div className="grid md:grid-cols-[1fr,300px] gap-6">
         {/* Calendar */}
@@ -51,11 +97,11 @@ export default function TradeCalendar() {
                 {day && (
                   <>
                     <span className={day === 15 ? "font-semibold text-primary" : ""}>{day}</span>
-                    {events[day] && (
+                    {eventsByDay[day] && (
                       <>
-                        <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${events[day].color}`} />
+                        <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${eventTone[eventsByDay[day][0].type]}`} />
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-foreground text-background text-[10px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                          {events[day].label}
+                          {eventsByDay[day].map((e) => e.title).join(" / ")}
                         </div>
                       </>
                     )}
@@ -79,10 +125,11 @@ export default function TradeCalendar() {
             {upcomingEvents.map((e, i) => (
               <div key={i} className="border-b last:border-b-0 pb-3 last:pb-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${e.typeColor}`} />
-                  <span className="text-xs text-muted-foreground">{e.date}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${eventTone[e.type]}`} />
+                  <span className="text-xs text-muted-foreground">{e.date.slice(5)} · {e.startTime}-{e.endTime}</span>
                 </div>
                 <p className="text-sm pl-3.5">{e.title}</p>
+                <p className="text-[10px] text-muted-foreground pl-3.5 mt-1">{e.type} · {e.provinceMarket} · {e.remindAt} · {e.source}</p>
               </div>
             ))}
           </div>
