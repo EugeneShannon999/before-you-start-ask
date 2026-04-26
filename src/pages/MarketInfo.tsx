@@ -104,6 +104,41 @@ export default function MarketInfo() {
     applyQuickRange(rangeDays[range]);
   };
 
+  const applyZoomDrivenGranularity = (next: { start: number; end: number }) => {
+    const width = next.end - next.start;
+    setGlobalAll(width <= 35 ? "15min" : width <= 70 ? "hour" : "day");
+  };
+
+  const handleZoomWheel = (deltaY: number) => {
+    setZoomWindow((current) => {
+      const width = current.end - current.start;
+      const nextWidth = Math.max(18, Math.min(100, width + (deltaY > 0 ? 10 : -10)));
+      const center = (current.start + current.end) / 2;
+      const start = Math.max(0, Math.min(100 - nextWidth, center - nextWidth / 2));
+      const next = { start: Math.round(start), end: Math.round(start + nextWidth) };
+      applyZoomDrivenGranularity(next);
+      return next;
+    });
+  };
+
+  const zoomData = <T,>(items: T[]) => {
+    const start = Math.floor((zoomWindow.start / 100) * items.length);
+    const end = Math.max(start + 1, Math.ceil((zoomWindow.end / 100) * items.length));
+    return items.slice(start, end);
+  };
+
+  useEffect(() => {
+    if (saved?.province) setProvince(saved.province as ProvinceCode);
+  }, [saved?.province, setProvince]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      province, startDate, endDate, granularity: globalGranularity,
+      priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
+      activeChart, expandedChart,
+    }));
+  }, [province, startDate, endDate, globalGranularity, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart]);
+
   // 各图数据
   const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
   const loadForecast = useMemo(() => getForecastSeries("load", startDate, endDate, loadCfg.granularity), [startDate, endDate, loadCfg.granularity]);
