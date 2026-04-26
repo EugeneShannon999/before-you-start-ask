@@ -39,7 +39,7 @@ export function ChartToolbar({
       <div className="flex items-center gap-1">
         {/* 粒度切换 */}
         <div className="flex rounded border overflow-hidden text-[10px] mr-1">
-          {(["15min", "hour"] as Granularity[]).map((g) => (
+          {(["15min", "hour", "day"] as Granularity[]).map((g) => (
             <button
               key={g}
               onClick={() => onGranularityChange(g)}
@@ -49,7 +49,7 @@ export function ChartToolbar({
                   : "hover:bg-secondary text-muted-foreground"
               }`}
             >
-              {g === "15min" ? "15m" : "1h"}
+              {g === "15min" ? "15m" : g === "hour" ? "1h" : "24h"}
             </button>
           ))}
         </div>
