@@ -249,9 +249,9 @@ export default function MarketInfo() {
 
         <section className="rounded-lg border bg-card p-4 shadow-notion">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-            <h2 className="text-sm font-semibold shrink-0">行情摘要</h2>
+            <h2 className="text-sm font-semibold shrink-0">预测快照</h2>
             {forecastSummary.map((card) => (
-              <div key={card.label} className="min-w-[128px] rounded-md border bg-background px-3 py-2 shrink-0">
+              <div key={card.label} className="min-w-[172px] rounded-md border bg-background px-3 py-2 shrink-0">
                 <p className="text-[10px] text-muted-foreground truncate">{card.label}</p>
                 <p className="text-sm font-semibold leading-tight mt-1">
                   {card.stat.avgPredicted.toLocaleString()}
@@ -260,6 +260,9 @@ export default function MarketInfo() {
                 <p className={`text-[10px] mt-1 flex items-center gap-0.5 ${card.stat.avgDeviation >= 0 ? "text-destructive" : "text-success"}`}>
                   {card.stat.avgDeviation >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                   偏差 {card.stat.avgDeviation >= 0 ? "+" : ""}{card.stat.avgDeviation} · {card.stat.avgAbsPct}%
+                </p>
+                <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">
+                  数据时点：{endDate} · {card.source} · {card.lag}
                 </p>
               </div>
             ))}
@@ -270,6 +273,7 @@ export default function MarketInfo() {
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4 text-warning" />
             <h2 className="text-sm font-semibold">规则预警</h2>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">规则框架版</span>
           </div>
           <div className="grid gap-2 xl:grid-cols-2">
             {ruleWarnings.map((w) => (
@@ -293,6 +297,7 @@ export default function MarketInfo() {
                   <p><span className="text-foreground/70">规则名：</span>{w.title}</p>
                   <p><span className="text-foreground/70">当前值：</span>{w.current}</p>
                   <p><span className="text-foreground/70">阈值：</span>{w.threshold}</p>
+                  <p><span className="text-foreground/70">阈值来源：</span>{w.thresholdSource}</p>
                   <p><span className="text-foreground/70">时间段：</span>{w.period}</p>
                   <p><span className="text-foreground/70">数据来源：</span>{w.source}</p>
                   <p><span className="text-foreground/70">计算口径：</span>{w.method}</p>
