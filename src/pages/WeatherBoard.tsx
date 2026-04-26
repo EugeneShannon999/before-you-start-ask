@@ -117,7 +117,7 @@ export default function WeatherBoard() {
         </div>
 
         <div className="rounded-md border bg-background p-3 text-[11px] text-muted-foreground leading-relaxed">
-          当前为框架演示：数据源、点位口径、时间粒度会联动影响展示值与关注时段；区域暴露权重能力已预留，尚未按装机容量或负荷暴露加权。
+          当前预警为规则框架版：按天气异常落在高暴露区域进行提示；满血版还依赖区域/场站装机权重表、格点到区域/场站映射、业务阈值配置表和气象细粒度真实数据支持情况。
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
@@ -138,6 +138,7 @@ export default function WeatherBoard() {
           <SegmentedControl label="点位口径切换" options={pointOptions} value={pointScope} onChange={setPointScope} />
           <SegmentedControl label="时间粒度切换" options={granularityOptions} value={granularity} onChange={setGranularity} />
         </div>
+        <p className="text-[11px] text-muted-foreground">15分钟/日内粒度当前为待补数据源框架演示，非真实细粒度气象回传。</p>
 
         <div className="rounded-md border bg-background p-3">
           <p className="text-xs font-medium">{fieldGroup}</p>
@@ -186,6 +187,11 @@ export default function WeatherBoard() {
               <p className="mt-1 text-[11px] text-muted-foreground">业务阈值优先；无业务阈值时用近30/90天同小时段 P90/P95 兜底。</p>
             </div>
             <div className="rounded-md border bg-background p-3">
+              <p className="text-[11px] text-muted-foreground">阈值来源</p>
+              <p className="mt-2 text-sm font-medium">{getThresholdSource(current)}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">当前仅保留规则框架，阈值配置表待补血。</p>
+            </div>
+            <div className="rounded-md border bg-background p-3">
               <p className="text-[11px] text-muted-foreground">影响区域</p>
               <p className="mt-2 text-sm font-medium">{current.affectedArea}</p>
               <p className="mt-1 text-[11px] text-muted-foreground">单点超阈值为区域提示，多区域同超阈值升级市场级提示。</p>
@@ -204,10 +210,10 @@ export default function WeatherBoard() {
             <h2 className="text-sm font-semibold">影响说明</h2>
           </div>
           <div className="space-y-2 text-xs text-muted-foreground leading-relaxed">
-            <p>低云量、总云量抬升且直接辐射走弱时，更可能影响光伏出力。</p>
-            <p>100米风速波动扩大时，更可能影响风电侧预测稳定性。</p>
-            <p>2米气温、相对湿度、露点温度共同偏离时，更可能影响负荷兑现。</p>
-            <p>气象异常与新能源预测偏差或负荷偏差同向叠加时，提高提醒优先级并进入市场波动判断。</p>
+            <p>更影响光伏：低云量/总云量抬升且直接辐射走弱。</p>
+            <p>更影响风电：100米风速波动扩大或区域风速超过阈值。</p>
+            <p>更影响负荷：2米气温、相对湿度、露点温度共同偏离。</p>
+            <p>更可能影响市场波动：气象异常与新能源预测偏差或负荷偏差同向叠加。</p>
           </div>
         </div>
       </section>
@@ -215,7 +221,7 @@ export default function WeatherBoard() {
       <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-sm font-semibold">联动提示</h2>
-          <span className="text-[11px] text-muted-foreground">气象异常同向叠加时提升 P0 / P1 提醒优先级</span>
+          <span className="text-[11px] text-muted-foreground">只有天气异常与新能源预测偏差或负荷偏差同向叠加时，才升级 P0 / P1 优先级</span>
         </div>
         <div className="grid gap-2 xl:grid-cols-5">
           {weatherLinks.map((item) => (
@@ -235,7 +241,7 @@ export default function WeatherBoard() {
         <div className="px-4 py-3 border-b flex items-center justify-between gap-2 flex-wrap">
           <h2 className="text-sm font-semibold">24小时交易气象矩阵</h2>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
-            <span>保留字段：直接辐射 / 2米露点温度 / 2米气温 / 2米相对湿度 / 低云量 / 降雨量</span>
+            <span>当前字段组：{fieldGroups[fieldGroup as keyof typeof fieldGroups].join(" / ")}</span>
             <span className="px-1.5 py-0.5 rounded bg-secondary">公开API + 页面抓取 + 规则计算</span>
           </div>
         </div>
