@@ -58,6 +58,8 @@ const modeOptions: Array<{ key: ForecastMode; label: string }> = [
   { key: "deviation", label: "偏差" },
 ];
 
+const rangeDays: Record<RangeKey, number> = { "1d": 1, "2d": 2, "4d": 4, "7d": 7 };
+
 const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true });
 
 export default function MarketInfo() {
@@ -92,6 +94,11 @@ export default function MarketInfo() {
     start.setDate(end.getDate() - days + 1);
     setStartDate(start.toISOString().slice(0, 10));
     setEndDate(end.toISOString().slice(0, 10));
+  };
+
+  const applyChartRange = (range: RangeKey, setter: (fn: (c: ChartCfg) => ChartCfg) => void) => {
+    setter((c) => ({ ...c, range }));
+    applyQuickRange(rangeDays[range]);
   };
 
   // 各图数据
@@ -262,7 +269,7 @@ export default function MarketInfo() {
           granularity={priceCfg.granularity}
           onGranularityChange={(g) => setPriceCfg({ ...priceCfg, granularity: g })}
           range={priceCfg.range}
-          onRangeChange={(r) => setPriceCfg({ ...priceCfg, range: r })}
+          onRangeChange={(r) => applyChartRange(r, setPriceCfg)}
           showLegend={priceCfg.showLegend}
           onToggleLegend={() => setPriceCfg({ ...priceCfg, showLegend: !priceCfg.showLegend })}
           tableHeader={["时段", "日前(元/MWh)", "实时(元/MWh)", "价差", "出清(MWh)"]}
@@ -306,6 +313,7 @@ export default function MarketInfo() {
             periodLabel={priceDs.periodLabel}
             showLegend={priceCfg.showLegend}
             visibleSeries={priceSeries}
+            forecastMode={forecastMode}
           />
         </ChartCard>
 
@@ -385,7 +393,7 @@ export default function MarketInfo() {
           granularity={loadCfg.granularity}
           onGranularityChange={(g) => setLoadCfg({ ...loadCfg, granularity: g })}
           range={loadCfg.range}
-          onRangeChange={(r) => setLoadCfg({ ...loadCfg, range: r })}
+          onRangeChange={(r) => applyChartRange(r, setLoadCfg)}
           showLegend={loadCfg.showLegend}
           onToggleLegend={() => setLoadCfg({ ...loadCfg, showLegend: !loadCfg.showLegend })}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "偏差率"]}
@@ -412,6 +420,7 @@ export default function MarketInfo() {
             xInterval={loadDs.xInterval}
             periodLabel={loadDs.periodLabel}
             showLegend={loadCfg.showLegend}
+            forecastMode={forecastMode}
           />
         </ChartCard>
 
@@ -424,15 +433,15 @@ export default function MarketInfo() {
           granularity={renCfg.granularity}
           onGranularityChange={(g) => setRenCfg({ ...renCfg, granularity: g })}
           range={renCfg.range}
-          onRangeChange={(r) => setRenCfg({ ...renCfg, range: r })}
+          onRangeChange={(r) => applyChartRange(r, setRenCfg)}
           showLegend={renCfg.showLegend}
           onToggleLegend={() => setRenCfg({ ...renCfg, showLegend: !renCfg.showLegend })}
-          tableHeader={["时段", "风电(MW)", "光伏(MW)", "总出力(MW)"]}
-          tableRows={renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.wind, p.solar, p.total])}
+          tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "偏差率"]}
+          tableRows={renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, `${p.deviationPct}%`])}
           csvFilename="renewable.csv"
           csvRows={[
-            ["时段", "风电", "光伏", "总出力"],
-            ...renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.wind, p.solar, p.total]),
+            ["时段", "预测", "实际", "偏差", "偏差率"],
+            ...renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.deviationPct]),
           ]}
           footer={
             <div className="mt-2 flex items-center gap-3 flex-wrap text-[11px]">
@@ -468,6 +477,7 @@ export default function MarketInfo() {
             periodLabel={renDs.periodLabel}
             showLegend={renCfg.showLegend}
             visibleSeries={renSeries}
+            forecastMode={forecastMode}
           />
         </ChartCard>
 
@@ -480,17 +490,17 @@ export default function MarketInfo() {
           granularity={spaceCfg.granularity}
           onGranularityChange={(g) => setSpaceCfg({ ...spaceCfg, granularity: g })}
           range={spaceCfg.range}
-          onRangeChange={(r) => setSpaceCfg({ ...spaceCfg, range: r })}
+          onRangeChange={(r) => applyChartRange(r, setSpaceCfg)}
           showLegend={spaceCfg.showLegend}
           onToggleLegend={() => setSpaceCfg({ ...spaceCfg, showLegend: !spaceCfg.showLegend })}
-          tableHeader={["时段", "总负荷(MW)", "新能源(MW)", "竞价空间", "状态"]}
+          tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "状态"]}
           tableRows={spaceDs.space.map((p: any) => [
-            p.label ?? p.hourLabel, p.load, p.renewable, p.space, p.warning ? "⚠️ 预警" : "正常",
+            p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? "⚠️ 预警" : "正常",
           ])}
           csvFilename="bidding-space.csv"
           csvRows={[
-            ["时段", "总负荷", "新能源", "竞价空间", "预警"],
-            ...spaceDs.space.map((p: any) => [p.label ?? p.hourLabel, p.load, p.renewable, p.space, p.warning ? 1 : 0]),
+            ["时段", "预测", "实际", "偏差", "预警"],
+            ...spaceDs.space.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? 1 : 0]),
           ]}
         >
           <BiddingSpaceChart
@@ -500,6 +510,7 @@ export default function MarketInfo() {
             periodLabel={spaceDs.periodLabel}
             showLegend={spaceCfg.showLegend}
             threshold={SPACE_WARN_THRESHOLD}
+            forecastMode={forecastMode}
           />
         </ChartCard>
 
