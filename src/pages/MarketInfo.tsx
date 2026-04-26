@@ -8,7 +8,6 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -73,7 +72,6 @@ const restoreCfg = (cfg: ChartCfg | undefined, g: Granularity): ChartCfg => ({
 });
 
 export default function MarketInfo() {
-  const navigate = useNavigate();
   const { province, setProvince } = useProvince();
   const businessDate = useMemo(() => getCurrentBusinessDate(), []);
   const saved = useMemo(() => {
@@ -156,7 +154,7 @@ export default function MarketInfo() {
   const openChartPage = (chartId: MainChartId) => {
     setActiveChart(chartId);
     syncActiveChartZoom(zoomWindow, chartId);
-    navigate(`/tools/market/chart/${chartId}`);
+    window.open(`/tools/market/chart/${chartId}`, "_blank", "noopener,noreferrer");
   };
 
   const zoomData = <T,>(items: T[]) => {
