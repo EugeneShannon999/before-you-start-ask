@@ -57,7 +57,14 @@ function getLinkedWeatherRows(rows: WeatherPoint[], source: string, pointScope: 
     wind100mSpeed: Number((row.wind100mSpeed * (pointScope === "新能源场站 / 区域点位" ? 1.12 : 1)).toFixed(1)),
   }));
   if (granularity === "日内") return adjusted.filter((_, index) => index % 3 === 0);
+  if (granularity === "15分钟") return adjusted.flatMap((row) => [row, { ...row, hour: row.hour + 0.25, hourLabel: `${row.hourLabel} +15` }]);
   return adjusted;
+}
+
+function getThresholdSource(row: WeatherPoint) {
+  if (row.warningLevel === "正常") return "待配置";
+  if (row.triggerReason.includes("阈值")) return "业务阈值 / 历史P90-P95";
+  return "官方预警";
 }
 
 function getCoreCards(row: WeatherPoint, fieldGroup: string) {
