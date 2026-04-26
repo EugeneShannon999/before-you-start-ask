@@ -305,6 +305,12 @@ export default function MarketInfo() {
           onRangeChange={(r) => applyChartRange(r, setPriceCfg)}
           showLegend={priceCfg.showLegend}
           onToggleLegend={() => setPriceCfg({ ...priceCfg, showLegend: !priceCfg.showLegend })}
+          active={activeChart === "price-spread"}
+          expanded={expandedChart === "price-spread"}
+          onActivate={() => setActiveChart("price-spread")}
+          onExpand={() => { setActiveChart("price-spread"); setExpandedChart("price-spread"); }}
+          onExpandedChange={(open) => setExpandedChart(open ? "price-spread" : null)}
+          onZoomWheel={handleZoomWheel}
           tableHeader={["时段", "日前(元/MWh)", "实时(元/MWh)", "价差", "出清(MWh)"]}
           tableRows={priceDs.price.map((p: any) => [
             p.label ?? p.hourLabel, p.dayAhead, p.realtime, p.spread, p.cleared,
@@ -340,13 +346,13 @@ export default function MarketInfo() {
           }
         >
           <PriceSpreadChart
-            data={priceDs.price}
+            data={zoomData(priceDs.price)}
             xKey={priceDs.xKey}
             xInterval={priceDs.xInterval}
             periodLabel={priceDs.periodLabel}
             showLegend={priceCfg.showLegend}
             visibleSeries={priceSeries}
-            forecastMode={forecastMode}
+            forecastMode="all"
           />
         </ChartCard>
 
