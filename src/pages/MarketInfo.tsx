@@ -482,6 +482,12 @@ export default function MarketInfo() {
           onRangeChange={(r) => applyChartRange(r, setRenCfg)}
           showLegend={renCfg.showLegend}
           onToggleLegend={() => setRenCfg({ ...renCfg, showLegend: !renCfg.showLegend })}
+          active={activeChart === "renewable-output"}
+          expanded={expandedChart === "renewable-output"}
+          onActivate={() => setActiveChart("renewable-output")}
+          onExpand={() => { setActiveChart("renewable-output"); setExpandedChart("renewable-output"); }}
+          onExpandedChange={(open) => setExpandedChart(open ? "renewable-output" : null)}
+          onZoomWheel={handleZoomWheel}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "偏差率"]}
           tableRows={renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, `${p.deviationPct}%`])}
           csvFilename="renewable.csv"
@@ -492,9 +498,9 @@ export default function MarketInfo() {
           footer={
             <div className="mt-2 flex items-center gap-3 flex-wrap text-[11px]">
               {[
-                { k: "wind", label: "风电", color: C_SUCCESS },
-                { k: "solar", label: "光伏", color: C_PRIMARY },
-                { k: "total", label: "总出力", color: "hsl(var(--destructive))" },
+                { k: "predicted", label: "预测新能源", color: C_PRIMARY },
+                { k: "actual", label: "实际新能源", color: C_SUCCESS },
+                { k: "deviation", label: "偏差", color: "hsl(var(--destructive))" },
               ].map((s) => (
                 <label key={s.k} className="inline-flex items-center gap-1 cursor-pointer select-none">
                   <input
@@ -517,13 +523,13 @@ export default function MarketInfo() {
           }
         >
           <RenewableChart
-            data={renDs.renewable}
+            data={zoomData(renDs.renewable)}
             xKey={renDs.xKey}
             xInterval={renDs.xInterval}
             periodLabel={renDs.periodLabel}
             showLegend={renCfg.showLegend}
             visibleSeries={renSeries}
-            forecastMode={forecastMode}
+            forecastMode="all"
           />
         </ChartCard>
 
