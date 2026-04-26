@@ -62,6 +62,11 @@ type MainChartId = "price-spread" | "load-forecast" | "renewable-output" | "bidd
 const STORAGE_KEY = "market-board-interaction-state:v1";
 
 const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true });
+const restoreCfg = (cfg: ChartCfg | undefined, g: Granularity): ChartCfg => ({
+  granularity: g,
+  range: cfg?.range ?? "1d",
+  showLegend: cfg?.showLegend ?? true,
+});
 
 export default function MarketInfo() {
   const { province, setProvince } = useProvince();
@@ -75,14 +80,14 @@ export default function MarketInfo() {
   const [startDate, setStartDate] = useState(saved?.startDate ?? businessDate);
   const [endDate, setEndDate] = useState(saved?.endDate ?? businessDate);
   const [activeChart, setActiveChart] = useState<MainChartId | null>(saved?.activeChart ?? null);
-  const [expandedChart, setExpandedChart] = useState<MainChartId | null>(saved?.expandedChart ?? null);
+  const [expandedChart, setExpandedChart] = useState<MainChartId | null>(null);
   const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? { start: 0, end: 100 });
 
   // 每图独立配置（粒度可被全局或单独控制）
-  const [priceCfg, setPriceCfg] = useState<ChartCfg>(saved?.chartCfgs?.price ?? initialCfg(globalGranularity));
-  const [loadCfg, setLoadCfg] = useState<ChartCfg>(saved?.chartCfgs?.load ?? initialCfg(globalGranularity));
-  const [renCfg, setRenCfg] = useState<ChartCfg>(saved?.chartCfgs?.renewable ?? initialCfg(globalGranularity));
-  const [spaceCfg, setSpaceCfg] = useState<ChartCfg>(saved?.chartCfgs?.space ?? initialCfg(globalGranularity));
+  const [priceCfg, setPriceCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.price, globalGranularity));
+  const [loadCfg, setLoadCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.load, globalGranularity));
+  const [renCfg, setRenCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.renewable, globalGranularity));
+  const [spaceCfg, setSpaceCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.space, globalGranularity));
 
   // 系列可见性
   const [priceSeries, setPriceSeries] = useState(saved?.priceSeries ?? { dayAhead: true, realtime: true, spread: true, cleared: true });
@@ -143,7 +148,7 @@ export default function MarketInfo() {
       province, startDate, endDate, granularity: globalGranularity,
       chartCfgs: { price: priceCfg, load: loadCfg, renewable: renCfg, space: spaceCfg },
       priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
-      activeChart, expandedChart,
+      activeChart, lastExpandedChart: expandedChart,
     }));
   }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart]);
 
