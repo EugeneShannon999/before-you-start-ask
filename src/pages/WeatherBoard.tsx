@@ -104,6 +104,7 @@ export default function WeatherBoard() {
   const current = useMemo(() => linkedWeather.find((row) => row.warningLevel === "市场级提示") ?? linkedWeather.find((row) => row.warningLevel === "区域提示") ?? linkedWeather[0], [linkedWeather]);
   const coreCards = useMemo(() => getCoreCards(current, fieldGroup), [current, fieldGroup]);
   const warningRows = linkedWeather.filter((row) => row.warningLevel !== "正常").slice(0, 6);
+  const matrixFields = weatherFieldCatalog.filter((item) => fieldGroups[fieldGroup as keyof typeof fieldGroups].includes(item.label));
 
   return (
     <div className="px-6 py-5 space-y-4">
@@ -250,13 +251,9 @@ export default function WeatherBoard() {
             <thead className="sticky top-0 bg-secondary/50 z-10">
               <tr>
                 <th className="text-left px-4 py-2">时段</th>
-                <th className="text-right px-4 py-2">直接辐射</th>
-                <th className="text-right px-4 py-2">2米露点</th>
-                <th className="text-right px-4 py-2">2米气温</th>
-                <th className="text-right px-4 py-2">2米湿度</th>
-                <th className="text-right px-4 py-2">低云量</th>
-                <th className="text-right px-4 py-2">降雨量</th>
-                <th className="text-right px-4 py-2">100米风</th>
+                {matrixFields.map((field) => (
+                  <th key={field.label} className="text-right px-4 py-2">{field.label}</th>
+                ))}
                 <th className="text-left px-4 py-2">预警等级</th>
                 <th className="text-left px-4 py-2">影响对象</th>
                 <th className="text-left px-4 py-2">来源</th>
@@ -266,13 +263,9 @@ export default function WeatherBoard() {
               {linkedWeather.map((row) => (
                 <tr key={row.hour} className="border-t hover:bg-secondary/30">
                   <td className="px-4 py-2 font-mono">{row.hourLabel}</td>
-                  <td className="px-4 py-2 text-right">{row.directRadiation}</td>
-                  <td className="px-4 py-2 text-right">{row.dewPoint2m}℃</td>
-                  <td className="px-4 py-2 text-right">{row.temperature}℃</td>
-                  <td className="px-4 py-2 text-right">{row.humidity2m}%</td>
-                  <td className="px-4 py-2 text-right">{row.lowCloudCover}%</td>
-                  <td className="px-4 py-2 text-right">{row.precipitation.toFixed(1)}</td>
-                  <td className="px-4 py-2 text-right"><span className="inline-flex items-center justify-end gap-1"><Wind className="h-3 w-3 text-muted-foreground" />{row.wind100mSpeed.toFixed(1)}</span></td>
+                  {matrixFields.map((field) => (
+                    <td key={field.label} className="px-4 py-2 text-right">{field.group === "风电" ? <span className="inline-flex items-center justify-end gap-1"><Wind className="h-3 w-3 text-muted-foreground" />{field.getValue(row)}</span> : field.getValue(row)}</td>
+                  ))}
                   <td className="px-4 py-2">
                     <span className={`inline-flex items-center gap-1 ${row.warningLevel === "正常" ? "text-muted-foreground" : "text-destructive"}`}>
                       {row.warningLevel === "正常" ? <CloudSun className="h-3 w-3" /> : <CloudRain className="h-3 w-3" />}
