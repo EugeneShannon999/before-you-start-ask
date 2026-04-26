@@ -367,9 +367,10 @@ export default function MarketInfo() {
           active={activeChart === "price-spread"}
           expanded={expandedChart === "price-spread"}
           onActivate={() => setActiveChart("price-spread")}
-          onExpand={() => { setActiveChart("price-spread"); setExpandedChart("price-spread"); }}
+          onExpand={() => openChartPage("price-spread")}
           onExpandedChange={(open) => setExpandedChart(open ? "price-spread" : null)}
-          onZoomWheel={handleZoomWheel}
+          onZoomWheel={(deltaY) => handleZoomWheel(deltaY, "price-spread")}
+          onResetZoom={() => resetZoom("price-spread")}
           tableHeader={["时段", "日前(元/MWh)", "实时(元/MWh)", "价差", "出清(MWh)"]}
           tableRows={priceDs.price.map((p: any) => [
             p.label ?? p.hourLabel, p.dayAhead, p.realtime, p.spread, p.cleared,
@@ -498,9 +499,10 @@ export default function MarketInfo() {
           active={activeChart === "load-forecast"}
           expanded={expandedChart === "load-forecast"}
           onActivate={() => setActiveChart("load-forecast")}
-          onExpand={() => { setActiveChart("load-forecast"); setExpandedChart("load-forecast"); }}
+          onExpand={() => openChartPage("load-forecast")}
           onExpandedChange={(open) => setExpandedChart(open ? "load-forecast" : null)}
-          onZoomWheel={handleZoomWheel}
+          onZoomWheel={(deltaY) => handleZoomWheel(deltaY, "load-forecast")}
+          onResetZoom={() => resetZoom("load-forecast")}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "偏差率"]}
           tableRows={loadDs.load.map((p: any) => [
             p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, `${((p.deviation / p.predicted) * 100).toFixed(2)}%`,
@@ -556,9 +558,10 @@ export default function MarketInfo() {
           active={activeChart === "renewable-output"}
           expanded={expandedChart === "renewable-output"}
           onActivate={() => setActiveChart("renewable-output")}
-          onExpand={() => { setActiveChart("renewable-output"); setExpandedChart("renewable-output"); }}
+          onExpand={() => openChartPage("renewable-output")}
           onExpandedChange={(open) => setExpandedChart(open ? "renewable-output" : null)}
-          onZoomWheel={handleZoomWheel}
+          onZoomWheel={(deltaY) => handleZoomWheel(deltaY, "renewable-output")}
+          onResetZoom={() => resetZoom("renewable-output")}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "偏差率"]}
           tableRows={renDs.renewable.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, `${p.deviationPct}%`])}
           csvFilename="renewable.csv"
@@ -619,9 +622,10 @@ export default function MarketInfo() {
           active={activeChart === "bidding-space"}
           expanded={expandedChart === "bidding-space"}
           onActivate={() => setActiveChart("bidding-space")}
-          onExpand={() => { setActiveChart("bidding-space"); setExpandedChart("bidding-space"); }}
+          onExpand={() => openChartPage("bidding-space")}
           onExpandedChange={(open) => setExpandedChart(open ? "bidding-space" : null)}
-          onZoomWheel={handleZoomWheel}
+          onZoomWheel={(deltaY) => handleZoomWheel(deltaY, "bidding-space")}
+          onResetZoom={() => resetZoom("bidding-space")}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "状态"]}
           tableRows={spaceDs.space.map((p: any) => [
             p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? "⚠️ 预警" : "正常",
