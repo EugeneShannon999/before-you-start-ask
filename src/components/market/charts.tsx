@@ -83,16 +83,16 @@ export function PriceSpreadChart({
           />
           {showLegend && <Legend wrapperStyle={{ fontSize: 11 }} />}
           <CursorRef data={data} />
-          {visibleSeries.cleared && forecastMode === "all" && (
+          {visibleSeries.cleared && (
             <Bar yAxisId="right" dataKey="cleared" name="出清电量" fill={C_MUTED} fillOpacity={0.18} />
           )}
-          {(visibleSeries.spread || forecastMode === "deviation") && forecastMode !== "predicted" && forecastMode !== "actual" && (
+          {visibleSeries.spread && (
             <Bar yAxisId="left" dataKey="spread" name="价差" fill={C_WARNING} fillOpacity={0.35} />
           )}
-          {visibleSeries.dayAhead && forecastMode !== "actual" && forecastMode !== "deviation" && (
+          {visibleSeries.dayAhead && (
             <Line yAxisId="left" type="monotone" dataKey="dayAhead" name="日前电价" stroke={C_PRIMARY} strokeWidth={2} dot={false} />
           )}
-          {visibleSeries.realtime && forecastMode !== "predicted" && forecastMode !== "deviation" && (
+          {visibleSeries.realtime && (
             <Line yAxisId="left" type="monotone" dataKey="realtime" name="实时电价" stroke={C_DESTRUCTIVE} strokeWidth={2} dot={false} />
           )}
         </ComposedChart>
@@ -104,8 +104,9 @@ export function PriceSpreadChart({
 // 2. 负荷预测 vs 实际
 export function LoadForecastChart({
   data, xKey, xInterval, showLegend = true, height = 230, periodLabel,
+  visibleSeries = { predicted: true, actual: true, deviation: true },
   forecastMode = "all",
-}: BaseChartProps & { forecastMode?: ForecastMode }) {
+}: BaseChartProps & { visibleSeries?: Record<string, boolean>; forecastMode?: ForecastMode }) {
   const sync = useHoverSync(data);
   return (
     <div style={{ height }}>
@@ -127,9 +128,9 @@ export function LoadForecastChart({
           />
           {showLegend && <Legend wrapperStyle={{ fontSize: 11 }} />}
           <CursorRef data={data} />
-          {forecastMode !== "actual" && forecastMode !== "deviation" && <Bar yAxisId="left" dataKey="predicted" name="预测负荷" fill={C_PRIMARY} fillOpacity={0.35} />}
-          {forecastMode !== "predicted" && forecastMode !== "deviation" && <Bar yAxisId="left" dataKey="actual" name="实际负荷" fill={C_PRIMARY} />}
-          {forecastMode !== "predicted" && forecastMode !== "actual" && <Line yAxisId="right" type="monotone" dataKey="deviation" name="偏差(MW)" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
+          {visibleSeries.predicted && <Bar yAxisId="left" dataKey="predicted" name="预测负荷" fill={C_PRIMARY} fillOpacity={0.35} />}
+          {visibleSeries.actual && <Bar yAxisId="left" dataKey="actual" name="实际负荷" fill={C_PRIMARY} />}
+          {visibleSeries.deviation && <Line yAxisId="right" type="monotone" dataKey="deviation" name="偏差(MW)" stroke={C_DESTRUCTIVE} strokeWidth={1.5} dot={false} />}
         </ComposedChart>
       </ResponsiveContainer>
     </div>
