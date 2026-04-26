@@ -11,6 +11,7 @@ import {
   Legend,
 } from "recharts";
 import { AlertTriangle, Info } from "lucide-react";
+import { getForecastSeries, type ForecastKind } from "@/lib/predictionOutputs";
 
 type TabKey = "load" | "renewable" | "space" | "price" | "factor";
 type Granularity = "15min" | "hour";
@@ -174,10 +175,15 @@ export default function Prediction() {
   const [granularity, setGranularity] = useState<Granularity>("hour");
   const [horizon, setHorizon] = useState<HorizonKey>("2d");
   const data = dataMap[active];
+  const endDate = useMemo(() => {
+    const d = new Date("2025-07-15T00:00:00");
+    d.setDate(d.getDate() + Number(horizon.replace("d", "")) - 1);
+    return d.toISOString().slice(0, 10);
+  }, [horizon]);
 
   const series: SeriesPoint[] = useMemo(
-    () => (granularity === "15min" ? data.series : aggregate(data.series)),
-    [granularity, data.series],
+    () => active === "factor" ? (granularity === "15min" ? data.series : aggregate(data.series)) : getForecastSeries(active as ForecastKind, "2025-07-15", endDate, granularity),
+    [active, granularity, data.series, endDate],
   );
   const xKey = granularity === "15min" ? "label" : "hourLabel";
   const xInterval = granularity === "15min" ? 7 : 2;
