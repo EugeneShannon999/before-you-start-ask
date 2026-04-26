@@ -545,6 +545,12 @@ export default function MarketInfo() {
           onRangeChange={(r) => applyChartRange(r, setSpaceCfg)}
           showLegend={spaceCfg.showLegend}
           onToggleLegend={() => setSpaceCfg({ ...spaceCfg, showLegend: !spaceCfg.showLegend })}
+          active={activeChart === "bidding-space"}
+          expanded={expandedChart === "bidding-space"}
+          onActivate={() => setActiveChart("bidding-space")}
+          onExpand={() => { setActiveChart("bidding-space"); setExpandedChart("bidding-space"); }}
+          onExpandedChange={(open) => setExpandedChart(open ? "bidding-space" : null)}
+          onZoomWheel={handleZoomWheel}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "状态"]}
           tableRows={spaceDs.space.map((p: any) => [
             p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? "⚠️ 预警" : "正常",
@@ -556,13 +562,14 @@ export default function MarketInfo() {
           ]}
         >
           <BiddingSpaceChart
-            data={spaceDs.space}
+            data={zoomData(spaceDs.space)}
             xKey={spaceDs.xKey}
             xInterval={spaceDs.xInterval}
             periodLabel={spaceDs.periodLabel}
             showLegend={spaceCfg.showLegend}
             threshold={SPACE_WARN_THRESHOLD}
-            forecastMode={forecastMode}
+            visibleSeries={spaceSeries}
+            forecastMode="all"
           />
         </ChartCard>
 
