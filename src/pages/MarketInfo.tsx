@@ -282,8 +282,12 @@ export default function MarketInfo() {
                   <span className="text-[9px] px-1 py-0.5 rounded bg-secondary text-muted-foreground shrink-0">公开API</span>
                 </div>
                 <div className="pl-4 space-y-0.5 text-[10px] text-muted-foreground">
-                  <p><span className="text-foreground/70">时段：</span>{w.period}</p>
+                  <p><span className="text-foreground/70">规则名：</span>{w.title}</p>
                   <p><span className="text-foreground/70">当前值：</span>{w.current}</p>
+                  <p><span className="text-foreground/70">阈值：</span>{w.threshold}</p>
+                  <p><span className="text-foreground/70">时间段：</span>{w.period}</p>
+                  <p><span className="text-foreground/70">数据来源：</span>{w.source}</p>
+                  <p><span className="text-foreground/70">计算口径：</span>{w.method}</p>
                   <p className="text-foreground/80"><span className="text-foreground/60">建议：</span>{w.action}</p>
                 </div>
               </div>
