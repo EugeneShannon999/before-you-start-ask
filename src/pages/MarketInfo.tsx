@@ -637,7 +637,7 @@ export default function MarketInfo() {
             <div className="flex items-baseline gap-2">
               <span className="text-xs font-mono text-muted-foreground">#5</span>
               <h3 className="text-sm font-semibold">市场运行与边界</h3>
-              <span className="text-[11px] text-muted-foreground">联络线 / 断面 / 必开必停 / 备用</span>
+              <span className="text-[11px] text-muted-foreground">公开披露版；实时/插件增强字段待补血</span>
             </div>
             <button
               onClick={() => setBoundaryExpanded((v) => !v)}
@@ -649,11 +649,17 @@ export default function MarketInfo() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {boundaryRows.map((row) => (
+            {boundaryRows.map((row) => {
+              const meta = boundaryMeta[row.item] ?? { sourceType: "公开披露" as const, note: "公开披露版" };
+              return (
               <div key={row.item} className="p-2.5 rounded-md border bg-background">
                 <p className="text-[11px] text-muted-foreground mb-0.5">{row.item}</p>
                 <p className="text-sm font-semibold">{row.value}</p>
                 <p className="text-[10px] text-muted-foreground">{row.note}</p>
+                <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-muted-foreground">
+                  <span className="rounded bg-secondary px-1.5 py-0.5">{meta.sourceType}</span>
+                  <span>{meta.note}</span>
+                </div>
                 {row.trendKey && (
                   <BoundaryMiniChart
                     data={boundaryDs.boundary as any[]}
@@ -662,7 +668,7 @@ export default function MarketInfo() {
                   />
                 )}
               </div>
-            ))}
+            );})}
           </div>
 
           {boundaryExpanded && (
