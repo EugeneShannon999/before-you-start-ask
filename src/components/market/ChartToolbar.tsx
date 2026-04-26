@@ -1,4 +1,4 @@
-import { ExternalLink, Download, Table2, RotateCcw, Eye, EyeOff } from "lucide-react";
+import { Download, Table2, RotateCcw, Search } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Granularity } from "@/lib/marketMocks";
 
@@ -15,70 +15,23 @@ export interface ChartToolbarProps {
   onShowTable: () => void;
   onDownload: () => void;
   onReset: () => void;
+  onExpand: () => void;
 }
 
 const iconBtn =
   "h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors";
+const primaryIconBtn =
+  "h-7 w-7 inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow-notion hover:bg-primary/90 transition-colors";
 
 export function ChartToolbar({
-  chartId,
-  granularity,
-  onGranularityChange,
-  range,
-  onRangeChange,
-  showLegend,
-  onToggleLegend,
   onShowTable,
   onDownload,
   onReset,
+  onExpand,
 }: ChartToolbarProps) {
-  const fullscreenUrl = `/tools/market/chart/${chartId}?g=${granularity}&r=${range}`;
-
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex items-center gap-1">
-        {/* 粒度切换 */}
-        <div className="flex rounded border overflow-hidden text-[10px] mr-1">
-          {(["15min", "hour", "day"] as Granularity[]).map((g) => (
-            <button
-              key={g}
-              onClick={() => onGranularityChange(g)}
-              className={`px-1.5 py-0.5 ${
-                granularity === g
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-secondary text-muted-foreground"
-              }`}
-            >
-              {g === "15min" ? "15m" : g === "hour" ? "1h" : "24h"}
-            </button>
-          ))}
-        </div>
-        {/* 区间切换 */}
-        <div className="flex rounded border overflow-hidden text-[10px] mr-1">
-          {(["1d", "2d", "4d", "7d"] as RangeKey[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => onRangeChange(r)}
-              className={`px-1.5 py-0.5 ${
-                range === r
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-secondary text-muted-foreground"
-              }`}
-            >
-              {r === "1d" ? "今日" : r === "2d" ? "2日" : r === "4d" ? "4日" : "7日"}
-            </button>
-          ))}
-        </div>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button className={iconBtn} onClick={onToggleLegend} aria-label="图例">
-              {showLegend ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">{showLegend ? "隐藏图例" : "显示图例"}</TooltipContent>
-        </Tooltip>
-
         <Tooltip>
           <TooltipTrigger asChild>
             <button className={iconBtn} onClick={onShowTable} aria-label="数据表">
@@ -108,17 +61,11 @@ export function ChartToolbar({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <a
-              href={fullscreenUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={iconBtn}
-              aria-label="新标签页放大"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+            <button className={primaryIconBtn} onClick={onExpand} aria-label="放大图表">
+              <Search className="h-4 w-4" />
+            </button>
           </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">新标签页放大</TooltipContent>
+          <TooltipContent side="top" className="text-xs">放大图表</TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>
