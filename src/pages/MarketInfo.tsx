@@ -435,6 +435,12 @@ export default function MarketInfo() {
           onRangeChange={(r) => applyChartRange(r, setLoadCfg)}
           showLegend={loadCfg.showLegend}
           onToggleLegend={() => setLoadCfg({ ...loadCfg, showLegend: !loadCfg.showLegend })}
+          active={activeChart === "load-forecast"}
+          expanded={expandedChart === "load-forecast"}
+          onActivate={() => setActiveChart("load-forecast")}
+          onExpand={() => { setActiveChart("load-forecast"); setExpandedChart("load-forecast"); }}
+          onExpandedChange={(open) => setExpandedChart(open ? "load-forecast" : null)}
+          onZoomWheel={handleZoomWheel}
           tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "偏差率"]}
           tableRows={loadDs.load.map((p: any) => [
             p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, `${((p.deviation / p.predicted) * 100).toFixed(2)}%`,
@@ -454,12 +460,13 @@ export default function MarketInfo() {
           }
         >
           <LoadForecastChart
-            data={loadDs.load}
+            data={zoomData(loadDs.load)}
             xKey={loadDs.xKey}
             xInterval={loadDs.xInterval}
             periodLabel={loadDs.periodLabel}
             showLegend={loadCfg.showLegend}
-            forecastMode={forecastMode}
+            visibleSeries={loadSeries}
+            forecastMode="all"
           />
         </ChartCard>
 
