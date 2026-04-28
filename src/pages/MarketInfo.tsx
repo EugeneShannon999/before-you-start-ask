@@ -19,11 +19,20 @@ import {
   getDataset,
   Granularity,
   boundaryRows,
+  biddingSpaceByOffset,
+  marketBoundaryCore,
+  thermalUnits,
+  thermalRealtimeSummary,
+  getThermalMonthlyProfile,
+  ruleAlertReports,
+  powerForecastCards,
   SPACE_WARN_THRESHOLD,
   load96,
   renewable96,
   priceForecastLink24,
   weather24,
+  aggregateToHour,
+  type BiddingDayOffset,
   type DataSourceTag,
 } from "@/lib/marketMocks";
 import { getForecastSeries, summarizeForecast } from "@/lib/predictionOutputs";
@@ -85,6 +94,9 @@ export default function MarketInfo() {
   const [activeChart, setActiveChart] = useState<MainChartId | null>(saved?.activeChart ?? null);
   const [expandedChart, setExpandedChart] = useState<MainChartId | null>(null);
   const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? { start: 0, end: 100 });
+  const [biddingOffset, setBiddingOffset] = useState<BiddingDayOffset>(saved?.biddingOffset ?? "D-1");
+  const [selectedUnitId, setSelectedUnitId] = useState(saved?.selectedUnitId ?? thermalUnits[0].id);
+  const [alertStatus, setAlertStatus] = useState("全部");
 
   // 每图独立配置（粒度可被全局或单独控制）
   const [priceCfg, setPriceCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.price, globalGranularity));
@@ -172,9 +184,9 @@ export default function MarketInfo() {
       province, startDate, endDate, granularity: globalGranularity,
       chartCfgs: { price: priceCfg, load: loadCfg, renewable: renCfg, space: spaceCfg },
       priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
-      activeChart, lastExpandedChart: expandedChart,
+      activeChart, lastExpandedChart: expandedChart, biddingOffset, selectedUnitId,
     }));
-  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart]);
+  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart, biddingOffset, selectedUnitId]);
 
   // 各图数据
   const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
