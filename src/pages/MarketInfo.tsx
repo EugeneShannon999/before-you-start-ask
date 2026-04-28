@@ -308,66 +308,61 @@ export default function MarketInfo() {
           </p>
         </header>
 
-        <section className="rounded-lg border bg-card p-4 shadow-notion">
-          <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-            <h2 className="text-sm font-semibold shrink-0">预测快照</h2>
-            {forecastSummary.map((card) => (
-              <div key={card.label} className="min-w-[172px] rounded-md border bg-background px-3 py-2 shrink-0">
-                <p className="text-[10px] text-muted-foreground truncate">{card.label}</p>
-                <p className="text-sm font-semibold leading-tight mt-1">
-                  {card.stat.avgPredicted.toLocaleString()}
-                  <span className="text-[10px] font-normal text-muted-foreground ml-1">{card.unit}</span>
-                </p>
-                <p className={`text-[10px] mt-1 flex items-center gap-0.5 ${card.stat.avgDeviation >= 0 ? "text-destructive" : "text-success"}`}>
-                  {card.stat.avgDeviation >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  偏差 {card.stat.avgDeviation >= 0 ? "+" : ""}{card.stat.avgDeviation} · {card.stat.avgAbsPct}%
-                </p>
-                <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">
-                  数据时点：{endDate} · {card.source} · {card.lag}
-                </p>
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="space-y-3 min-w-0">
+            <ChartCard
+              index={1}
+              chartId="bidding-space"
+              title="竞价空间判断"
+              caption={`默认 ${biddingOffset}；D-2 预测模型完成后，再将默认切换为 D-2`}
+              granularity={spaceCfg.granularity}
+              onGranularityChange={(g) => setSpaceCfg({ ...spaceCfg, granularity: g })}
+              range={spaceCfg.range}
+              onRangeChange={(r) => applyChartRange(r, setSpaceCfg)}
+              showLegend={spaceCfg.showLegend}
+              onToggleLegend={() => setSpaceCfg({ ...spaceCfg, showLegend: !spaceCfg.showLegend })}
+              active={activeChart === "bidding-space"}
+              expanded={expandedChart === "bidding-space"}
+              onActivate={() => setActiveChart("bidding-space")}
+              onExpand={() => openChartPage("bidding-space")}
+              onExpandedChange={(open) => setExpandedChart(open ? "bidding-space" : null)}
+              onZoomWheel={(deltaY) => handleZoomWheel(deltaY, "bidding-space")}
+              onResetZoom={() => resetZoom("bidding-space")}
+              tableHeader={["时段", "总负荷预测", "新能源预测", "竞价空间", "状态"]}
+              tableRows={biddingOffsetDs.space.map((p: any) => [p.label ?? p.hourLabel, p.load, p.renewable, p.space, p.warning ? "预警" : "正常"])}
+              csvFilename="bidding-space-priority.csv"
+              csvRows={[["时段", "总负荷预测", "新能源预测", "竞价空间", "预警"], ...biddingOffsetDs.space.map((p: any) => [p.label ?? p.hourLabel, p.load, p.renewable, p.space, p.warning ? 1 : 0])]}
+              footer={<div className="mt-2 flex items-center gap-2 flex-wrap text-[11px]"><span className="text-muted-foreground">竞价空间 = 总负荷预测 − 新能源预测；当前为 mock 规则框架版。</span><SourceBadge label="规则计算" /><SourceBadge label="待确认数据源" /></div>}
+            >
+              <div className="mb-2 flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">预测日</span>
+                <Select value={biddingOffset} onValueChange={(v) => setBiddingOffset(v as BiddingDayOffset)}>
+                  <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>{(["D-1", "D-2", "D-3", "D-5"] as BiddingDayOffset[]).map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                </Select>
+                <span className="text-[11px] text-muted-foreground">当前默认 D-1</span>
               </div>
-            ))}
+              <BiddingSpaceChart data={zoomData(biddingOffsetDs.space)} xKey={biddingOffsetDs.xKey} xInterval={biddingOffsetDs.xInterval} periodLabel={biddingOffsetDs.periodLabel} showLegend={spaceCfg.showLegend} threshold={SPACE_WARN_THRESHOLD} visibleSeries={{ predicted: false, actual: false, deviation: false }} />
+            </ChartCard>
           </div>
-        </section>
 
-        <section className="rounded-lg border bg-card p-4 shadow-notion">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4 text-warning" />
-            <h2 className="text-sm font-semibold">规则预警</h2>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">规则框架版</span>
-          </div>
-          <div className="grid gap-2 xl:grid-cols-2">
-            {ruleWarnings.map((w) => (
-              <div
-                key={w.id}
-                className={`p-3 rounded-md text-xs border ${
-                  w.level === "high"
-                    ? "border-destructive/30 bg-destructive/5"
-                    : "border-warning/30 bg-warning/5"
-                }`}
-              >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <AlertTriangle
-                    className={`h-3 w-3 shrink-0 ${w.level === "high" ? "text-destructive" : "text-warning"}`}
-                  />
-                  <p className="font-medium text-foreground flex-1 text-[11px]">{w.title}</p>
-                  <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">规则计算</span>
-                  <span className="text-[9px] px-1 py-0.5 rounded bg-secondary text-muted-foreground shrink-0">公开API</span>
+          <aside className="xl:sticky xl:top-4 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
+            <h2 className="text-sm font-semibold mb-2">预测快照</h2>
+            <div className="flex xl:flex-col gap-2 min-w-max xl:min-w-0">
+              {forecastSummary.map((card) => (
+                <div key={card.label} className="w-[220px] xl:w-full rounded-md border bg-background px-3 py-2 shrink-0">
+                  <p className="text-xs font-medium">{card.label}</p>
+                  <div className="grid grid-cols-3 gap-1 mt-2 text-[10px] text-muted-foreground">
+                    <span>最高 <b className="font-mono text-foreground">{card.stat.maxPredicted}</b></span>
+                    <span>最低 <b className="font-mono text-foreground">{card.stat.minPredicted}</b></span>
+                    <span>均值 <b className="font-mono text-foreground">{card.stat.avgPredicted}</b></span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">单位：{card.unit} · 数据时点：{endDate} · {card.source} · {card.lag}</p>
                 </div>
-                <div className="pl-4 space-y-0.5 text-[10px] text-muted-foreground">
-                  <p><span className="text-foreground/70">规则名：</span>{w.title}</p>
-                  <p><span className="text-foreground/70">当前值：</span>{w.current}</p>
-                  <p><span className="text-foreground/70">阈值：</span>{w.threshold}</p>
-                  <p><span className="text-foreground/70">阈值来源：</span>{w.thresholdSource}</p>
-                  <p><span className="text-foreground/70">时间段：</span>{w.period}</p>
-                  <p><span className="text-foreground/70">数据来源：</span>{w.source}</p>
-                  <p><span className="text-foreground/70">计算口径：</span>{w.method}</p>
-                  <p className="text-foreground/80"><span className="text-foreground/60">建议：</span>{w.action}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </aside>
+        </div>
 
         <div className="space-y-3">
 
