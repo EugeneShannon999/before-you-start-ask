@@ -197,6 +197,11 @@ export default function MarketInfo() {
   const loadDs = useMemo(() => ({ load: loadForecast, xKey: loadCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: loadCfg.granularity === "15min" ? 15 : loadCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [loadForecast, loadCfg.granularity]);
   const renDs = useMemo(() => ({ renewable: renForecast, xKey: renCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: renCfg.granularity === "15min" ? 15 : renCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [renForecast, renCfg.granularity]);
   const spaceDs = useMemo(() => ({ space: spaceForecast.map((p) => ({ ...p, warning: p.predicted < SPACE_WARN_THRESHOLD })), xKey: spaceCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: spaceCfg.granularity === "15min" ? 15 : spaceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [spaceForecast, spaceCfg.granularity]);
+  const biddingOffsetDs = useMemo(() => {
+    const base = biddingSpaceByOffset[biddingOffset];
+    const data = spaceCfg.granularity === "15min" ? base : spaceCfg.granularity === "hour" ? aggregateToHour(base, ["load", "renewable", "space"] as any).map((s: any) => ({ ...s, warning: s.space < SPACE_WARN_THRESHOLD })) : [{ ...base[0], label: "24小时", periodRange: "1-96", load: Math.round(base.reduce((sum, p) => sum + p.load, 0) / base.length), renewable: Math.round(base.reduce((sum, p) => sum + p.renewable, 0) / base.length), space: Math.round(base.reduce((sum, p) => sum + p.space, 0) / base.length), warning: base.some((p) => p.warning) }];
+    return { space: data, xKey: spaceCfg.granularity === "hour" ? "hourLabel" as const : "label" as const, xInterval: spaceCfg.granularity === "15min" ? 15 : spaceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => `时段 ${p.periodRange ?? p.period}` };
+  }, [biddingOffset, spaceCfg.granularity]);
   // 边界使用全局粒度
   const boundaryDs = useMemo(() => getDataset(globalGranularity), [globalGranularity]);
 
@@ -225,11 +230,15 @@ export default function MarketInfo() {
 
   const weatherSignals = useMemo(() => weather24.filter((row) => row.alert !== "无").slice(0, 4), []);
   const forecastSummary = useMemo(() => [
-    { label: "负荷预测均值", stat: summarizeForecast(loadForecast), unit: "MW", source: "预测模块", lag: "实际滞后约15-60分钟" },
-    { label: "新能源预测均值", stat: summarizeForecast(renForecast), unit: "MW", source: "预测模块", lag: "场站实测回传后校验" },
-    { label: "竞价空间预测", stat: summarizeForecast(spaceForecast), unit: "MW", source: "规则计算", lag: "随负荷/新能源预测同步" },
-    { label: "电价预测均值", stat: summarizeForecast(priceForecast), unit: "元/MWh", source: "预测模块", lag: "出清披露后对照" },
-  ], [loadForecast, renForecast, spaceForecast, priceForecast]);
+    { label: "负荷预测", stat: summarizeForecast(loadForecast), unit: "MW", source: "预测模块", lag: "实际滞后约15-60分钟" },
+    { label: "新能源出力预测", stat: summarizeForecast(renForecast), unit: "MW", source: "预测模块", lag: "场站实测回传后校验" },
+    { label: "电价预测", stat: summarizeForecast(priceForecast), unit: "元/MWh", source: "预测模块", lag: "出清披露后对照" },
+  ], [loadForecast, renForecast, priceForecast]);
+  const monthlyProfile = useMemo(() => getThermalMonthlyProfile(selectedUnitId), [selectedUnitId]);
+  const highRealtime = useMemo(() => thermalUnits.slice().sort((a, b) => b.realtimeLoadRate - a.realtimeLoadRate).slice(0, 8), []);
+  const highRolling = useMemo(() => thermalUnits.slice().sort((a, b) => b.rollingAvgLoadRate - a.rollingAvgLoadRate).slice(0, 8), []);
+  const overlapUnits = useMemo(() => new Set(highRealtime.map((u) => u.id).filter((id) => highRolling.some((u) => u.id === id))), [highRealtime, highRolling]);
+  const filteredReports = useMemo(() => alertStatus === "全部" ? ruleAlertReports : ruleAlertReports.filter((r) => r.status === alertStatus), [alertStatus]);
   const boundaryMeta: Record<string, { sourceType: "公开披露" | "预测推导" | "插件增强"; note: string }> = {
     联络线外送计划: { sourceType: "公开披露", note: "公开披露版，非实时终端" },
     "皖南-皖北断面限额": { sourceType: "插件增强", note: "当前为示例口径，实时断面待插件数据" },
