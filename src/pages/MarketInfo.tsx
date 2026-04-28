@@ -19,11 +19,20 @@ import {
   getDataset,
   Granularity,
   boundaryRows,
+  biddingSpaceByOffset,
+  marketBoundaryCore,
+  thermalUnits,
+  thermalRealtimeSummary,
+  getThermalMonthlyProfile,
+  ruleAlertReports,
+  powerForecastCards,
   SPACE_WARN_THRESHOLD,
   load96,
   renewable96,
   priceForecastLink24,
   weather24,
+  aggregateToHour,
+  type BiddingDayOffset,
   type DataSourceTag,
 } from "@/lib/marketMocks";
 import { getForecastSeries, summarizeForecast } from "@/lib/predictionOutputs";
@@ -85,6 +94,9 @@ export default function MarketInfo() {
   const [activeChart, setActiveChart] = useState<MainChartId | null>(saved?.activeChart ?? null);
   const [expandedChart, setExpandedChart] = useState<MainChartId | null>(null);
   const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? { start: 0, end: 100 });
+  const [biddingOffset, setBiddingOffset] = useState<BiddingDayOffset>(saved?.biddingOffset ?? "D-1");
+  const [selectedUnitId, setSelectedUnitId] = useState(saved?.selectedUnitId ?? thermalUnits[0].id);
+  const [alertStatus, setAlertStatus] = useState("全部");
 
   // 每图独立配置（粒度可被全局或单独控制）
   const [priceCfg, setPriceCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.price, globalGranularity));
@@ -172,9 +184,9 @@ export default function MarketInfo() {
       province, startDate, endDate, granularity: globalGranularity,
       chartCfgs: { price: priceCfg, load: loadCfg, renewable: renCfg, space: spaceCfg },
       priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
-      activeChart, lastExpandedChart: expandedChart,
+      activeChart, lastExpandedChart: expandedChart, biddingOffset, selectedUnitId,
     }));
-  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart]);
+  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart, biddingOffset, selectedUnitId]);
 
   // 各图数据
   const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
@@ -185,6 +197,11 @@ export default function MarketInfo() {
   const loadDs = useMemo(() => ({ load: loadForecast, xKey: loadCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: loadCfg.granularity === "15min" ? 15 : loadCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [loadForecast, loadCfg.granularity]);
   const renDs = useMemo(() => ({ renewable: renForecast, xKey: renCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: renCfg.granularity === "15min" ? 15 : renCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [renForecast, renCfg.granularity]);
   const spaceDs = useMemo(() => ({ space: spaceForecast.map((p) => ({ ...p, warning: p.predicted < SPACE_WARN_THRESHOLD })), xKey: spaceCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: spaceCfg.granularity === "15min" ? 15 : spaceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [spaceForecast, spaceCfg.granularity]);
+  const biddingOffsetDs = useMemo(() => {
+    const base = biddingSpaceByOffset[biddingOffset];
+    const data = spaceCfg.granularity === "15min" ? base : spaceCfg.granularity === "hour" ? aggregateToHour(base, ["load", "renewable", "space"] as any).map((s: any) => ({ ...s, warning: s.space < SPACE_WARN_THRESHOLD })) : [{ ...base[0], label: "24小时", periodRange: "1-96", load: Math.round(base.reduce((sum, p) => sum + p.load, 0) / base.length), renewable: Math.round(base.reduce((sum, p) => sum + p.renewable, 0) / base.length), space: Math.round(base.reduce((sum, p) => sum + p.space, 0) / base.length), warning: base.some((p) => p.warning) }];
+    return { space: data, xKey: spaceCfg.granularity === "hour" ? "hourLabel" as const : "label" as const, xInterval: spaceCfg.granularity === "15min" ? 15 : spaceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => `时段 ${p.periodRange ?? p.period}` };
+  }, [biddingOffset, spaceCfg.granularity]);
   // 边界使用全局粒度
   const boundaryDs = useMemo(() => getDataset(globalGranularity), [globalGranularity]);
 
@@ -213,11 +230,15 @@ export default function MarketInfo() {
 
   const weatherSignals = useMemo(() => weather24.filter((row) => row.alert !== "无").slice(0, 4), []);
   const forecastSummary = useMemo(() => [
-    { label: "负荷预测均值", stat: summarizeForecast(loadForecast), unit: "MW", source: "预测模块", lag: "实际滞后约15-60分钟" },
-    { label: "新能源预测均值", stat: summarizeForecast(renForecast), unit: "MW", source: "预测模块", lag: "场站实测回传后校验" },
-    { label: "竞价空间预测", stat: summarizeForecast(spaceForecast), unit: "MW", source: "规则计算", lag: "随负荷/新能源预测同步" },
-    { label: "电价预测均值", stat: summarizeForecast(priceForecast), unit: "元/MWh", source: "预测模块", lag: "出清披露后对照" },
-  ], [loadForecast, renForecast, spaceForecast, priceForecast]);
+    { label: "负荷预测", stat: summarizeForecast(loadForecast), unit: "MW", source: "预测模块", lag: "实际滞后约15-60分钟" },
+    { label: "新能源出力预测", stat: summarizeForecast(renForecast), unit: "MW", source: "预测模块", lag: "场站实测回传后校验" },
+    { label: "电价预测", stat: summarizeForecast(priceForecast), unit: "元/MWh", source: "预测模块", lag: "出清披露后对照" },
+  ], [loadForecast, renForecast, priceForecast]);
+  const monthlyProfile = useMemo(() => getThermalMonthlyProfile(selectedUnitId), [selectedUnitId]);
+  const highRealtime = useMemo(() => thermalUnits.slice().sort((a, b) => b.realtimeLoadRate - a.realtimeLoadRate).slice(0, 8), []);
+  const highRolling = useMemo(() => thermalUnits.slice().sort((a, b) => b.rollingAvgLoadRate - a.rollingAvgLoadRate).slice(0, 8), []);
+  const overlapUnits = useMemo(() => new Set(highRealtime.map((u) => u.id).filter((id) => highRolling.some((u) => u.id === id))), [highRealtime, highRolling]);
+  const filteredReports = useMemo(() => alertStatus === "全部" ? ruleAlertReports : ruleAlertReports.filter((r) => r.status === alertStatus), [alertStatus]);
   const boundaryMeta: Record<string, { sourceType: "公开披露" | "预测推导" | "插件增强"; note: string }> = {
     联络线外送计划: { sourceType: "公开披露", note: "公开披露版，非实时终端" },
     "皖南-皖北断面限额": { sourceType: "插件增强", note: "当前为示例口径，实时断面待插件数据" },
@@ -287,65 +308,136 @@ export default function MarketInfo() {
           </p>
         </header>
 
-        <section className="rounded-lg border bg-card p-4 shadow-notion">
-          <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-            <h2 className="text-sm font-semibold shrink-0">预测快照</h2>
-            {forecastSummary.map((card) => (
-              <div key={card.label} className="min-w-[172px] rounded-md border bg-background px-3 py-2 shrink-0">
-                <p className="text-[10px] text-muted-foreground truncate">{card.label}</p>
-                <p className="text-sm font-semibold leading-tight mt-1">
-                  {card.stat.avgPredicted.toLocaleString()}
-                  <span className="text-[10px] font-normal text-muted-foreground ml-1">{card.unit}</span>
-                </p>
-                <p className={`text-[10px] mt-1 flex items-center gap-0.5 ${card.stat.avgDeviation >= 0 ? "text-destructive" : "text-success"}`}>
-                  {card.stat.avgDeviation >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  偏差 {card.stat.avgDeviation >= 0 ? "+" : ""}{card.stat.avgDeviation} · {card.stat.avgAbsPct}%
-                </p>
-                <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">
-                  数据时点：{endDate} · {card.source} · {card.lag}
-                </p>
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="space-y-3 min-w-0">
+            <ChartCard
+              index={1}
+              chartId="bidding-space"
+              title="竞价空间判断"
+              caption={`默认 ${biddingOffset}；D-2 预测模型完成后，再将默认切换为 D-2`}
+              granularity={spaceCfg.granularity}
+              onGranularityChange={(g) => setSpaceCfg({ ...spaceCfg, granularity: g })}
+              range={spaceCfg.range}
+              onRangeChange={(r) => applyChartRange(r, setSpaceCfg)}
+              showLegend={spaceCfg.showLegend}
+              onToggleLegend={() => setSpaceCfg({ ...spaceCfg, showLegend: !spaceCfg.showLegend })}
+              active={activeChart === "bidding-space"}
+              expanded={expandedChart === "bidding-space"}
+              onActivate={() => setActiveChart("bidding-space")}
+              onExpand={() => openChartPage("bidding-space")}
+              onExpandedChange={(open) => setExpandedChart(open ? "bidding-space" : null)}
+              onZoomWheel={(deltaY) => handleZoomWheel(deltaY, "bidding-space")}
+              onResetZoom={() => resetZoom("bidding-space")}
+              tableHeader={["时段", "总负荷预测", "新能源预测", "竞价空间", "状态"]}
+              tableRows={biddingOffsetDs.space.map((p: any) => [p.label ?? p.hourLabel, p.load, p.renewable, p.space, p.warning ? "预警" : "正常"])}
+              csvFilename="bidding-space-priority.csv"
+              csvRows={[["时段", "总负荷预测", "新能源预测", "竞价空间", "预警"], ...biddingOffsetDs.space.map((p: any) => [p.label ?? p.hourLabel, p.load, p.renewable, p.space, p.warning ? 1 : 0])]}
+              footer={<div className="mt-2 flex items-center gap-2 flex-wrap text-[11px]"><span className="text-muted-foreground">竞价空间 = 总负荷预测 − 新能源预测；当前为 mock 规则框架版。</span><SourceBadge label="规则计算" /><SourceBadge label="待确认数据源" /></div>}
+            >
+              <div className="mb-2 flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">预测日</span>
+                <Select value={biddingOffset} onValueChange={(v) => setBiddingOffset(v as BiddingDayOffset)}>
+                  <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>{(["D-1", "D-2", "D-3", "D-5"] as BiddingDayOffset[]).map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                </Select>
+                <span className="text-[11px] text-muted-foreground">当前默认 D-1</span>
               </div>
-            ))}
+              <BiddingSpaceChart data={zoomData(biddingOffsetDs.space)} xKey={biddingOffsetDs.xKey} xInterval={biddingOffsetDs.xInterval} periodLabel={biddingOffsetDs.periodLabel} showLegend={spaceCfg.showLegend} threshold={SPACE_WARN_THRESHOLD} visibleSeries={{ predicted: false, actual: false, deviation: false }} />
+            </ChartCard>
+          </div>
+
+          <aside className="xl:sticky xl:top-4 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
+            <h2 className="text-sm font-semibold mb-2">预测快照</h2>
+            <div className="flex xl:flex-col gap-2 min-w-max xl:min-w-0">
+              {forecastSummary.map((card) => (
+                <div key={card.label} className="w-[220px] xl:w-full rounded-md border bg-background px-3 py-2 shrink-0">
+                  <p className="text-xs font-medium">{card.label}</p>
+                  <div className="grid grid-cols-3 gap-1 mt-2 text-[10px] text-muted-foreground">
+                    <span>最高 <b className="font-mono text-foreground">{card.stat.maxPredicted}</b></span>
+                    <span>最低 <b className="font-mono text-foreground">{card.stat.minPredicted}</b></span>
+                    <span>均值 <b className="font-mono text-foreground">{card.stat.avgPredicted}</b></span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">单位：{card.unit} · 数据时点：{endDate} · {card.source} · {card.lag}</p>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+
+        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <h2 className="text-sm font-semibold">市场运行边界</h2>
+              <p className="text-[11px] text-muted-foreground mt-1">公开披露 / 规则计算口径；实时和插件增强字段仍待补数据源。</p>
+            </div>
+            <SourceBadge label="规则计算" />
+          </div>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-md border bg-background p-3">
+              <p className="text-[11px] text-muted-foreground">现货火电机组容量</p>
+              <p className="mt-1 text-lg font-mono font-semibold">{marketBoundaryCore.thermalCapacity.total.toLocaleString()} MW</p>
+              <p className="text-[10px] text-muted-foreground">在网 {marketBoundaryCore.thermalCapacity.online.toLocaleString()} + 检修 {marketBoundaryCore.thermalCapacity.maintenance.toLocaleString()}；{marketBoundaryCore.thermalCapacity.note}</p>
+            </div>
+            <div className="rounded-md border bg-background p-3">
+              <p className="text-[11px] text-muted-foreground">联络线送出计划</p>
+              <p className="mt-1 text-lg font-mono font-semibold">{boundaryRows[0].value}</p>
+              <BoundaryMiniChart data={boundaryDs.boundary as any[]} dataKey="tieLine" color={C_PRIMARY} />
+            </div>
+            <div className="rounded-md border bg-background p-3">
+              <p className="text-[11px] text-muted-foreground">必开 / 必停</p>
+              <p className="mt-1 text-sm font-mono font-semibold">必开 {marketBoundaryCore.mustRun.mw} MW / {marketBoundaryCore.mustRun.units} 台</p>
+              <p className="text-sm font-mono font-semibold">必停 {marketBoundaryCore.mustStop.mw} MW / {marketBoundaryCore.mustStop.units} 台</p>
+            </div>
+            <div className="rounded-md border bg-background p-3 space-y-1">
+              <p className="text-[11px] text-muted-foreground">正备用 / 负备用</p>
+              {marketBoundaryCore.reserve.map((r) => (
+                <p key={r.name} className="text-[11px]"><span className="font-medium">{r.name}</span> <span className="font-mono">{r.value} MW</span> <span className="text-muted-foreground">D-1 {r.d1Change > 0 ? "+" : ""}{r.d1Change} / 月 {r.monthChange > 0 ? "+" : ""}{r.monthChange}</span></p>
+              ))}
+            </div>
           </div>
         </section>
 
+        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <h2 className="text-sm font-semibold">火电机组实时出力</h2>
+          <div className="grid grid-cols-3 gap-2">
+            <Stat label="全部火电机组总出力" value={`${thermalRealtimeSummary.totalOutput.toLocaleString()} MW`} />
+            <Stat label="当前实时点平均负载率" value={`${thermalRealtimeSummary.avgRealtimeLoadRate}%`} />
+            <Stat label="全天滚动实际平均负载率" value={`${thermalRealtimeSummary.avgRollingLoadRate}%`} />
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <LoadRateTable title="实时负载率排行" rows={highRealtime} metric="realtimeLoadRate" overlap={overlapUnits} />
+            <LoadRateTable title="全天滚动平均负载率排行" rows={highRolling} metric="rollingAvgLoadRate" overlap={overlapUnits} />
+          </div>
+        </section>
+
+        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="text-sm font-semibold">机组月报</h2>
+            <div className="flex items-center gap-2">
+              <Select value={selectedUnitId} onValueChange={setSelectedUnitId}>
+                <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{thermalUnits.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <button onClick={() => downloadCsvLikeExcel(monthlyProfile)} className="h-8 rounded-md bg-primary px-3 text-xs text-primary-foreground hover:bg-primary/90">导出 Excel</button>
+            </div>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
+            <div className="rounded-md border bg-background p-3"><p className="text-[11px] text-muted-foreground">全月平均负载率 · {monthlyProfile.granularity}</p><p className="mt-2 text-2xl font-mono font-semibold">{monthlyProfile.monthlyAvgLoadRate}%</p><p className="text-[10px] text-muted-foreground">mock 70 个火电机组，后续接入月报数据源。</p></div>
+            <BoundaryMiniChart data={monthlyProfile.points} dataKey="loadRate" color={C_WARNING} />
+          </div>
+        </section>
+
+        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="text-sm font-semibold">规则预警报告中心</h2>
+            <Select value={alertStatus} onValueChange={setAlertStatus}><SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger><SelectContent>{["全部", "待处理", "已复盘", "已忽略"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+          </div>
+          <ReportTable rows={filteredReports} />
+        </section>
+
         <section className="rounded-lg border bg-card p-4 shadow-notion">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4 text-warning" />
-            <h2 className="text-sm font-semibold">规则预警</h2>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">规则框架版</span>
-          </div>
-          <div className="grid gap-2 xl:grid-cols-2">
-            {ruleWarnings.map((w) => (
-              <div
-                key={w.id}
-                className={`p-3 rounded-md text-xs border ${
-                  w.level === "high"
-                    ? "border-destructive/30 bg-destructive/5"
-                    : "border-warning/30 bg-warning/5"
-                }`}
-              >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <AlertTriangle
-                    className={`h-3 w-3 shrink-0 ${w.level === "high" ? "text-destructive" : "text-warning"}`}
-                  />
-                  <p className="font-medium text-foreground flex-1 text-[11px]">{w.title}</p>
-                  <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">规则计算</span>
-                  <span className="text-[9px] px-1 py-0.5 rounded bg-secondary text-muted-foreground shrink-0">公开API</span>
-                </div>
-                <div className="pl-4 space-y-0.5 text-[10px] text-muted-foreground">
-                  <p><span className="text-foreground/70">规则名：</span>{w.title}</p>
-                  <p><span className="text-foreground/70">当前值：</span>{w.current}</p>
-                  <p><span className="text-foreground/70">阈值：</span>{w.threshold}</p>
-                  <p><span className="text-foreground/70">阈值来源：</span>{w.thresholdSource}</p>
-                  <p><span className="text-foreground/70">时间段：</span>{w.period}</p>
-                  <p><span className="text-foreground/70">数据来源：</span>{w.source}</p>
-                  <p><span className="text-foreground/70">计算口径：</span>{w.method}</p>
-                  <p className="text-foreground/80"><span className="text-foreground/60">建议：</span>{w.action}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <h2 className="text-sm font-semibold mb-2">功率预测</h2>
+          <div className="grid gap-2 md:grid-cols-3">{powerForecastCards.map((c) => <div key={c.name} className="rounded-md border bg-background p-3"><p className="text-[11px] text-muted-foreground">{c.name}</p><p className="mt-1 text-lg font-mono font-semibold">{c.value.toLocaleString()} {c.unit}</p><p className="text-[10px] text-muted-foreground">{c.source} · 入口预留</p></div>)}</div>
         </section>
 
         <div className="space-y-3">
@@ -804,6 +896,56 @@ const ruleWarnings: RuleWarning[] = [
     level: "medium",
   },
 ];
+
+function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: typeof thermalUnits; metric: "realtimeLoadRate" | "rollingAvgLoadRate"; overlap: Set<string> }) {
+  return (
+    <div className="rounded-md border overflow-hidden">
+      <div className="bg-secondary/50 px-3 py-2 text-xs font-medium">{title}</div>
+      <table className="w-full text-xs">
+        <tbody>
+          {rows.map((u, index) => (
+            <tr key={u.id} className="border-t hover:bg-secondary/30">
+              <td className="px-3 py-1.5 font-mono text-muted-foreground">#{index + 1}</td>
+              <td className="px-3 py-1.5">{u.name}{overlap.has(u.id) && <span className="ml-2 rounded bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning">同时高负载</span>}</td>
+              <td className="px-3 py-1.5 text-right font-mono">{u[metric]}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ReportTable({ rows }: { rows: typeof ruleAlertReports }) {
+  return (
+    <div className="overflow-auto rounded-md border">
+      <table className="w-full min-w-[980px] text-xs">
+        <thead className="bg-secondary/50">
+          <tr>{["预警时间", "规则名称", "触发原因", "当前值", "阈值", "数据来源", "影响对象", "建议动作", "状态"].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={`${r.time}-${r.ruleName}`} className="border-t hover:bg-secondary/30">
+              <td className="px-3 py-2 font-mono">{r.time}</td><td className="px-3 py-2">{r.ruleName}</td><td className="px-3 py-2 text-muted-foreground">{r.reason}</td><td className="px-3 py-2 font-mono">{r.current}</td><td className="px-3 py-2">{r.threshold}</td><td className="px-3 py-2">{r.source}</td><td className="px-3 py-2">{r.target}</td><td className="px-3 py-2">{r.action}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.status}</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function downloadCsvLikeExcel(profile: ReturnType<typeof getThermalMonthlyProfile>) {
+  const rows = [["机组", "粒度", "时段", "负载率%"], ...profile.points.map((p) => [profile.unit.name, profile.granularity, p.label, p.loadRate])];
+  const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${profile.unit.name}-月报.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "destructive" | "success" }) {
   const cls =

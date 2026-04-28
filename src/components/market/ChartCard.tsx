@@ -52,20 +52,20 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 export function ChartCard(props: ChartCardProps) {
   const [tableOpen, setTableOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
-  const canZoom = props.active || props.expanded;
+  const [hovered, setHovered] = useState(false);
+  const canZoom = hovered || props.active || props.expanded;
   const chartBody = (
     <div
       key={resetKey}
-      onClick={props.onActivate}
-      onPointerDownCapture={props.onActivate}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onWheel={(event) => {
         if (!canZoom) return;
         event.preventDefault();
         props.onZoomWheel?.(event.deltaY);
       }}
-      role="button"
-      tabIndex={0}
-      aria-pressed={props.active}
+      role="region"
+      aria-label={`${props.title} 图表区域，悬停后滚轮缩放`}
       className={`relative rounded-md transition-all ${
         canZoom
           ? "cursor-zoom-in ring-2 ring-primary/50 bg-primary/5"
@@ -75,7 +75,7 @@ export function ChartCard(props: ChartCardProps) {
       <div className={`pointer-events-none absolute right-2 top-2 z-10 rounded bg-card/90 px-2 py-1 text-[10px] shadow-notion ${
         canZoom ? "text-primary" : "text-muted-foreground"
       }`}>
-        {canZoom ? "滚轮缩放已接管" : "点击图表区域后滚轮缩放"}
+        {canZoom ? "悬停中 · 滚轮缩放图表" : "鼠标悬停图表后滚轮缩放"}
       </div>
       {props.children}
     </div>

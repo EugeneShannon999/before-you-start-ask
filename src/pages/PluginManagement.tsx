@@ -86,9 +86,9 @@ export default function PluginManagement() {
         <Panel title="方向 B · 自动报价 / 自动售卖插件">
           <div className="space-y-2 text-sm text-muted-foreground">
             <p>· SP3</p>
-            <p>· 风险评估中</p>
-            <p>· 暂不作为当前可用功能</p>
-            <p className="text-[11px]">待电力交易事业部部门变动及内部风险评估完成后再启动</p>
+            <p>· 自动报价机器人 · On queue / 待排期</p>
+            <p>· 已进入后续排期池</p>
+            <p className="text-[11px]">当前为待排期状态，不表达为永久暂停</p>
           </div>
         </Panel>
       </div>

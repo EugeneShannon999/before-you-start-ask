@@ -64,7 +64,7 @@ const pluginModules: Array<{
   },
   {
     title: "自动报价 / 自动售卖插件",
-    description: "SP3 · 风险评估中，待部门变动与内部评估完成后启动",
+    description: "自动报价机器人 · On queue / 待排期",
     icon: History,
     placeholder: true,
   },

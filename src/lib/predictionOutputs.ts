@@ -109,11 +109,14 @@ export function getForecastSeries(kind: ForecastKind, startDate: string, endDate
 export function summarizeForecast(points: ForecastPoint[]) {
   const absPct = points.reduce((sum, p) => sum + Math.abs(Number(p.deviationPct)), 0) / Math.max(points.length, 1);
   const maxDeviation = points.reduce((max, p) => (Math.abs(p.deviation) > Math.abs(max.deviation) ? p : max), points[0]);
+  const predictedValues = points.map((p) => p.predicted);
   return {
     avgPredicted: avg(points, "predicted"),
     avgActual: avg(points, "actual"),
     avgDeviation: avg(points, "deviation"),
     avgAbsPct: absPct.toFixed(1),
     maxDeviation,
+    maxPredicted: Math.max(...predictedValues),
+    minPredicted: Math.min(...predictedValues),
   };
 }
