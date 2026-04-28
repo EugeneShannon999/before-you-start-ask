@@ -364,6 +364,82 @@ export default function MarketInfo() {
           </aside>
         </div>
 
+        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <h2 className="text-sm font-semibold">市场运行边界</h2>
+              <p className="text-[11px] text-muted-foreground mt-1">公开披露 / 规则计算口径；实时和插件增强字段仍待补数据源。</p>
+            </div>
+            <SourceBadge label="规则计算" />
+          </div>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-md border bg-background p-3">
+              <p className="text-[11px] text-muted-foreground">现货火电机组容量</p>
+              <p className="mt-1 text-lg font-mono font-semibold">{marketBoundaryCore.thermalCapacity.total.toLocaleString()} MW</p>
+              <p className="text-[10px] text-muted-foreground">在网 {marketBoundaryCore.thermalCapacity.online.toLocaleString()} + 检修 {marketBoundaryCore.thermalCapacity.maintenance.toLocaleString()}；{marketBoundaryCore.thermalCapacity.note}</p>
+            </div>
+            <div className="rounded-md border bg-background p-3">
+              <p className="text-[11px] text-muted-foreground">联络线送出计划</p>
+              <p className="mt-1 text-lg font-mono font-semibold">{boundaryRows[0].value}</p>
+              <BoundaryMiniChart data={boundaryDs.boundary as any[]} dataKey="tieLine" color={C_PRIMARY} />
+            </div>
+            <div className="rounded-md border bg-background p-3">
+              <p className="text-[11px] text-muted-foreground">必开 / 必停</p>
+              <p className="mt-1 text-sm font-mono font-semibold">必开 {marketBoundaryCore.mustRun.mw} MW / {marketBoundaryCore.mustRun.units} 台</p>
+              <p className="text-sm font-mono font-semibold">必停 {marketBoundaryCore.mustStop.mw} MW / {marketBoundaryCore.mustStop.units} 台</p>
+            </div>
+            <div className="rounded-md border bg-background p-3 space-y-1">
+              <p className="text-[11px] text-muted-foreground">正备用 / 负备用</p>
+              {marketBoundaryCore.reserve.map((r) => (
+                <p key={r.name} className="text-[11px]"><span className="font-medium">{r.name}</span> <span className="font-mono">{r.value} MW</span> <span className="text-muted-foreground">D-1 {r.d1Change > 0 ? "+" : ""}{r.d1Change} / 月 {r.monthChange > 0 ? "+" : ""}{r.monthChange}</span></p>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <h2 className="text-sm font-semibold">火电机组实时出力</h2>
+          <div className="grid grid-cols-3 gap-2">
+            <Stat label="全部火电机组总出力" value={`${thermalRealtimeSummary.totalOutput.toLocaleString()} MW`} />
+            <Stat label="当前实时点平均负载率" value={`${thermalRealtimeSummary.avgRealtimeLoadRate}%`} />
+            <Stat label="全天滚动实际平均负载率" value={`${thermalRealtimeSummary.avgRollingLoadRate}%`} />
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <LoadRateTable title="实时负载率排行" rows={highRealtime} metric="realtimeLoadRate" overlap={overlapUnits} />
+            <LoadRateTable title="全天滚动平均负载率排行" rows={highRolling} metric="rollingAvgLoadRate" overlap={overlapUnits} />
+          </div>
+        </section>
+
+        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="text-sm font-semibold">机组月报</h2>
+            <div className="flex items-center gap-2">
+              <Select value={selectedUnitId} onValueChange={setSelectedUnitId}>
+                <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{thermalUnits.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <button onClick={() => downloadCsvLikeExcel(monthlyProfile)} className="h-8 rounded-md bg-primary px-3 text-xs text-primary-foreground hover:bg-primary/90">导出 Excel</button>
+            </div>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
+            <div className="rounded-md border bg-background p-3"><p className="text-[11px] text-muted-foreground">全月平均负载率 · {monthlyProfile.granularity}</p><p className="mt-2 text-2xl font-mono font-semibold">{monthlyProfile.monthlyAvgLoadRate}%</p><p className="text-[10px] text-muted-foreground">mock 70 个火电机组，后续接入月报数据源。</p></div>
+            <BoundaryMiniChart data={monthlyProfile.points} dataKey="loadRate" color={C_WARNING} />
+          </div>
+        </section>
+
+        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="text-sm font-semibold">规则预警报告中心</h2>
+            <Select value={alertStatus} onValueChange={setAlertStatus}><SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger><SelectContent>{["全部", "待处理", "已复盘", "已忽略"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+          </div>
+          <ReportTable rows={filteredReports} />
+        </section>
+
+        <section className="rounded-lg border bg-card p-4 shadow-notion">
+          <h2 className="text-sm font-semibold mb-2">功率预测</h2>
+          <div className="grid gap-2 md:grid-cols-3">{powerForecastCards.map((c) => <div key={c.name} className="rounded-md border bg-background p-3"><p className="text-[11px] text-muted-foreground">{c.name}</p><p className="mt-1 text-lg font-mono font-semibold">{c.value.toLocaleString()} {c.unit}</p><p className="text-[10px] text-muted-foreground">{c.source} · 入口预留</p></div>)}</div>
+        </section>
+
         <div className="space-y-3">
 
         {/* 1. 电价与价差 */}
