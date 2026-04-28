@@ -441,6 +441,80 @@ export const boundaryRows = [
   { item: "正备用 / 负备用", value: "520 / 380 MW", note: "正常区间", trendKey: "reservePos" as const },
 ];
 
+export type BiddingDayOffset = "D-1" | "D-2" | "D-3" | "D-5";
+export const biddingSpaceByOffset: Record<BiddingDayOffset, SpacePoint[]> = {
+  "D-1": space96,
+  "D-2": space96.map((p, i) => ({ ...p, space: Math.max(0, p.space + Math.round((seeded(i + 1200) - 0.5) * 180)), warning: p.space < SPACE_WARN_THRESHOLD + 80 })),
+  "D-3": space96.map((p, i) => ({ ...p, space: Math.max(0, p.space + Math.round((seeded(i + 1300) - 0.5) * 260)), warning: p.space < SPACE_WARN_THRESHOLD + 120 })),
+  "D-5": space96.map((p, i) => ({ ...p, space: Math.max(0, p.space + Math.round((seeded(i + 1500) - 0.5) * 360)), warning: p.space < SPACE_WARN_THRESHOLD + 180 })),
+};
+
+export const marketBoundaryCore = {
+  thermalCapacity: { online: 18500, maintenance: 1650, total: 20150, note: "口径待业务确认" },
+  mustRun: { mw: 1260, units: 6 },
+  mustStop: { mw: 420, units: 2 },
+  reserve: [
+    { name: "正备用", value: 1820, d1Change: -180, monthChange: -420, source: "公开披露" },
+    { name: "负备用", value: 940, d1Change: 75, monthChange: -110, source: "公开披露" },
+  ],
+};
+
+export interface ThermalUnit {
+  id: string;
+  name: string;
+  capacity: number;
+  realtimeOutput: number;
+  realtimeLoadRate: number;
+  rollingAvgLoadRate: number;
+}
+
+export const thermalUnits: ThermalUnit[] = Array.from({ length: 70 }, (_, i) => {
+  const capacity = 260 + (i % 8) * 55 + Math.round(seeded(i + 2000) * 80);
+  const realtimeLoadRate = Math.round(48 + seeded(i + 2100) * 48);
+  const rollingAvgLoadRate = Math.round(45 + seeded(i + 2200) * 46);
+  return {
+    id: `TU-${String(i + 1).padStart(2, "0")}`,
+    name: `火电机组 ${String(i + 1).padStart(2, "0")}`,
+    capacity,
+    realtimeOutput: Math.round((capacity * realtimeLoadRate) / 100),
+    realtimeLoadRate,
+    rollingAvgLoadRate,
+  };
+});
+
+export const thermalRealtimeSummary = {
+  totalOutput: thermalUnits.reduce((sum, u) => sum + u.realtimeOutput, 0),
+  avgRealtimeLoadRate: Math.round(thermalUnits.reduce((sum, u) => sum + u.realtimeLoadRate, 0) / thermalUnits.length),
+  avgRollingLoadRate: Math.round(thermalUnits.reduce((sum, u) => sum + u.rollingAvgLoadRate, 0) / thermalUnits.length),
+};
+
+export function getThermalMonthlyProfile(unitId: string) {
+  const unit = thermalUnits.find((u) => u.id === unitId) ?? thermalUnits[0];
+  const points = Array.from({ length: 96 }, (_, idx) => {
+    const value = Math.max(32, Math.min(98, Math.round(unit.rollingAvgLoadRate + Math.sin(idx / 10) * 8 + (seeded(idx + unit.capacity) - 0.5) * 10)));
+    return { idx, label: pointLabel(idx), period: String(idx + 1), loadRate: value };
+  });
+  return {
+    unit,
+    granularity: "Per 15Mins",
+    monthlyAvgLoadRate: Math.round(points.reduce((sum, p) => sum + p.loadRate, 0) / points.length),
+    points,
+  };
+}
+
+export const ruleAlertReports = [
+  { time: "10:32", ruleName: "竞价空间低于阈值", reason: "晚峰竞价空间连续 4 个时段低于规则阈值", current: "760 MW", threshold: "800 MW", source: "规则计算", target: "晚峰现货申报", action: "复核 D-1 申报边界", status: "待处理" },
+  { time: "09:45", ruleName: "正备用偏紧", reason: "正备用较上一工作日下降 180 MW", current: "1,820 MW", threshold: "2,000 MW", source: "公开披露", target: "备用敏感时段", action: "关注调度披露更新", status: "已复盘" },
+  { time: "08:50", ruleName: "新能源出力偏差", reason: "云量抬升导致预测下修", current: "-9.8%", threshold: "历史P95 8%", source: "公开API", target: "新能源预测", action: "同步修正竞价空间", status: "待处理" },
+  { time: "D-1 17:20", ruleName: "必开容量变动", reason: "必开机组较 D-2 新增 1 台", current: "1,260 MW / 6台", threshold: "变动即提示", source: "规则计算", target: "火电边界", action: "复核机组约束", status: "已忽略" },
+];
+
+export const powerForecastCards = [
+  { name: "负荷功率预测", value: Math.max(...load96.map((p) => p.predicted)), unit: "MW", source: "预测模块" },
+  { name: "新能源功率预测", value: Math.max(...renewable96.map((p) => p.total)), unit: "MW", source: "预测模块" },
+  { name: "火电机组出力预测", value: Math.round(thermalRealtimeSummary.totalOutput * 1.04), unit: "MW", source: "规则框架版" },
+];
+
 // 公告 + 异常
 export interface MarketEvent {
   id: string;
