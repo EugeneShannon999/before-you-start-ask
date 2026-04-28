@@ -897,6 +897,56 @@ const ruleWarnings: RuleWarning[] = [
   },
 ];
 
+function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: typeof thermalUnits; metric: "realtimeLoadRate" | "rollingAvgLoadRate"; overlap: Set<string> }) {
+  return (
+    <div className="rounded-md border overflow-hidden">
+      <div className="bg-secondary/50 px-3 py-2 text-xs font-medium">{title}</div>
+      <table className="w-full text-xs">
+        <tbody>
+          {rows.map((u, index) => (
+            <tr key={u.id} className="border-t hover:bg-secondary/30">
+              <td className="px-3 py-1.5 font-mono text-muted-foreground">#{index + 1}</td>
+              <td className="px-3 py-1.5">{u.name}{overlap.has(u.id) && <span className="ml-2 rounded bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning">同时高负载</span>}</td>
+              <td className="px-3 py-1.5 text-right font-mono">{u[metric]}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ReportTable({ rows }: { rows: typeof ruleAlertReports }) {
+  return (
+    <div className="overflow-auto rounded-md border">
+      <table className="w-full min-w-[980px] text-xs">
+        <thead className="bg-secondary/50">
+          <tr>{["预警时间", "规则名称", "触发原因", "当前值", "阈值", "数据来源", "影响对象", "建议动作", "状态"].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={`${r.time}-${r.ruleName}`} className="border-t hover:bg-secondary/30">
+              <td className="px-3 py-2 font-mono">{r.time}</td><td className="px-3 py-2">{r.ruleName}</td><td className="px-3 py-2 text-muted-foreground">{r.reason}</td><td className="px-3 py-2 font-mono">{r.current}</td><td className="px-3 py-2">{r.threshold}</td><td className="px-3 py-2">{r.source}</td><td className="px-3 py-2">{r.target}</td><td className="px-3 py-2">{r.action}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.status}</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function downloadCsvLikeExcel(profile: ReturnType<typeof getThermalMonthlyProfile>) {
+  const rows = [["机组", "粒度", "时段", "负载率%"], ...profile.points.map((p) => [profile.unit.name, profile.granularity, p.label, p.loadRate])];
+  const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${profile.unit.name}-月报.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "destructive" | "success" }) {
   const cls =
     tone === "destructive" ? "text-destructive" : tone === "success" ? "text-success" : "text-foreground";
