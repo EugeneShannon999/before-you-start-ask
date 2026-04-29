@@ -503,10 +503,10 @@ export function getThermalMonthlyProfile(unitId: string) {
 }
 
 export const ruleAlertReports = [
-  { time: "10:32", ruleName: "竞价空间低于阈值", reason: "晚峰竞价空间连续 4 个时段低于规则阈值", current: "760 MW", threshold: "800 MW", source: "规则计算", target: "晚峰现货申报", action: "复核 D-1 申报边界", status: "待处理" },
-  { time: "09:45", ruleName: "正备用偏紧", reason: "正备用较上一工作日下降 180 MW", current: "1,820 MW", threshold: "2,000 MW", source: "公开披露", target: "备用敏感时段", action: "关注调度披露更新", status: "已复盘" },
-  { time: "08:50", ruleName: "新能源出力偏差", reason: "云量抬升导致预测下修", current: "-9.8%", threshold: "历史P95 8%", source: "公开API", target: "新能源预测", action: "同步修正竞价空间", status: "待处理" },
-  { time: "D-1 17:20", ruleName: "必开容量变动", reason: "必开机组较 D-2 新增 1 台", current: "1,260 MW / 6台", threshold: "变动即提示", source: "规则计算", target: "火电边界", action: "复核机组约束", status: "已忽略" },
+  { dataDate: "D-1", disclosureTime: "10:20", ingestTime: "10:32", delayStatus: "延迟 12 分钟", time: "10:32", ruleName: "竞价空间低于阈值", reason: "晚峰竞价空间连续 4 个时段低于规则阈值", current: "760 MW", threshold: "800 MW", source: "规则计算", target: "晚峰现货申报", action: "复核 D-1 申报边界", status: "待处理" },
+  { dataDate: "D-1", disclosureTime: "09:36", ingestTime: "09:45", delayStatus: "延迟 9 分钟", time: "09:45", ruleName: "正备用偏紧", reason: "正备用较上一工作日下降 180 MW", current: "1,820 MW", threshold: "2,000 MW", source: "公开披露", target: "备用敏感时段", action: "关注调度披露更新", status: "已复盘" },
+  { dataDate: "D", disclosureTime: "08:44", ingestTime: "08:50", delayStatus: "延迟 6 分钟", time: "08:50", ruleName: "新能源出力偏差", reason: "云量抬升导致预测下修", current: "-9.8%", threshold: "历史P95 8%", source: "公开API", target: "新能源预测", action: "同步修正竞价空间", status: "待处理" },
+  { dataDate: "D-2", disclosureTime: "17:12", ingestTime: "D-1 17:20", delayStatus: "跨日入库", time: "D-1 17:20", ruleName: "必开容量变动", reason: "必开机组较 D-2 新增 1 台", current: "1,260 MW / 6台", threshold: "变动即提示", source: "规则计算", target: "火电边界", action: "复核机组约束", status: "已忽略" },
 ];
 
 export const powerForecastCards = [
