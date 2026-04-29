@@ -68,11 +68,11 @@ export default function ChartFullscreen() {
   }, []);
   const businessDate = useMemo(() => getCurrentBusinessDate(), []);
   const [granularity, setGranularity] = useState<Granularity>(
-    (searchParams.get("g") as Granularity) ?? saved?.granularity ?? "hour"
+    (searchParams.get("g") as Granularity) ?? saved?.chartCfgs?.[chartKeyMap[chartId]]?.granularity ?? saved?.granularity ?? "hour"
   );
   const [startDate, setStartDate] = useState(saved?.startDate ?? businessDate);
   const [endDate, setEndDate] = useState(saved?.endDate ?? businessDate);
-  const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? DEFAULT_ZOOM_WINDOW);
+  const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.chartCfgs?.[chartKeyMap[chartId]]?.zoomWindow ?? saved?.zoomWindow ?? DEFAULT_ZOOM_WINDOW);
 
   const meta = CHART_META[chartId];
   const forecastKind = chartKeyMap[chartId];
