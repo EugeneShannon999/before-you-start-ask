@@ -400,18 +400,6 @@ export default function MarketInfo() {
           </div>
         </section>
 
-        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div>
-              <h2 className="text-sm font-semibold">运行规则预警盒子 / 数据规则提醒中心</h2>
-              <p className="text-[11px] text-muted-foreground mt-1">规则框架版：补充数据日、披露时间、入库时间与延迟状态。</p>
-            </div>
-            <Select value={alertStatus} onValueChange={setAlertStatus}><SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger><SelectContent>{["全部", "待处理", "已复盘", "已忽略"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
-          </div>
-          <ReportTable rows={filteredReports} />
-        </section>
-
-
         <div className="space-y-3">
         {/* 1. 电价与价差 */}
         <ChartCard
@@ -767,25 +755,6 @@ function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: 
               <td className="px-3 py-1.5 font-mono text-muted-foreground">#{index + 1}</td>
               <td className="px-3 py-1.5">{u.name}{overlap.has(u.id) && <span className="ml-2 rounded bg-warning/20 px-1.5 py-0.5 text-[10px] text-warning">两榜重合</span>}</td>
               <td className="px-3 py-1.5 text-right font-mono">{u[metric]}%</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function ReportTable({ rows }: { rows: typeof ruleAlertReports }) {
-  return (
-    <div className="overflow-auto rounded-md border">
-      <table className="w-full min-w-[1180px] text-xs">
-        <thead className="bg-secondary/50">
-          <tr>{["数据日", "披露时间", "入库时间", "延迟状态", "规则名称", "触发原因", "当前值", "阈值", "数据来源", "影响对象", "建议动作", "状态"].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={`${r.time}-${r.ruleName}`} className="border-t hover:bg-secondary/30">
-              <td className="px-3 py-2 font-mono">{r.dataDate}</td><td className="px-3 py-2 font-mono">{r.disclosureTime}</td><td className="px-3 py-2 font-mono">{r.ingestTime}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.delayStatus}</span></td><td className="px-3 py-2">{r.ruleName}</td><td className="px-3 py-2 text-muted-foreground">{r.reason}</td><td className="px-3 py-2 font-mono">{r.current}</td><td className="px-3 py-2">{r.threshold}</td><td className="px-3 py-2">{r.source}</td><td className="px-3 py-2">{r.target}</td><td className="px-3 py-2">{r.action}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.status}</span></td>
             </tr>
           ))}
         </tbody>
