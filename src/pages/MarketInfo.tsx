@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
   Clock,
   MapPin,
   PanelRightClose,
@@ -16,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  getDataset,
   Granularity,
   boundaryRows,
   biddingSpaceByOffset,
