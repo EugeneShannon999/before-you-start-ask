@@ -384,6 +384,10 @@ export default function MarketInfo() {
         </div>
 
         <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold">实际运行区</h2>
+            <p className="text-[11px] text-muted-foreground mt-1">市场边界、火电实况与规则提醒，均标注披露/入库口径。</p>
+          </div>
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <h2 className="text-sm font-semibold">市场运行边界</h2>
@@ -400,7 +404,7 @@ export default function MarketInfo() {
             <div className="rounded-md border bg-background p-3">
               <p className="text-[11px] text-muted-foreground">联络线送出计划</p>
               <p className="mt-1 text-lg font-mono font-semibold">{boundaryRows[0].value}</p>
-              <BoundaryMiniChart data={boundaryDs.boundary as any[]} dataKey="tieLine" color={C_PRIMARY} />
+               <BoundaryMiniChart data={boundaryTrendData as any[]} dataKey="tieLine" color={C_PRIMARY} />
             </div>
             <div className="rounded-md border bg-background p-3">
               <p className="text-[11px] text-muted-foreground">必开 / 必停</p>
@@ -466,6 +470,10 @@ export default function MarketInfo() {
         </section>
 
         <div className="space-y-3">
+          <section className="rounded-lg border bg-card p-4 shadow-notion">
+            <h2 className="text-sm font-semibold">预测判断区</h2>
+            <p className="text-[11px] text-muted-foreground mt-1">下方图表用于预测、偏差和回测判断；每张图滚轮缩放为单图独立状态。</p>
+          </section>
 
         {/* 1. 电价与价差 */}
         <ChartCard
@@ -726,7 +734,7 @@ export default function MarketInfo() {
         <ChartCard
           index={4}
           chartId="bidding-space"
-          title="竞价空间"
+          title="竞价空间实际对照/回测"
           caption={`公式：竞价空间 = 总负荷预测 − 新能源预测 · 预警阈值 ${SPACE_WARN_THRESHOLD} MW`}
           granularity={spaceCfg.granularity}
           onGranularityChange={(g) => setSpaceCfg({ ...spaceCfg, granularity: g })}
@@ -807,7 +815,7 @@ export default function MarketInfo() {
                 </div>
                 {row.trendKey && (
                   <BoundaryMiniChart
-                    data={boundaryDs.boundary as any[]}
+                    data={boundaryTrendData as any[]}
                     dataKey={row.trendKey}
                     color={row.trendKey === "sectionLoad" ? "hsl(var(--warning))" : C_PRIMARY}
                   />
