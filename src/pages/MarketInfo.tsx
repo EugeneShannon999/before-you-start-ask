@@ -68,7 +68,6 @@ type MainChartId = "price-spread" | "load-forecast" | "renewable-output" | "bidd
 const STORAGE_KEY = "market-board-interaction-state:v1";
 
 const DEFAULT_ZOOM_WINDOW = { start: 0, end: 100 };
-const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true, zoomWindow: DEFAULT_ZOOM_WINDOW });
 const restoreCfg = (cfg: ChartCfg | undefined, g: Granularity): ChartCfg => ({
   granularity: g,
   range: cfg?.range ?? "1d",
