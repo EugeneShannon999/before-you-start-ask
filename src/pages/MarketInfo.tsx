@@ -522,7 +522,7 @@ export default function MarketInfo() {
           }
         >
           <PriceSpreadChart
-            data={zoomData(priceDs.price)}
+            data={zoomData(priceDs.price, priceCfg.zoomWindow)}
             xKey={priceDs.xKey}
             xInterval={priceDs.xInterval}
             periodLabel={priceDs.periodLabel}
@@ -648,7 +648,7 @@ export default function MarketInfo() {
           }
         >
           <LoadForecastChart
-            data={zoomData(loadDs.load)}
+            data={zoomData(loadDs.load, loadCfg.zoomWindow)}
             xKey={loadDs.xKey}
             xInterval={loadDs.xInterval}
             periodLabel={loadDs.periodLabel}
@@ -712,7 +712,7 @@ export default function MarketInfo() {
           }
         >
           <RenewableChart
-            data={zoomData(renDs.renewable)}
+            data={zoomData(renDs.renewable, renCfg.zoomWindow)}
             xKey={renDs.xKey}
             xInterval={renDs.xInterval}
             periodLabel={renDs.periodLabel}
@@ -765,7 +765,7 @@ export default function MarketInfo() {
           }
         >
           <BiddingSpaceChart
-            data={zoomData(spaceDs.space)}
+            data={zoomData(spaceDs.space, spaceCfg.zoomWindow)}
             xKey={spaceDs.xKey}
             xInterval={spaceDs.xInterval}
             periodLabel={spaceDs.periodLabel}
