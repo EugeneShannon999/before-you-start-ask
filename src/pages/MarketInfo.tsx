@@ -153,17 +153,17 @@ export default function MarketInfo() {
   };
 
   const handleZoomWheel = (deltaY: number, chartId?: MainChartId) => {
+    const targetChart = chartId ?? activeChart;
     if (chartId) setActiveChart(chartId);
-    setZoomWindow((current) => {
-      const width = current.end - current.start;
-      const nextWidth = Math.max(8, Math.min(100, width + (deltaY > 0 ? 10 : -10)));
-      const center = (current.start + current.end) / 2;
-      const start = Math.max(0, Math.min(100 - nextWidth, center - nextWidth / 2));
-      const next = { start: Math.round(start), end: Math.round(start + nextWidth) };
-      applyZoomDrivenGranularity(next, chartId ?? activeChart);
-      syncActiveChartZoom(next, chartId ?? activeChart);
-      return next;
-    });
+    const current = targetChart === "price-spread" ? priceCfg.zoomWindow : targetChart === "load-forecast" ? loadCfg.zoomWindow : targetChart === "renewable-output" ? renCfg.zoomWindow : targetChart === "bidding-space" ? spaceCfg.zoomWindow : zoomWindow;
+    const width = current.end - current.start;
+    const nextWidth = Math.max(8, Math.min(100, width + (deltaY > 0 ? 10 : -10)));
+    const center = (current.start + current.end) / 2;
+    const start = Math.max(0, Math.min(100 - nextWidth, center - nextWidth / 2));
+    const next = { start: Math.round(start), end: Math.round(start + nextWidth) };
+    applyZoomDrivenGranularity(next, targetChart);
+    syncActiveChartZoom(next, targetChart);
+    setZoomWindow(next);
   };
 
   const resetZoom = (chartId?: MainChartId) => {
