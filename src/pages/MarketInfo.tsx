@@ -7,6 +7,8 @@ import {
   MapPin,
   ChevronDown,
   ChevronRight,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
 import {
   Select,
@@ -27,6 +29,7 @@ import {
   ruleAlertReports,
   powerForecastCards,
   SPACE_WARN_THRESHOLD,
+  boundary96,
   load96,
   renewable96,
   priceForecastLink24,
@@ -97,6 +100,8 @@ export default function MarketInfo() {
   const [biddingOffset, setBiddingOffset] = useState<BiddingDayOffset>(saved?.biddingOffset ?? "D-1");
   const [selectedUnitId, setSelectedUnitId] = useState(saved?.selectedUnitId ?? thermalUnits[0].id);
   const [alertStatus, setAlertStatus] = useState("全部");
+  const [snapshotCollapsed, setSnapshotCollapsed] = useState(saved?.snapshotCollapsed ?? false);
+  const [thermalRankMode, setThermalRankMode] = useState<"highest" | "lowest">(saved?.thermalRankMode ?? "highest");
 
   // 每图独立配置（粒度可被全局或单独控制）
   const [priceCfg, setPriceCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.price, globalGranularity));
@@ -131,9 +136,13 @@ export default function MarketInfo() {
     applyQuickRange(rangeDays[range]);
   };
 
-  const applyZoomDrivenGranularity = (next: { start: number; end: number }) => {
+  const applyZoomDrivenGranularity = (next: { start: number; end: number }, chartId: MainChartId | null = activeChart) => {
     const width = next.end - next.start;
-    setGlobalAll(width <= 35 ? "15min" : width <= 70 ? "hour" : "day");
+    const granularity = width <= 35 ? "15min" : width <= 70 ? "hour" : "day";
+    if (chartId === "price-spread") setPriceCfg((c) => ({ ...c, granularity }));
+    if (chartId === "load-forecast") setLoadCfg((c) => ({ ...c, granularity }));
+    if (chartId === "renewable-output") setRenCfg((c) => ({ ...c, granularity }));
+    if (chartId === "bidding-space") setSpaceCfg((c) => ({ ...c, granularity }));
   };
 
   const syncActiveChartZoom = (next: { start: number; end: number }, chartId: MainChartId | null = activeChart) => {
@@ -144,34 +153,38 @@ export default function MarketInfo() {
   };
 
   const handleZoomWheel = (deltaY: number, chartId?: MainChartId) => {
+    const targetChart = chartId ?? activeChart;
     if (chartId) setActiveChart(chartId);
-    setZoomWindow((current) => {
-      const width = current.end - current.start;
-      const nextWidth = Math.max(8, Math.min(100, width + (deltaY > 0 ? 10 : -10)));
-      const center = (current.start + current.end) / 2;
-      const start = Math.max(0, Math.min(100 - nextWidth, center - nextWidth / 2));
-      const next = { start: Math.round(start), end: Math.round(start + nextWidth) };
-      applyZoomDrivenGranularity(next);
-      syncActiveChartZoom(next, chartId ?? activeChart);
-      return next;
-    });
+    const current = targetChart === "price-spread" ? priceCfg.zoomWindow : targetChart === "load-forecast" ? loadCfg.zoomWindow : targetChart === "renewable-output" ? renCfg.zoomWindow : targetChart === "bidding-space" ? spaceCfg.zoomWindow : zoomWindow;
+    const width = current.end - current.start;
+    const nextWidth = Math.max(8, Math.min(100, width + (deltaY > 0 ? 10 : -10)));
+    const center = (current.start + current.end) / 2;
+    const start = Math.max(0, Math.min(100 - nextWidth, center - nextWidth / 2));
+    const next = { start: Math.round(start), end: Math.round(start + nextWidth) };
+    applyZoomDrivenGranularity(next, targetChart);
+    syncActiveChartZoom(next, targetChart);
+    setZoomWindow(next);
   };
 
   const resetZoom = (chartId?: MainChartId) => {
     setZoomWindow(DEFAULT_ZOOM_WINDOW);
-    setGlobalAll("hour");
+    if (chartId === "price-spread") setPriceCfg((c) => ({ ...c, granularity: "hour", zoomWindow: DEFAULT_ZOOM_WINDOW }));
+    if (chartId === "load-forecast") setLoadCfg((c) => ({ ...c, granularity: "hour", zoomWindow: DEFAULT_ZOOM_WINDOW }));
+    if (chartId === "renewable-output") setRenCfg((c) => ({ ...c, granularity: "hour", zoomWindow: DEFAULT_ZOOM_WINDOW }));
+    if (chartId === "bidding-space") setSpaceCfg((c) => ({ ...c, granularity: "hour", zoomWindow: DEFAULT_ZOOM_WINDOW }));
     syncActiveChartZoom(DEFAULT_ZOOM_WINDOW, chartId ?? activeChart);
   };
 
   const openChartPage = (chartId: MainChartId) => {
+    const chartCfg = chartId === "price-spread" ? priceCfg : chartId === "load-forecast" ? loadCfg : chartId === "renewable-output" ? renCfg : spaceCfg;
     setActiveChart(chartId);
-    syncActiveChartZoom(zoomWindow, chartId);
+    syncActiveChartZoom(chartCfg.zoomWindow, chartId);
     window.open(`/tools/market/chart/${chartId}`, "_blank", "noopener,noreferrer");
   };
 
-  const zoomData = <T,>(items: T[]) => {
-    const start = Math.floor((zoomWindow.start / 100) * items.length);
-    const end = Math.max(start + 1, Math.ceil((zoomWindow.end / 100) * items.length));
+  const zoomData = <T,>(items: T[], windowValue: { start: number; end: number }) => {
+    const start = Math.floor((windowValue.start / 100) * items.length);
+    const end = Math.max(start + 1, Math.ceil((windowValue.end / 100) * items.length));
     return items.slice(start, end);
   };
 
@@ -184,9 +197,9 @@ export default function MarketInfo() {
       province, startDate, endDate, granularity: globalGranularity,
       chartCfgs: { price: priceCfg, load: loadCfg, renewable: renCfg, space: spaceCfg },
       priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
-      activeChart, lastExpandedChart: expandedChart, biddingOffset, selectedUnitId,
+      activeChart, lastExpandedChart: expandedChart, biddingOffset, selectedUnitId, snapshotCollapsed, thermalRankMode,
     }));
-  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart, biddingOffset, selectedUnitId]);
+  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart, biddingOffset, selectedUnitId, snapshotCollapsed, thermalRankMode]);
 
   // 各图数据
   const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
@@ -204,6 +217,7 @@ export default function MarketInfo() {
   }, [biddingOffset, spaceCfg.granularity]);
   // 边界使用全局粒度
   const boundaryDs = useMemo(() => getDataset(globalGranularity), [globalGranularity]);
+  const boundaryTrendData = useMemo(() => aggregateToHour(boundary96, ["tieLine", "sectionLoad", "reservePos", "reserveNeg"] as any), []);
 
   // 负荷偏差摘要（基于 96 点原始数据）
   const loadStats = useMemo(() => {
@@ -235,9 +249,9 @@ export default function MarketInfo() {
     { label: "电价预测", stat: summarizeForecast(priceForecast), unit: "元/MWh", source: "预测模块", lag: "出清披露后对照" },
   ], [loadForecast, renForecast, priceForecast]);
   const monthlyProfile = useMemo(() => getThermalMonthlyProfile(selectedUnitId), [selectedUnitId]);
-  const highRealtime = useMemo(() => thermalUnits.slice().sort((a, b) => b.realtimeLoadRate - a.realtimeLoadRate).slice(0, 8), []);
-  const highRolling = useMemo(() => thermalUnits.slice().sort((a, b) => b.rollingAvgLoadRate - a.rollingAvgLoadRate).slice(0, 8), []);
-  const overlapUnits = useMemo(() => new Set(highRealtime.map((u) => u.id).filter((id) => highRolling.some((u) => u.id === id))), [highRealtime, highRolling]);
+  const realtimeRank = useMemo(() => thermalUnits.slice().sort((a, b) => thermalRankMode === "highest" ? b.realtimeLoadRate - a.realtimeLoadRate : a.realtimeLoadRate - b.realtimeLoadRate).slice(0, 8), [thermalRankMode]);
+  const rollingRank = useMemo(() => thermalUnits.slice().sort((a, b) => thermalRankMode === "highest" ? b.rollingAvgLoadRate - a.rollingAvgLoadRate : a.rollingAvgLoadRate - b.rollingAvgLoadRate).slice(0, 8), [thermalRankMode]);
+  const overlapUnits = useMemo(() => new Set(realtimeRank.map((u) => u.id).filter((id) => rollingRank.some((u) => u.id === id))), [realtimeRank, rollingRank]);
   const filteredReports = useMemo(() => alertStatus === "全部" ? ruleAlertReports : ruleAlertReports.filter((r) => r.status === alertStatus), [alertStatus]);
   const boundaryMeta: Record<string, { sourceType: "公开披露" | "预测推导" | "插件增强"; note: string }> = {
     联络线外送计划: { sourceType: "公开披露", note: "公开披露版，非实时终端" },
@@ -252,7 +266,7 @@ export default function MarketInfo() {
     <MarketCursorProvider>
       <div className="px-6 py-5 space-y-4 min-h-[calc(100vh-5rem)]">
         <header className="rounded-lg border bg-card p-4 shadow-notion">
-          <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-lg font-semibold shrink-0">交易员判断工作台</h1>
             <div className="flex items-center gap-2 shrink-0 ml-2">
               <span className="text-xs text-muted-foreground">省份</span>
@@ -308,7 +322,7 @@ export default function MarketInfo() {
           </p>
         </header>
 
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className={`grid gap-3 ${snapshotCollapsed ? "xl:grid-cols-[minmax(0,1fr)_44px]" : "xl:grid-cols-[minmax(0,1fr)_280px]"}`}>
           <div className="space-y-3 min-w-0">
             <ChartCard
               index={1}
@@ -342,13 +356,18 @@ export default function MarketInfo() {
                 </Select>
                 <span className="text-[11px] text-muted-foreground">当前默认 D-1</span>
               </div>
-              <BiddingSpaceChart data={zoomData(biddingOffsetDs.space)} xKey={biddingOffsetDs.xKey} xInterval={biddingOffsetDs.xInterval} periodLabel={biddingOffsetDs.periodLabel} showLegend={spaceCfg.showLegend} threshold={SPACE_WARN_THRESHOLD} visibleSeries={{ predicted: false, actual: false, deviation: false }} />
+              <BiddingSpaceChart data={zoomData(biddingOffsetDs.space, spaceCfg.zoomWindow)} xKey={biddingOffsetDs.xKey} xInterval={biddingOffsetDs.xInterval} periodLabel={biddingOffsetDs.periodLabel} showLegend={spaceCfg.showLegend} threshold={SPACE_WARN_THRESHOLD} visibleSeries={{ predicted: false, actual: false, deviation: false }} />
             </ChartCard>
           </div>
 
           <aside className="xl:sticky xl:top-4 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
-            <h2 className="text-sm font-semibold mb-2">预测快照</h2>
-            <div className="flex xl:flex-col gap-2 min-w-max xl:min-w-0">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              {!snapshotCollapsed && <h2 className="text-sm font-semibold">预测快照</h2>}
+              <button onClick={() => setSnapshotCollapsed((v) => !v)} className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-secondary" aria-label="收起或展开预测快照">
+                {snapshotCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
+              </button>
+            </div>
+            <div className={`flex gap-2 min-w-max xl:min-w-0 ${snapshotCollapsed ? "xl:hidden" : "xl:flex-col"}`}>
               {forecastSummary.map((card) => (
                 <div key={card.label} className="w-[220px] xl:w-full rounded-md border bg-background px-3 py-2 shrink-0">
                   <p className="text-xs font-medium">{card.label}</p>
@@ -365,6 +384,10 @@ export default function MarketInfo() {
         </div>
 
         <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold">实际运行区</h2>
+            <p className="text-[11px] text-muted-foreground mt-1">市场边界、火电实况与规则提醒，均标注披露/入库口径。</p>
+          </div>
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <h2 className="text-sm font-semibold">市场运行边界</h2>
@@ -381,7 +404,7 @@ export default function MarketInfo() {
             <div className="rounded-md border bg-background p-3">
               <p className="text-[11px] text-muted-foreground">联络线送出计划</p>
               <p className="mt-1 text-lg font-mono font-semibold">{boundaryRows[0].value}</p>
-              <BoundaryMiniChart data={boundaryDs.boundary as any[]} dataKey="tieLine" color={C_PRIMARY} />
+               <BoundaryMiniChart data={boundaryTrendData as any[]} dataKey="tieLine" color={C_PRIMARY} />
             </div>
             <div className="rounded-md border bg-background p-3">
               <p className="text-[11px] text-muted-foreground">必开 / 必停</p>
@@ -398,19 +421,22 @@ export default function MarketInfo() {
         </section>
 
         <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
-          <h2 className="text-sm font-semibold">火电机组实时出力</h2>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="text-sm font-semibold">大火电模块</h2>
+            <div className="flex rounded-md border overflow-hidden text-xs h-8 bg-background">
+              <button onClick={() => setThermalRankMode("highest")} className={`px-3 ${thermalRankMode === "highest" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>最高</button>
+              <button onClick={() => setThermalRankMode("lowest")} className={`px-3 ${thermalRankMode === "lowest" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>最低</button>
+            </div>
+          </div>
           <div className="grid grid-cols-3 gap-2">
             <Stat label="全部火电机组总出力" value={`${thermalRealtimeSummary.totalOutput.toLocaleString()} MW`} />
             <Stat label="当前实时点平均负载率" value={`${thermalRealtimeSummary.avgRealtimeLoadRate}%`} />
             <Stat label="全天滚动实际平均负载率" value={`${thermalRealtimeSummary.avgRollingLoadRate}%`} />
           </div>
           <div className="grid gap-3 lg:grid-cols-2">
-            <LoadRateTable title="实时负载率排行" rows={highRealtime} metric="realtimeLoadRate" overlap={overlapUnits} />
-            <LoadRateTable title="全天滚动平均负载率排行" rows={highRolling} metric="rollingAvgLoadRate" overlap={overlapUnits} />
+            <LoadRateTable title="实时负载率排行" rows={realtimeRank} metric="realtimeLoadRate" overlap={overlapUnits} />
+            <LoadRateTable title="全天滚动平均负载率排行" rows={rollingRank} metric="rollingAvgLoadRate" overlap={overlapUnits} />
           </div>
-        </section>
-
-        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <h2 className="text-sm font-semibold">机组月报</h2>
             <div className="flex items-center gap-2">
@@ -429,7 +455,10 @@ export default function MarketInfo() {
 
         <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h2 className="text-sm font-semibold">规则预警报告中心</h2>
+            <div>
+              <h2 className="text-sm font-semibold">运行规则预警盒子 / 数据规则提醒中心</h2>
+              <p className="text-[11px] text-muted-foreground mt-1">规则框架版：补充数据日、披露时间、入库时间与延迟状态。</p>
+            </div>
             <Select value={alertStatus} onValueChange={setAlertStatus}><SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger><SelectContent>{["全部", "待处理", "已复盘", "已忽略"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
           </div>
           <ReportTable rows={filteredReports} />
@@ -441,6 +470,10 @@ export default function MarketInfo() {
         </section>
 
         <div className="space-y-3">
+          <section className="rounded-lg border bg-card p-4 shadow-notion">
+            <h2 className="text-sm font-semibold">预测判断区</h2>
+            <p className="text-[11px] text-muted-foreground mt-1">下方图表用于预测、偏差和回测判断；每张图滚轮缩放为单图独立状态。</p>
+          </section>
 
         {/* 1. 电价与价差 */}
         <ChartCard
@@ -497,7 +530,7 @@ export default function MarketInfo() {
           }
         >
           <PriceSpreadChart
-            data={zoomData(priceDs.price)}
+            data={zoomData(priceDs.price, priceCfg.zoomWindow)}
             xKey={priceDs.xKey}
             xInterval={priceDs.xInterval}
             periodLabel={priceDs.periodLabel}
@@ -623,7 +656,7 @@ export default function MarketInfo() {
           }
         >
           <LoadForecastChart
-            data={zoomData(loadDs.load)}
+            data={zoomData(loadDs.load, loadCfg.zoomWindow)}
             xKey={loadDs.xKey}
             xInterval={loadDs.xInterval}
             periodLabel={loadDs.periodLabel}
@@ -687,7 +720,7 @@ export default function MarketInfo() {
           }
         >
           <RenewableChart
-            data={zoomData(renDs.renewable)}
+            data={zoomData(renDs.renewable, renCfg.zoomWindow)}
             xKey={renDs.xKey}
             xInterval={renDs.xInterval}
             periodLabel={renDs.periodLabel}
@@ -701,7 +734,7 @@ export default function MarketInfo() {
         <ChartCard
           index={4}
           chartId="bidding-space"
-          title="竞价空间"
+          title="竞价空间实际对照/回测"
           caption={`公式：竞价空间 = 总负荷预测 − 新能源预测 · 预警阈值 ${SPACE_WARN_THRESHOLD} MW`}
           granularity={spaceCfg.granularity}
           onGranularityChange={(g) => setSpaceCfg({ ...spaceCfg, granularity: g })}
@@ -740,7 +773,7 @@ export default function MarketInfo() {
           }
         >
           <BiddingSpaceChart
-            data={zoomData(spaceDs.space)}
+            data={zoomData(spaceDs.space, spaceCfg.zoomWindow)}
             xKey={spaceDs.xKey}
             xInterval={spaceDs.xInterval}
             periodLabel={spaceDs.periodLabel}
@@ -782,7 +815,7 @@ export default function MarketInfo() {
                 </div>
                 {row.trendKey && (
                   <BoundaryMiniChart
-                    data={boundaryDs.boundary as any[]}
+                    data={boundaryTrendData as any[]}
                     dataKey={row.trendKey}
                     color={row.trendKey === "sectionLoad" ? "hsl(var(--warning))" : C_PRIMARY}
                   />
@@ -902,11 +935,18 @@ function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: 
     <div className="rounded-md border overflow-hidden">
       <div className="bg-secondary/50 px-3 py-2 text-xs font-medium">{title}</div>
       <table className="w-full text-xs">
+        <thead className="bg-background">
+          <tr>
+            <th className="px-3 py-1.5 text-left font-medium">排名</th>
+            <th className="px-3 py-1.5 text-left font-medium">机组</th>
+            <th className="px-3 py-1.5 text-right font-medium">负载率</th>
+          </tr>
+        </thead>
         <tbody>
           {rows.map((u, index) => (
-            <tr key={u.id} className="border-t hover:bg-secondary/30">
+            <tr key={u.id} className={`border-t hover:bg-secondary/30 ${overlap.has(u.id) ? "bg-warning/10" : ""}`}>
               <td className="px-3 py-1.5 font-mono text-muted-foreground">#{index + 1}</td>
-              <td className="px-3 py-1.5">{u.name}{overlap.has(u.id) && <span className="ml-2 rounded bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning">同时高负载</span>}</td>
+              <td className="px-3 py-1.5">{u.name}{overlap.has(u.id) && <span className="ml-2 rounded bg-warning/20 px-1.5 py-0.5 text-[10px] text-warning">两榜重合</span>}</td>
               <td className="px-3 py-1.5 text-right font-mono">{u[metric]}%</td>
             </tr>
           ))}
@@ -919,14 +959,14 @@ function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: 
 function ReportTable({ rows }: { rows: typeof ruleAlertReports }) {
   return (
     <div className="overflow-auto rounded-md border">
-      <table className="w-full min-w-[980px] text-xs">
+      <table className="w-full min-w-[1180px] text-xs">
         <thead className="bg-secondary/50">
-          <tr>{["预警时间", "规则名称", "触发原因", "当前值", "阈值", "数据来源", "影响对象", "建议动作", "状态"].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
+          <tr>{["数据日", "披露时间", "入库时间", "延迟状态", "规则名称", "触发原因", "当前值", "阈值", "数据来源", "影响对象", "建议动作", "状态"].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={`${r.time}-${r.ruleName}`} className="border-t hover:bg-secondary/30">
-              <td className="px-3 py-2 font-mono">{r.time}</td><td className="px-3 py-2">{r.ruleName}</td><td className="px-3 py-2 text-muted-foreground">{r.reason}</td><td className="px-3 py-2 font-mono">{r.current}</td><td className="px-3 py-2">{r.threshold}</td><td className="px-3 py-2">{r.source}</td><td className="px-3 py-2">{r.target}</td><td className="px-3 py-2">{r.action}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.status}</span></td>
+              <td className="px-3 py-2 font-mono">{r.dataDate}</td><td className="px-3 py-2 font-mono">{r.disclosureTime}</td><td className="px-3 py-2 font-mono">{r.ingestTime}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.delayStatus}</span></td><td className="px-3 py-2">{r.ruleName}</td><td className="px-3 py-2 text-muted-foreground">{r.reason}</td><td className="px-3 py-2 font-mono">{r.current}</td><td className="px-3 py-2">{r.threshold}</td><td className="px-3 py-2">{r.source}</td><td className="px-3 py-2">{r.target}</td><td className="px-3 py-2">{r.action}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.status}</span></td>
             </tr>
           ))}
         </tbody>
