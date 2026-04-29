@@ -18,6 +18,7 @@ import {
 import {
   getDataset,
   Granularity,
+  boundaryRows,
   biddingSpaceByOffset,
   marketBoundaryCore,
   thermalUnits,
