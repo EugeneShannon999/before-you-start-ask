@@ -266,7 +266,7 @@ export default function MarketInfo() {
     <MarketCursorProvider>
       <div className="px-6 py-5 space-y-4 min-h-[calc(100vh-5rem)]">
         <header className="rounded-lg border bg-card p-4 shadow-notion">
-          <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-lg font-semibold shrink-0">交易员判断工作台</h1>
             <div className="flex items-center gap-2 shrink-0 ml-2">
               <span className="text-xs text-muted-foreground">省份</span>
@@ -322,7 +322,7 @@ export default function MarketInfo() {
           </p>
         </header>
 
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className={`grid gap-3 ${snapshotCollapsed ? "xl:grid-cols-[minmax(0,1fr)_44px]" : "xl:grid-cols-[minmax(0,1fr)_280px]"}`}>
           <div className="space-y-3 min-w-0">
             <ChartCard
               index={1}
@@ -356,13 +356,18 @@ export default function MarketInfo() {
                 </Select>
                 <span className="text-[11px] text-muted-foreground">当前默认 D-1</span>
               </div>
-              <BiddingSpaceChart data={zoomData(biddingOffsetDs.space)} xKey={biddingOffsetDs.xKey} xInterval={biddingOffsetDs.xInterval} periodLabel={biddingOffsetDs.periodLabel} showLegend={spaceCfg.showLegend} threshold={SPACE_WARN_THRESHOLD} visibleSeries={{ predicted: false, actual: false, deviation: false }} />
+              <BiddingSpaceChart data={zoomData(biddingOffsetDs.space, spaceCfg.zoomWindow)} xKey={biddingOffsetDs.xKey} xInterval={biddingOffsetDs.xInterval} periodLabel={biddingOffsetDs.periodLabel} showLegend={spaceCfg.showLegend} threshold={SPACE_WARN_THRESHOLD} visibleSeries={{ predicted: false, actual: false, deviation: false }} />
             </ChartCard>
           </div>
 
           <aside className="xl:sticky xl:top-4 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
-            <h2 className="text-sm font-semibold mb-2">预测快照</h2>
-            <div className="flex xl:flex-col gap-2 min-w-max xl:min-w-0">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              {!snapshotCollapsed && <h2 className="text-sm font-semibold">预测快照</h2>}
+              <button onClick={() => setSnapshotCollapsed((v) => !v)} className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-secondary" aria-label="收起或展开预测快照">
+                {snapshotCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
+              </button>
+            </div>
+            <div className={`${snapshotCollapsed ? "hidden" : "flex xl:flex-col gap-2 min-w-max xl:min-w-0"}`}>
               {forecastSummary.map((card) => (
                 <div key={card.label} className="w-[220px] xl:w-full rounded-md border bg-background px-3 py-2 shrink-0">
                   <p className="text-xs font-medium">{card.label}</p>
