@@ -53,15 +53,18 @@ export function ChartCard(props: ChartCardProps) {
   const [tableOpen, setTableOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [hovered, setHovered] = useState(false);
-  const canZoom = hovered || props.active || props.expanded;
+  const canZoom = hovered || props.expanded;
   const chartBody = (
     <div
       key={resetKey}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
       onWheel={(event) => {
         if (!canZoom) return;
         event.preventDefault();
+        props.onActivate?.();
         props.onZoomWheel?.(event.deltaY);
       }}
       role="region"
