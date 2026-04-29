@@ -100,6 +100,8 @@ export default function MarketInfo() {
   const [biddingOffset, setBiddingOffset] = useState<BiddingDayOffset>(saved?.biddingOffset ?? "D-1");
   const [selectedUnitId, setSelectedUnitId] = useState(saved?.selectedUnitId ?? thermalUnits[0].id);
   const [alertStatus, setAlertStatus] = useState("全部");
+  const [snapshotCollapsed, setSnapshotCollapsed] = useState(saved?.snapshotCollapsed ?? false);
+  const [thermalRankMode, setThermalRankMode] = useState<"highest" | "lowest">(saved?.thermalRankMode ?? "highest");
 
   // 每图独立配置（粒度可被全局或单独控制）
   const [priceCfg, setPriceCfg] = useState<ChartCfg>(restoreCfg(saved?.chartCfgs?.price, globalGranularity));
@@ -134,9 +136,13 @@ export default function MarketInfo() {
     applyQuickRange(rangeDays[range]);
   };
 
-  const applyZoomDrivenGranularity = (next: { start: number; end: number }) => {
+  const applyZoomDrivenGranularity = (next: { start: number; end: number }, chartId: MainChartId | null = activeChart) => {
     const width = next.end - next.start;
-    setGlobalAll(width <= 35 ? "15min" : width <= 70 ? "hour" : "day");
+    const granularity = width <= 35 ? "15min" : width <= 70 ? "hour" : "day";
+    if (chartId === "price-spread") setPriceCfg((c) => ({ ...c, granularity }));
+    if (chartId === "load-forecast") setLoadCfg((c) => ({ ...c, granularity }));
+    if (chartId === "renewable-output") setRenCfg((c) => ({ ...c, granularity }));
+    if (chartId === "bidding-space") setSpaceCfg((c) => ({ ...c, granularity }));
   };
 
   const syncActiveChartZoom = (next: { start: number; end: number }, chartId: MainChartId | null = activeChart) => {
@@ -154,7 +160,7 @@ export default function MarketInfo() {
       const center = (current.start + current.end) / 2;
       const start = Math.max(0, Math.min(100 - nextWidth, center - nextWidth / 2));
       const next = { start: Math.round(start), end: Math.round(start + nextWidth) };
-      applyZoomDrivenGranularity(next);
+      applyZoomDrivenGranularity(next, chartId ?? activeChart);
       syncActiveChartZoom(next, chartId ?? activeChart);
       return next;
     });
@@ -162,19 +168,23 @@ export default function MarketInfo() {
 
   const resetZoom = (chartId?: MainChartId) => {
     setZoomWindow(DEFAULT_ZOOM_WINDOW);
-    setGlobalAll("hour");
+    if (chartId === "price-spread") setPriceCfg((c) => ({ ...c, granularity: "hour", zoomWindow: DEFAULT_ZOOM_WINDOW }));
+    if (chartId === "load-forecast") setLoadCfg((c) => ({ ...c, granularity: "hour", zoomWindow: DEFAULT_ZOOM_WINDOW }));
+    if (chartId === "renewable-output") setRenCfg((c) => ({ ...c, granularity: "hour", zoomWindow: DEFAULT_ZOOM_WINDOW }));
+    if (chartId === "bidding-space") setSpaceCfg((c) => ({ ...c, granularity: "hour", zoomWindow: DEFAULT_ZOOM_WINDOW }));
     syncActiveChartZoom(DEFAULT_ZOOM_WINDOW, chartId ?? activeChart);
   };
 
   const openChartPage = (chartId: MainChartId) => {
+    const chartCfg = chartId === "price-spread" ? priceCfg : chartId === "load-forecast" ? loadCfg : chartId === "renewable-output" ? renCfg : spaceCfg;
     setActiveChart(chartId);
-    syncActiveChartZoom(zoomWindow, chartId);
+    syncActiveChartZoom(chartCfg.zoomWindow, chartId);
     window.open(`/tools/market/chart/${chartId}`, "_blank", "noopener,noreferrer");
   };
 
-  const zoomData = <T,>(items: T[]) => {
-    const start = Math.floor((zoomWindow.start / 100) * items.length);
-    const end = Math.max(start + 1, Math.ceil((zoomWindow.end / 100) * items.length));
+  const zoomData = <T,>(items: T[], windowValue: { start: number; end: number }) => {
+    const start = Math.floor((windowValue.start / 100) * items.length);
+    const end = Math.max(start + 1, Math.ceil((windowValue.end / 100) * items.length));
     return items.slice(start, end);
   };
 
