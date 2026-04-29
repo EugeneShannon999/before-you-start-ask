@@ -96,19 +96,6 @@ export interface PriceForecastLinkRow {
   candidateFactor: string;
 }
 
-export interface TradeLedgerRow {
-  date: string;
-  contract: string;
-  period: string;
-  side: "买入" | "卖出";
-  quantity: number;
-  dealPrice: number;
-  settlementPrice: number;
-  deviation: number;
-  pnl: number;
-  note: string;
-}
-
 const points96 = Array.from({ length: 96 }, (_, i) => i);
 
 export const SPACE_WARN_THRESHOLD = 800; // 竞价空间预警阈值 MW
@@ -421,15 +408,6 @@ export const priceForecastLink24: PriceForecastLinkRow[] = Array.from({ length: 
     candidateFactor,
   };
 });
-
-export const tradeLedgerRows: TradeLedgerRow[] = [
-  { date: "2025-07-15", contract: "皖电现货·日前", period: "09:00-10:00", side: "卖出", quantity: 1200, dealPrice: 426, settlementPrice: 418, deviation: 8, pnl: 9600, note: "负荷兑现高于预期" },
-  { date: "2025-07-15", contract: "皖电现货·实时", period: "18:00-19:00", side: "买入", quantity: 800, dealPrice: 482, settlementPrice: 496, deviation: -14, pnl: -11200, note: "晚峰补仓" },
-  { date: "2025-07-14", contract: "月度集中竞价", period: "13-16时段", side: "卖出", quantity: 3000, dealPrice: 392, settlementPrice: 401, deviation: -9, pnl: -27000, note: "高云量导致修正" },
-  { date: "2025-07-14", contract: "省间交易·外送", period: "20:00-22:00", side: "卖出", quantity: 1800, dealPrice: 438, settlementPrice: 431, deviation: 7, pnl: 12600, note: "联络线偏差收窄" },
-  { date: "2025-07-13", contract: "皖电现货·实时", period: "11:00-12:00", side: "买入", quantity: 650, dealPrice: 355, settlementPrice: 348, deviation: 7, pnl: 4550, note: "午间回落" },
-  { date: "2025-07-13", contract: "辅助服务分摊", period: "全日", side: "卖出", quantity: 2200, dealPrice: 88, settlementPrice: 92, deviation: -4, pnl: -8800, note: "分摊上修" },
-];
 
 // 边界静态信息（卡片）
 export const boundaryRows = [

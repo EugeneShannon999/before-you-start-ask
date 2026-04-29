@@ -20,7 +20,6 @@ import {
   thermalUnits,
   thermalRealtimeSummary,
   getThermalMonthlyProfile,
-  ruleAlertReports,
   SPACE_WARN_THRESHOLD,
   boundary96,
   load96,
@@ -90,7 +89,6 @@ export default function MarketInfo() {
   const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? { start: 0, end: 100 });
   const [biddingOffset, setBiddingOffset] = useState<BiddingDayOffset>(saved?.biddingOffset ?? "D-1");
   const [selectedUnitId, setSelectedUnitId] = useState(saved?.selectedUnitId ?? thermalUnits[0].id);
-  const [alertStatus, setAlertStatus] = useState("全部");
   const [snapshotCollapsed, setSnapshotCollapsed] = useState(saved?.snapshotCollapsed ?? false);
   const [thermalRankMode, setThermalRankMode] = useState<"highest" | "lowest">(saved?.thermalRankMode ?? "highest");
 
@@ -241,11 +239,10 @@ export default function MarketInfo() {
   const realtimeRank = useMemo(() => thermalUnits.slice().sort((a, b) => thermalRankMode === "highest" ? b.realtimeLoadRate - a.realtimeLoadRate : a.realtimeLoadRate - b.realtimeLoadRate).slice(0, 8), [thermalRankMode]);
   const rollingRank = useMemo(() => thermalUnits.slice().sort((a, b) => thermalRankMode === "highest" ? b.rollingAvgLoadRate - a.rollingAvgLoadRate : a.rollingAvgLoadRate - b.rollingAvgLoadRate).slice(0, 8), [thermalRankMode]);
   const overlapUnits = useMemo(() => new Set(realtimeRank.map((u) => u.id).filter((id) => rollingRank.some((u) => u.id === id))), [realtimeRank, rollingRank]);
-  const filteredReports = useMemo(() => alertStatus === "全部" ? ruleAlertReports : ruleAlertReports.filter((r) => r.status === alertStatus), [alertStatus]);
   return (
     <MarketCursorProvider>
       <div className="px-6 py-5 space-y-4 min-h-[calc(100vh-5rem)]">
-        <header className="rounded-lg border bg-card p-4 shadow-notion">
+        <header className="sticky top-0 z-30 rounded-lg border bg-card p-4 shadow-notion">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-lg font-semibold shrink-0">交易员判断工作台</h1>
             <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -287,22 +284,15 @@ export default function MarketInfo() {
                 >24小时</button>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
-              缩放窗口 {zoomWindow.start}% - {zoomWindow.end}%
-            </div>
             <div className="flex items-center gap-2 text-[11px] shrink-0 ml-auto">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" /> 更新 10:32
               </span>
-              <span className="px-1.5 py-0.5 rounded bg-success/10 text-success">公开披露</span>
             </div>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            口径：用于交易前判断，不表达为实时行情终端；顶部日期范围、快捷项和粒度是四张主图唯一时间控制源。
-          </p>
         </header>
 
-        <div className={`grid gap-3 ${snapshotCollapsed ? "xl:grid-cols-[minmax(0,1fr)_44px]" : "xl:grid-cols-[minmax(0,1fr)_280px]"}`}>
+        <div className={`grid gap-3 ${snapshotCollapsed ? "xl:grid-cols-[minmax(0,1fr)_52px]" : "xl:grid-cols-[minmax(0,1fr)_320px]"}`}>
           <div className="space-y-3 min-w-0">
             <ChartCard
               index={1}
@@ -409,18 +399,6 @@ export default function MarketInfo() {
             <BoundaryMiniChart data={monthlyProfile.points} dataKey="loadRate" color={C_WARNING} />
           </div>
         </section>
-
-        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div>
-              <h2 className="text-sm font-semibold">运行规则预警盒子 / 数据规则提醒中心</h2>
-              <p className="text-[11px] text-muted-foreground mt-1">规则框架版：补充数据日、披露时间、入库时间与延迟状态。</p>
-            </div>
-            <Select value={alertStatus} onValueChange={setAlertStatus}><SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger><SelectContent>{["全部", "待处理", "已复盘", "已忽略"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
-          </div>
-          <ReportTable rows={filteredReports} />
-        </section>
-
 
         <div className="space-y-3">
         {/* 1. 电价与价差 */}
@@ -732,23 +710,24 @@ export default function MarketInfo() {
         </div>
           </div>
 
-          <aside className="order-first xl:order-none xl:sticky xl:top-4 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              {!snapshotCollapsed && <h2 className="text-sm font-semibold">预测快照</h2>}
-              <button onClick={() => setSnapshotCollapsed((v) => !v)} className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-secondary" aria-label="收起或展开预测快照">
+          <aside className="order-first xl:order-none xl:sticky xl:top-0 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
+            <div className={`mb-3 flex items-center gap-2 ${snapshotCollapsed ? "xl:flex-col" : "justify-between"}`}>
+              {!snapshotCollapsed && <h2 className="text-base font-semibold">预测快照</h2>}
+              <button onClick={() => setSnapshotCollapsed((v) => !v)} className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary xl:ml-0" aria-label="收起或展开预测快照">
                 {snapshotCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
               </button>
+              {snapshotCollapsed && <span className="hidden xl:block text-xs font-medium text-muted-foreground [writing-mode:vertical-rl]">预测快照</span>}
             </div>
             <div className={`flex gap-2 min-w-max xl:min-w-0 ${snapshotCollapsed ? "xl:hidden" : "xl:flex-col"}`}>
               {forecastSummary.map((card) => (
-                <div key={card.label} className="w-[220px] xl:w-full rounded-md border bg-background px-3 py-2 shrink-0">
-                  <p className="text-xs font-medium">{card.label}</p>
-                  <div className="grid grid-cols-3 gap-1 mt-2 text-[10px] text-muted-foreground">
+                <div key={card.label} className="w-[240px] xl:w-full rounded-md border bg-background px-3 py-3 shrink-0">
+                  <p className="text-sm font-medium">{card.label}</p>
+                  <div className="grid grid-cols-3 gap-1 mt-3 text-xs text-muted-foreground">
                     <span>最高 <b className="font-mono text-foreground">{card.stat.maxPredicted}</b></span>
                     <span>最低 <b className="font-mono text-foreground">{card.stat.minPredicted}</b></span>
                     <span>均值 <b className="font-mono text-foreground">{card.stat.avgPredicted}</b></span>
                   </div>
-                  <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">单位：{card.unit} · 数据时点：{endDate}</p>
+                  <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">单位：{card.unit} · 数据时点：{endDate}</p>
                 </div>
               ))}
             </div>
@@ -777,25 +756,6 @@ function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: 
               <td className="px-3 py-1.5 font-mono text-muted-foreground">#{index + 1}</td>
               <td className="px-3 py-1.5">{u.name}{overlap.has(u.id) && <span className="ml-2 rounded bg-warning/20 px-1.5 py-0.5 text-[10px] text-warning">两榜重合</span>}</td>
               <td className="px-3 py-1.5 text-right font-mono">{u[metric]}%</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function ReportTable({ rows }: { rows: typeof ruleAlertReports }) {
-  return (
-    <div className="overflow-auto rounded-md border">
-      <table className="w-full min-w-[1180px] text-xs">
-        <thead className="bg-secondary/50">
-          <tr>{["数据日", "披露时间", "入库时间", "延迟状态", "规则名称", "触发原因", "当前值", "阈值", "数据来源", "影响对象", "建议动作", "状态"].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={`${r.time}-${r.ruleName}`} className="border-t hover:bg-secondary/30">
-              <td className="px-3 py-2 font-mono">{r.dataDate}</td><td className="px-3 py-2 font-mono">{r.disclosureTime}</td><td className="px-3 py-2 font-mono">{r.ingestTime}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.delayStatus}</span></td><td className="px-3 py-2">{r.ruleName}</td><td className="px-3 py-2 text-muted-foreground">{r.reason}</td><td className="px-3 py-2 font-mono">{r.current}</td><td className="px-3 py-2">{r.threshold}</td><td className="px-3 py-2">{r.source}</td><td className="px-3 py-2">{r.target}</td><td className="px-3 py-2">{r.action}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.status}</span></td>
             </tr>
           ))}
         </tbody>
