@@ -197,9 +197,9 @@ export default function MarketInfo() {
       province, startDate, endDate, granularity: globalGranularity,
       chartCfgs: { price: priceCfg, load: loadCfg, renewable: renCfg, space: spaceCfg },
       priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
-      activeChart, lastExpandedChart: expandedChart, biddingOffset, selectedUnitId,
+      activeChart, lastExpandedChart: expandedChart, biddingOffset, selectedUnitId, snapshotCollapsed, thermalRankMode,
     }));
-  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart, biddingOffset, selectedUnitId]);
+  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart, biddingOffset, selectedUnitId, snapshotCollapsed, thermalRankMode]);
 
   // 各图数据
   const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
@@ -217,6 +217,7 @@ export default function MarketInfo() {
   }, [biddingOffset, spaceCfg.granularity]);
   // 边界使用全局粒度
   const boundaryDs = useMemo(() => getDataset(globalGranularity), [globalGranularity]);
+  const boundaryTrendData = useMemo(() => aggregateToHour(boundary96, ["tieLine", "sectionLoad", "reservePos", "reserveNeg"] as any), []);
 
   // 负荷偏差摘要（基于 96 点原始数据）
   const loadStats = useMemo(() => {
@@ -248,9 +249,9 @@ export default function MarketInfo() {
     { label: "电价预测", stat: summarizeForecast(priceForecast), unit: "元/MWh", source: "预测模块", lag: "出清披露后对照" },
   ], [loadForecast, renForecast, priceForecast]);
   const monthlyProfile = useMemo(() => getThermalMonthlyProfile(selectedUnitId), [selectedUnitId]);
-  const highRealtime = useMemo(() => thermalUnits.slice().sort((a, b) => b.realtimeLoadRate - a.realtimeLoadRate).slice(0, 8), []);
-  const highRolling = useMemo(() => thermalUnits.slice().sort((a, b) => b.rollingAvgLoadRate - a.rollingAvgLoadRate).slice(0, 8), []);
-  const overlapUnits = useMemo(() => new Set(highRealtime.map((u) => u.id).filter((id) => highRolling.some((u) => u.id === id))), [highRealtime, highRolling]);
+  const realtimeRank = useMemo(() => thermalUnits.slice().sort((a, b) => thermalRankMode === "highest" ? b.realtimeLoadRate - a.realtimeLoadRate : a.realtimeLoadRate - b.realtimeLoadRate).slice(0, 8), [thermalRankMode]);
+  const rollingRank = useMemo(() => thermalUnits.slice().sort((a, b) => thermalRankMode === "highest" ? b.rollingAvgLoadRate - a.rollingAvgLoadRate : a.rollingAvgLoadRate - b.rollingAvgLoadRate).slice(0, 8), [thermalRankMode]);
+  const overlapUnits = useMemo(() => new Set(realtimeRank.map((u) => u.id).filter((id) => rollingRank.some((u) => u.id === id))), [realtimeRank, rollingRank]);
   const filteredReports = useMemo(() => alertStatus === "全部" ? ruleAlertReports : ruleAlertReports.filter((r) => r.status === alertStatus), [alertStatus]);
   const boundaryMeta: Record<string, { sourceType: "公开披露" | "预测推导" | "插件增强"; note: string }> = {
     联络线外送计划: { sourceType: "公开披露", note: "公开披露版，非实时终端" },
