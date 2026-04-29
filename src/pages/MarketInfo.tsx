@@ -935,11 +935,18 @@ function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: 
     <div className="rounded-md border overflow-hidden">
       <div className="bg-secondary/50 px-3 py-2 text-xs font-medium">{title}</div>
       <table className="w-full text-xs">
+        <thead className="bg-background">
+          <tr>
+            <th className="px-3 py-1.5 text-left font-medium">排名</th>
+            <th className="px-3 py-1.5 text-left font-medium">机组</th>
+            <th className="px-3 py-1.5 text-right font-medium">负载率</th>
+          </tr>
+        </thead>
         <tbody>
           {rows.map((u, index) => (
-            <tr key={u.id} className="border-t hover:bg-secondary/30">
+            <tr key={u.id} className={`border-t hover:bg-secondary/30 ${overlap.has(u.id) ? "bg-warning/10" : ""}`}>
               <td className="px-3 py-1.5 font-mono text-muted-foreground">#{index + 1}</td>
-              <td className="px-3 py-1.5">{u.name}{overlap.has(u.id) && <span className="ml-2 rounded bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning">同时高负载</span>}</td>
+              <td className="px-3 py-1.5">{u.name}{overlap.has(u.id) && <span className="ml-2 rounded bg-warning/20 px-1.5 py-0.5 text-[10px] text-warning">两榜重合</span>}</td>
               <td className="px-3 py-1.5 text-right font-mono">{u[metric]}%</td>
             </tr>
           ))}
@@ -952,14 +959,14 @@ function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: 
 function ReportTable({ rows }: { rows: typeof ruleAlertReports }) {
   return (
     <div className="overflow-auto rounded-md border">
-      <table className="w-full min-w-[980px] text-xs">
+      <table className="w-full min-w-[1180px] text-xs">
         <thead className="bg-secondary/50">
-          <tr>{["预警时间", "规则名称", "触发原因", "当前值", "阈值", "数据来源", "影响对象", "建议动作", "状态"].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
+          <tr>{["数据日", "披露时间", "入库时间", "延迟状态", "规则名称", "触发原因", "当前值", "阈值", "数据来源", "影响对象", "建议动作", "状态"].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={`${r.time}-${r.ruleName}`} className="border-t hover:bg-secondary/30">
-              <td className="px-3 py-2 font-mono">{r.time}</td><td className="px-3 py-2">{r.ruleName}</td><td className="px-3 py-2 text-muted-foreground">{r.reason}</td><td className="px-3 py-2 font-mono">{r.current}</td><td className="px-3 py-2">{r.threshold}</td><td className="px-3 py-2">{r.source}</td><td className="px-3 py-2">{r.target}</td><td className="px-3 py-2">{r.action}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.status}</span></td>
+              <td className="px-3 py-2 font-mono">{r.dataDate}</td><td className="px-3 py-2 font-mono">{r.disclosureTime}</td><td className="px-3 py-2 font-mono">{r.ingestTime}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.delayStatus}</span></td><td className="px-3 py-2">{r.ruleName}</td><td className="px-3 py-2 text-muted-foreground">{r.reason}</td><td className="px-3 py-2 font-mono">{r.current}</td><td className="px-3 py-2">{r.threshold}</td><td className="px-3 py-2">{r.source}</td><td className="px-3 py-2">{r.target}</td><td className="px-3 py-2">{r.action}</td><td className="px-3 py-2"><span className="rounded bg-secondary px-1.5 py-0.5">{r.status}</span></td>
             </tr>
           ))}
         </tbody>
