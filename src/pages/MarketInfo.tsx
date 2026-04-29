@@ -417,19 +417,22 @@ export default function MarketInfo() {
         </section>
 
         <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
-          <h2 className="text-sm font-semibold">火电机组实时出力</h2>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="text-sm font-semibold">大火电模块</h2>
+            <div className="flex rounded-md border overflow-hidden text-xs h-8 bg-background">
+              <button onClick={() => setThermalRankMode("highest")} className={`px-3 ${thermalRankMode === "highest" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>最高</button>
+              <button onClick={() => setThermalRankMode("lowest")} className={`px-3 ${thermalRankMode === "lowest" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>最低</button>
+            </div>
+          </div>
           <div className="grid grid-cols-3 gap-2">
             <Stat label="全部火电机组总出力" value={`${thermalRealtimeSummary.totalOutput.toLocaleString()} MW`} />
             <Stat label="当前实时点平均负载率" value={`${thermalRealtimeSummary.avgRealtimeLoadRate}%`} />
             <Stat label="全天滚动实际平均负载率" value={`${thermalRealtimeSummary.avgRollingLoadRate}%`} />
           </div>
           <div className="grid gap-3 lg:grid-cols-2">
-            <LoadRateTable title="实时负载率排行" rows={highRealtime} metric="realtimeLoadRate" overlap={overlapUnits} />
-            <LoadRateTable title="全天滚动平均负载率排行" rows={highRolling} metric="rollingAvgLoadRate" overlap={overlapUnits} />
+            <LoadRateTable title="实时负载率排行" rows={realtimeRank} metric="realtimeLoadRate" overlap={overlapUnits} />
+            <LoadRateTable title="全天滚动平均负载率排行" rows={rollingRank} metric="rollingAvgLoadRate" overlap={overlapUnits} />
           </div>
-        </section>
-
-        <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <h2 className="text-sm font-semibold">机组月报</h2>
             <div className="flex items-center gap-2">
@@ -448,7 +451,10 @@ export default function MarketInfo() {
 
         <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h2 className="text-sm font-semibold">规则预警报告中心</h2>
+            <div>
+              <h2 className="text-sm font-semibold">运行规则预警盒子 / 数据规则提醒中心</h2>
+              <p className="text-[11px] text-muted-foreground mt-1">规则框架版：补充数据日、披露时间、入库时间与延迟状态。</p>
+            </div>
             <Select value={alertStatus} onValueChange={setAlertStatus}><SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger><SelectContent>{["全部", "待处理", "已复盘", "已忽略"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
           </div>
           <ReportTable rows={filteredReports} />
