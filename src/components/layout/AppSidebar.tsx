@@ -6,7 +6,6 @@ import {
   Zap,
   Plug,
   CloudSun,
-  BookOpenText,
   Bot,
   LayoutDashboard,
   History,
@@ -44,7 +43,6 @@ const dashboardItems: NavItem[] = [
   { title: "市场看板", url: "/tools/market", icon: BarChart3 },
   { title: "气象看板", url: "/tools/weather", icon: CloudSun },
   { title: "算法预测", url: "/tools/prediction", icon: LineChart },
-  { title: "交易日志 / 账本", url: "/tools/ledger", icon: BookOpenText },
   { title: "交易日历", url: "/tools/calendar", icon: Calendar },
   { title: "交易执行", url: "/tools/trading", icon: Zap, placeholder: true },
 ];
