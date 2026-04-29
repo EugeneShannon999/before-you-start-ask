@@ -292,7 +292,7 @@ export default function MarketInfo() {
           </div>
         </header>
 
-        <div className={`grid gap-3 ${snapshotCollapsed ? "xl:grid-cols-[minmax(0,1fr)_44px]" : "xl:grid-cols-[minmax(0,1fr)_280px]"}`}>
+        <div className={`grid gap-3 ${snapshotCollapsed ? "xl:grid-cols-[minmax(0,1fr)_52px]" : "xl:grid-cols-[minmax(0,1fr)_320px]"}`}>
           <div className="space-y-3 min-w-0">
             <ChartCard
               index={1}
@@ -710,23 +710,24 @@ export default function MarketInfo() {
         </div>
           </div>
 
-          <aside className="order-first xl:order-none xl:sticky xl:top-4 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              {!snapshotCollapsed && <h2 className="text-sm font-semibold">预测快照</h2>}
-              <button onClick={() => setSnapshotCollapsed((v) => !v)} className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-secondary" aria-label="收起或展开预测快照">
+          <aside className="order-first xl:order-none xl:sticky xl:top-0 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
+            <div className={`mb-3 flex items-center gap-2 ${snapshotCollapsed ? "xl:flex-col" : "justify-between"}`}>
+              {!snapshotCollapsed && <h2 className="text-base font-semibold">预测快照</h2>}
+              <button onClick={() => setSnapshotCollapsed((v) => !v)} className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary xl:ml-0" aria-label="收起或展开预测快照">
                 {snapshotCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
               </button>
+              {snapshotCollapsed && <span className="hidden xl:block text-xs font-medium text-muted-foreground [writing-mode:vertical-rl]">预测快照</span>}
             </div>
             <div className={`flex gap-2 min-w-max xl:min-w-0 ${snapshotCollapsed ? "xl:hidden" : "xl:flex-col"}`}>
               {forecastSummary.map((card) => (
-                <div key={card.label} className="w-[220px] xl:w-full rounded-md border bg-background px-3 py-2 shrink-0">
-                  <p className="text-xs font-medium">{card.label}</p>
-                  <div className="grid grid-cols-3 gap-1 mt-2 text-[10px] text-muted-foreground">
+                <div key={card.label} className="w-[240px] xl:w-full rounded-md border bg-background px-3 py-3 shrink-0">
+                  <p className="text-sm font-medium">{card.label}</p>
+                  <div className="grid grid-cols-3 gap-1 mt-3 text-xs text-muted-foreground">
                     <span>最高 <b className="font-mono text-foreground">{card.stat.maxPredicted}</b></span>
                     <span>最低 <b className="font-mono text-foreground">{card.stat.minPredicted}</b></span>
                     <span>均值 <b className="font-mono text-foreground">{card.stat.avgPredicted}</b></span>
                   </div>
-                  <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">单位：{card.unit} · 数据时点：{endDate}</p>
+                  <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">单位：{card.unit} · 数据时点：{endDate}</p>
                 </div>
               ))}
             </div>
