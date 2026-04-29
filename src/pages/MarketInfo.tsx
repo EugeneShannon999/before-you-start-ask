@@ -20,7 +20,6 @@ import {
   thermalUnits,
   thermalRealtimeSummary,
   getThermalMonthlyProfile,
-  ruleAlertReports,
   SPACE_WARN_THRESHOLD,
   boundary96,
   load96,
@@ -90,7 +89,6 @@ export default function MarketInfo() {
   const [zoomWindow, setZoomWindow] = useState<{ start: number; end: number }>(saved?.zoomWindow ?? { start: 0, end: 100 });
   const [biddingOffset, setBiddingOffset] = useState<BiddingDayOffset>(saved?.biddingOffset ?? "D-1");
   const [selectedUnitId, setSelectedUnitId] = useState(saved?.selectedUnitId ?? thermalUnits[0].id);
-  const [alertStatus, setAlertStatus] = useState("全部");
   const [snapshotCollapsed, setSnapshotCollapsed] = useState(saved?.snapshotCollapsed ?? false);
   const [thermalRankMode, setThermalRankMode] = useState<"highest" | "lowest">(saved?.thermalRankMode ?? "highest");
 
@@ -241,11 +239,10 @@ export default function MarketInfo() {
   const realtimeRank = useMemo(() => thermalUnits.slice().sort((a, b) => thermalRankMode === "highest" ? b.realtimeLoadRate - a.realtimeLoadRate : a.realtimeLoadRate - b.realtimeLoadRate).slice(0, 8), [thermalRankMode]);
   const rollingRank = useMemo(() => thermalUnits.slice().sort((a, b) => thermalRankMode === "highest" ? b.rollingAvgLoadRate - a.rollingAvgLoadRate : a.rollingAvgLoadRate - b.rollingAvgLoadRate).slice(0, 8), [thermalRankMode]);
   const overlapUnits = useMemo(() => new Set(realtimeRank.map((u) => u.id).filter((id) => rollingRank.some((u) => u.id === id))), [realtimeRank, rollingRank]);
-  const filteredReports = useMemo(() => alertStatus === "全部" ? ruleAlertReports : ruleAlertReports.filter((r) => r.status === alertStatus), [alertStatus]);
   return (
     <MarketCursorProvider>
       <div className="px-6 py-5 space-y-4 min-h-[calc(100vh-5rem)]">
-        <header className="rounded-lg border bg-card p-4 shadow-notion">
+        <header className="sticky top-0 z-30 rounded-lg border bg-card p-4 shadow-notion">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-lg font-semibold shrink-0">交易员判断工作台</h1>
             <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -287,19 +284,12 @@ export default function MarketInfo() {
                 >24小时</button>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
-              缩放窗口 {zoomWindow.start}% - {zoomWindow.end}%
-            </div>
             <div className="flex items-center gap-2 text-[11px] shrink-0 ml-auto">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" /> 更新 10:32
               </span>
-              <span className="px-1.5 py-0.5 rounded bg-success/10 text-success">公开披露</span>
             </div>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            口径：用于交易前判断，不表达为实时行情终端；顶部日期范围、快捷项和粒度是四张主图唯一时间控制源。
-          </p>
         </header>
 
         <div className={`grid gap-3 ${snapshotCollapsed ? "xl:grid-cols-[minmax(0,1fr)_44px]" : "xl:grid-cols-[minmax(0,1fr)_280px]"}`}>
