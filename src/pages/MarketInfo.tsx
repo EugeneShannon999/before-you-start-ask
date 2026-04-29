@@ -7,6 +7,8 @@ import {
   MapPin,
   ChevronDown,
   ChevronRight,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
 import {
   Select,
@@ -27,6 +29,7 @@ import {
   ruleAlertReports,
   powerForecastCards,
   SPACE_WARN_THRESHOLD,
+  boundary96,
   load96,
   renewable96,
   priceForecastLink24,
