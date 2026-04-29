@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
   Clock,
   MapPin,
-  ChevronDown,
-  ChevronRight,
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
@@ -18,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  getDataset,
   Granularity,
   boundaryRows,
   biddingSpaceByOffset,
@@ -27,7 +21,6 @@ import {
   thermalRealtimeSummary,
   getThermalMonthlyProfile,
   ruleAlertReports,
-  powerForecastCards,
   SPACE_WARN_THRESHOLD,
   boundary96,
   load96,
@@ -75,7 +68,6 @@ type MainChartId = "price-spread" | "load-forecast" | "renewable-output" | "bidd
 const STORAGE_KEY = "market-board-interaction-state:v1";
 
 const DEFAULT_ZOOM_WINDOW = { start: 0, end: 100 };
-const initialCfg = (g: Granularity): ChartCfg => ({ granularity: g, range: "1d", showLegend: true, zoomWindow: DEFAULT_ZOOM_WINDOW });
 const restoreCfg = (cfg: ChartCfg | undefined, g: Granularity): ChartCfg => ({
   granularity: g,
   range: cfg?.range ?? "1d",
@@ -91,7 +83,6 @@ export default function MarketInfo() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch { return null; }
   }, []);
   const [globalGranularity, setGlobalGranularity] = useState<Granularity>(saved?.granularity ?? "hour");
-  const [boundaryExpanded, setBoundaryExpanded] = useState(false);
   const [startDate, setStartDate] = useState(saved?.startDate ?? businessDate);
   const [endDate, setEndDate] = useState(saved?.endDate ?? businessDate);
   const [activeChart, setActiveChart] = useState<MainChartId | null>(saved?.activeChart ?? null);
@@ -215,8 +206,6 @@ export default function MarketInfo() {
     const data = spaceCfg.granularity === "15min" ? base : spaceCfg.granularity === "hour" ? aggregateToHour(base, ["load", "renewable", "space"] as any).map((s: any) => ({ ...s, warning: s.space < SPACE_WARN_THRESHOLD })) : [{ ...base[0], label: "24小时", periodRange: "1-96", load: Math.round(base.reduce((sum, p) => sum + p.load, 0) / base.length), renewable: Math.round(base.reduce((sum, p) => sum + p.renewable, 0) / base.length), space: Math.round(base.reduce((sum, p) => sum + p.space, 0) / base.length), warning: base.some((p) => p.warning) }];
     return { space: data, xKey: spaceCfg.granularity === "hour" ? "hourLabel" as const : "label" as const, xInterval: spaceCfg.granularity === "15min" ? 15 : spaceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => `时段 ${p.periodRange ?? p.period}` };
   }, [biddingOffset, spaceCfg.granularity]);
-  // 边界使用全局粒度
-  const boundaryDs = useMemo(() => getDataset(globalGranularity), [globalGranularity]);
   const boundaryTrendData = useMemo(() => aggregateToHour(boundary96, ["tieLine", "sectionLoad", "reservePos", "reserveNeg"] as any), []);
 
   // 负荷偏差摘要（基于 96 点原始数据）
@@ -253,15 +242,6 @@ export default function MarketInfo() {
   const rollingRank = useMemo(() => thermalUnits.slice().sort((a, b) => thermalRankMode === "highest" ? b.rollingAvgLoadRate - a.rollingAvgLoadRate : a.rollingAvgLoadRate - b.rollingAvgLoadRate).slice(0, 8), [thermalRankMode]);
   const overlapUnits = useMemo(() => new Set(realtimeRank.map((u) => u.id).filter((id) => rollingRank.some((u) => u.id === id))), [realtimeRank, rollingRank]);
   const filteredReports = useMemo(() => alertStatus === "全部" ? ruleAlertReports : ruleAlertReports.filter((r) => r.status === alertStatus), [alertStatus]);
-  const boundaryMeta: Record<string, { sourceType: "公开披露" | "预测推导" | "插件增强"; note: string }> = {
-    联络线外送计划: { sourceType: "公开披露", note: "公开披露版，非实时终端" },
-    "皖南-皖北断面限额": { sourceType: "插件增强", note: "当前为示例口径，实时断面待插件数据" },
-    必开机组容量: { sourceType: "公开披露", note: "调度披露后人工/接口同步" },
-    必停机组容量: { sourceType: "公开披露", note: "检修计划披露版" },
-    非市场化机组出力: { sourceType: "预测推导", note: "规则推导，待补真实来源" },
-    备用容量: { sourceType: "插件增强", note: "满血版依赖实时/插件数据" },
-  };
-
   return (
     <MarketCursorProvider>
       <div className="px-6 py-5 space-y-4 min-h-[calc(100vh-5rem)]">
@@ -346,7 +326,7 @@ export default function MarketInfo() {
               tableRows={biddingOffsetDs.space.map((p: any) => [p.label ?? p.hourLabel, p.load, p.renewable, p.space, p.warning ? "预警" : "正常"])}
               csvFilename="bidding-space-priority.csv"
               csvRows={[["时段", "总负荷预测", "新能源预测", "竞价空间", "预警"], ...biddingOffsetDs.space.map((p: any) => [p.label ?? p.hourLabel, p.load, p.renewable, p.space, p.warning ? 1 : 0])]}
-              footer={<div className="mt-2 flex items-center gap-2 flex-wrap text-[11px]"><span className="text-muted-foreground">竞价空间 = 总负荷预测 − 新能源预测；当前为 mock 规则框架版。</span><SourceBadge label="规则计算" /><SourceBadge label="待确认数据源" /></div>}
+              footer={<div className="mt-2 flex items-center gap-2 flex-wrap text-[11px]"><span className="text-muted-foreground">竞价空间 = 总负荷预测 − 新能源预测；当前为 mock 规则框架版。</span><SourceBadge label="规则计算" /></div>}
             >
               <div className="mb-2 flex items-center gap-2 text-xs">
                 <span className="text-muted-foreground">预测日</span>
@@ -358,42 +338,19 @@ export default function MarketInfo() {
               </div>
               <BiddingSpaceChart data={zoomData(biddingOffsetDs.space, spaceCfg.zoomWindow)} xKey={biddingOffsetDs.xKey} xInterval={biddingOffsetDs.xInterval} periodLabel={biddingOffsetDs.periodLabel} showLegend={spaceCfg.showLegend} threshold={SPACE_WARN_THRESHOLD} visibleSeries={{ predicted: false, actual: false, deviation: false }} />
             </ChartCard>
-          </div>
 
-          <aside className="xl:sticky xl:top-4 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              {!snapshotCollapsed && <h2 className="text-sm font-semibold">预测快照</h2>}
-              <button onClick={() => setSnapshotCollapsed((v) => !v)} className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-secondary" aria-label="收起或展开预测快照">
-                {snapshotCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
-              </button>
-            </div>
-            <div className={`flex gap-2 min-w-max xl:min-w-0 ${snapshotCollapsed ? "xl:hidden" : "xl:flex-col"}`}>
-              {forecastSummary.map((card) => (
-                <div key={card.label} className="w-[220px] xl:w-full rounded-md border bg-background px-3 py-2 shrink-0">
-                  <p className="text-xs font-medium">{card.label}</p>
-                  <div className="grid grid-cols-3 gap-1 mt-2 text-[10px] text-muted-foreground">
-                    <span>最高 <b className="font-mono text-foreground">{card.stat.maxPredicted}</b></span>
-                    <span>最低 <b className="font-mono text-foreground">{card.stat.minPredicted}</b></span>
-                    <span>均值 <b className="font-mono text-foreground">{card.stat.avgPredicted}</b></span>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">单位：{card.unit} · 数据时点：{endDate} · {card.source} · {card.lag}</p>
-                </div>
-              ))}
-            </div>
-          </aside>
-        </div>
 
         <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
           <div>
             <h2 className="text-sm font-semibold">实际运行区</h2>
-            <p className="text-[11px] text-muted-foreground mt-1">市场边界、火电实况与规则提醒，均标注披露/入库口径。</p>
+            <p className="text-[11px] text-muted-foreground mt-1">市场边界、火电实况与规则提醒；仅对关键 mock 口径做轻量标注。</p>
           </div>
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
-              <h2 className="text-sm font-semibold">市场运行边界</h2>
-              <p className="text-[11px] text-muted-foreground mt-1">公开披露 / 规则计算口径；实时和插件增强字段仍待补数据源。</p>
+              <h3 className="text-sm font-semibold">市场运行边界</h3>
+              <p className="text-[11px] text-muted-foreground mt-1">先保留几项关键边界，避免把 mock 数据讲成实时终端。</p>
             </div>
-            <SourceBadge label="规则计算" />
+            <span className="text-[10px] rounded bg-secondary px-1.5 py-0.5 text-muted-foreground">部分为规则框架版</span>
           </div>
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-md border bg-background p-3">
@@ -464,17 +421,8 @@ export default function MarketInfo() {
           <ReportTable rows={filteredReports} />
         </section>
 
-        <section className="rounded-lg border bg-card p-4 shadow-notion">
-          <h2 className="text-sm font-semibold mb-2">功率预测</h2>
-          <div className="grid gap-2 md:grid-cols-3">{powerForecastCards.map((c) => <div key={c.name} className="rounded-md border bg-background p-3"><p className="text-[11px] text-muted-foreground">{c.name}</p><p className="mt-1 text-lg font-mono font-semibold">{c.value.toLocaleString()} {c.unit}</p><p className="text-[10px] text-muted-foreground">{c.source} · 入口预留</p></div>)}</div>
-        </section>
 
         <div className="space-y-3">
-          <section className="rounded-lg border bg-card p-4 shadow-notion">
-            <h2 className="text-sm font-semibold">预测判断区</h2>
-            <p className="text-[11px] text-muted-foreground mt-1">下方图表用于预测、偏差和回测判断；每张图滚轮缩放为单图独立状态。</p>
-          </section>
-
         {/* 1. 电价与价差 */}
         <ChartCard
           index={1}
@@ -522,10 +470,7 @@ export default function MarketInfo() {
                   <span className="text-muted-foreground">{s.label}</span>
                 </label>
               ))}
-              <SourceBadge label="公开API" />
-              <SourceBadge label="规则计算" />
-              <span className="text-muted-foreground ml-auto">价差 = 日前电价 − 实时电价</span>
-              <span className="text-muted-foreground">数据时点：{endDate} · 滞后披露/规则计算</span>
+              <span className="text-muted-foreground ml-auto">价差 = 日前电价 − 实时电价 · 数据时点：{endDate}</span>
             </div>
           }
         >
@@ -714,8 +659,7 @@ export default function MarketInfo() {
                 新能源占负荷比例 · 峰值 <span className="font-mono text-foreground">{renRatio.peak}%</span>
                 {" / "}日均 <span className="font-mono text-foreground">{renRatio.avg}%</span>
               </span>
-              <SourceBadge label="公开API" />
-              <SourceBadge label="待确认数据源" />
+
             </div>
           }
         >
@@ -784,151 +728,36 @@ export default function MarketInfo() {
           />
         </ChartCard>
 
-        {/* 5. 市场运行与边界 */}
-        <section className="rounded-lg shadow-notion bg-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-xs font-mono text-muted-foreground">#5</span>
-              <h3 className="text-sm font-semibold">市场运行与边界</h3>
-              <span className="text-[11px] text-muted-foreground">公开披露版；实时/插件增强字段待补血</span>
-            </div>
-            <button
-              onClick={() => setBoundaryExpanded((v) => !v)}
-              className="text-[11px] text-primary inline-flex items-center gap-1 hover:underline"
-            >
-              {boundaryExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              {boundaryExpanded ? "收起明细" : "展开 96 点明细"}
-            </button>
+
+        </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {boundaryRows.map((row) => {
-              const meta = boundaryMeta[row.item] ?? { sourceType: "公开披露" as const, note: "公开披露版" };
-              return (
-              <div key={row.item} className="p-2.5 rounded-md border bg-background">
-                <p className="text-[11px] text-muted-foreground mb-0.5">{row.item}</p>
-                <p className="text-sm font-semibold">{row.value}</p>
-                <p className="text-[10px] text-muted-foreground">{row.note}</p>
-                <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-muted-foreground">
-                  <span className="rounded bg-secondary px-1.5 py-0.5">{meta.sourceType}</span>
-                  <span>{meta.note}</span>
+          <aside className="order-first xl:order-none xl:sticky xl:top-4 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              {!snapshotCollapsed && <h2 className="text-sm font-semibold">预测快照</h2>}
+              <button onClick={() => setSnapshotCollapsed((v) => !v)} className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-secondary" aria-label="收起或展开预测快照">
+                {snapshotCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
+              </button>
+            </div>
+            <div className={`flex gap-2 min-w-max xl:min-w-0 ${snapshotCollapsed ? "xl:hidden" : "xl:flex-col"}`}>
+              {forecastSummary.map((card) => (
+                <div key={card.label} className="w-[220px] xl:w-full rounded-md border bg-background px-3 py-2 shrink-0">
+                  <p className="text-xs font-medium">{card.label}</p>
+                  <div className="grid grid-cols-3 gap-1 mt-2 text-[10px] text-muted-foreground">
+                    <span>最高 <b className="font-mono text-foreground">{card.stat.maxPredicted}</b></span>
+                    <span>最低 <b className="font-mono text-foreground">{card.stat.minPredicted}</b></span>
+                    <span>均值 <b className="font-mono text-foreground">{card.stat.avgPredicted}</b></span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">单位：{card.unit} · 数据时点：{endDate}</p>
                 </div>
-                {row.trendKey && (
-                  <BoundaryMiniChart
-                    data={boundaryTrendData as any[]}
-                    dataKey={row.trendKey}
-                    color={row.trendKey === "sectionLoad" ? "hsl(var(--warning))" : C_PRIMARY}
-                  />
-                )}
-              </div>
-            );})}
-          </div>
-
-          {boundaryExpanded && (
-            <div className="mt-3 max-h-72 overflow-auto border rounded">
-              <table className="w-full text-xs">
-                <thead className="bg-secondary sticky top-0">
-                  <tr>
-                    <th className="text-left px-3 py-1.5 font-medium">时段</th>
-                    <th className="text-right px-3 py-1.5 font-medium">联络线(MW)</th>
-                    <th className="text-right px-3 py-1.5 font-medium">断面负载率</th>
-                    <th className="text-right px-3 py-1.5 font-medium">正备用</th>
-                    <th className="text-right px-3 py-1.5 font-medium">负备用</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(boundaryDs.boundary as any[]).map((p, i) => (
-                    <tr key={i} className="border-t hover:bg-secondary/40">
-                      <td className="px-3 py-1 font-mono">{p.label ?? p.hourLabel}</td>
-                      <td className="px-3 py-1 font-mono text-right">{p.tieLine.toLocaleString()}</td>
-                      <td className={`px-3 py-1 font-mono text-right ${p.sectionLoad >= 75 ? "text-destructive" : ""}`}>
-                        {p.sectionLoad}%
-                      </td>
-                      <td className="px-3 py-1 font-mono text-right">{p.reservePos}</td>
-                      <td className="px-3 py-1 font-mono text-right">{p.reserveNeg}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              ))}
             </div>
-          )}
-        </section>
-
+          </aside>
         </div>
       </div>
     </MarketCursorProvider>
   );
 }
-
-// ============================================================
-// 规则预警 mock (SP1)
-// 仅保留可基于公开数据 + 预设阈值推导的预警类型：
-//   实时价差扩大 / 断面接近限额 / 备用偏紧 / 必开必停状态提醒
-// 「新能源预测偏差」类预警 SP1 暂不展示（待补实际数据来源）
-// ============================================================
-interface RuleWarning {
-  id: string;
-  title: string;
-  period: string;
-  current: string;
-  threshold: string;
-  thresholdSource: "业务阈值" | "历史P90-P95" | "官方预警" | "待配置";
-  source: DataSourceTag;
-  method: string;
-  action: string;
-  level: "high" | "medium";
-}
-
-const ruleWarnings: RuleWarning[] = [
-  {
-    id: "rw-1",
-    title: "实时价差扩大",
-    period: "18:00-20:00",
-    current: "当前价差 +47 元/MWh",
-    threshold: "超过预设阈值 ±30 元/MWh",
-    thresholdSource: "业务阈值",
-    source: "公开API",
-    method: "日前电价 − 实时电价，按当前粒度聚合",
-    action: "建议关注晚间申报策略",
-    level: "high",
-  },
-  {
-    id: "rw-2",
-    title: "断面接近限额",
-    period: "皖南-皖北断面",
-    current: "当前负载 78%",
-    threshold: "接近预警阈值 80%",
-    thresholdSource: "历史P90-P95",
-    source: "公开API",
-    method: "断面实时负载率与业务阈值比对",
-    action: "建议关注晚高峰送电安排",
-    level: "medium",
-  },
-  {
-    id: "rw-3",
-    title: "备用偏紧",
-    period: "19:30-21:00",
-    current: "正备用 1,820 MW",
-    threshold: "低于预设阈值 2,000 MW",
-    thresholdSource: "官方预警",
-    source: "公开API",
-    method: "正备用容量低于业务阈值触发",
-    action: "建议预留响应空间",
-    level: "medium",
-  },
-  {
-    id: "rw-4",
-    title: "必开机组状态提醒",
-    period: "全日",
-    current: "必开 6 台 / 必停 2 台",
-    threshold: "较 D-1 新增必开 1 台",
-    thresholdSource: "待配置",
-    source: "规则计算",
-    method: "必开必停台数与 D-1 计划差异比对",
-    action: "建议复核中长期匹配",
-    level: "medium",
-  },
-];
 
 function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: typeof thermalUnits; metric: "realtimeLoadRate" | "rollingAvgLoadRate"; overlap: Set<string> }) {
   return (
