@@ -257,7 +257,7 @@ export function BoundaryMiniChart({ data, dataKey, color = C_PRIMARY }: { data: 
     <div className="h-12">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
-          <Area type="monotone" dataKey={dataKey} stroke={color} fill={color} fillOpacity={0.18} strokeWidth={1.5} />
+          <Area type="monotone" dataKey={dataKey} stroke={color} fill={color} fillOpacity={0.18} strokeWidth={1.5} dot={false} activeDot={false} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
