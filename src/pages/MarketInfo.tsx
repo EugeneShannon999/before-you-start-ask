@@ -367,7 +367,7 @@ export default function MarketInfo() {
                 {snapshotCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
               </button>
             </div>
-            <div className={`${snapshotCollapsed ? "hidden" : "flex xl:flex-col gap-2 min-w-max xl:min-w-0"}`}>
+            <div className={`flex gap-2 min-w-max xl:min-w-0 ${snapshotCollapsed ? "xl:hidden" : "xl:flex-col"}`}>
               {forecastSummary.map((card) => (
                 <div key={card.label} className="w-[220px] xl:w-full rounded-md border bg-background px-3 py-2 shrink-0">
                   <p className="text-xs font-medium">{card.label}</p>
