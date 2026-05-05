@@ -4,6 +4,10 @@ import { ArrowLeft, Clock, MapPin } from "lucide-react";
 import {
   Granularity,
   SPACE_WARN_THRESHOLD,
+  aggregateToHour,
+  biddingSpaceByOffset,
+  type BiddingDayOffset,
+  type SpacePoint,
 } from "@/lib/marketMocks";
 import { getForecastSeries } from "@/lib/predictionOutputs";
 import { useProvince, type ProvinceCode } from "@/contexts/ProvinceContext";
@@ -43,6 +47,12 @@ const CHART_META: Record<string, { title: string; caption: string }> = {
 
 const STORAGE_KEY = "market-board-interaction-state:v1";
 const DEFAULT_ZOOM_WINDOW = { start: 0, end: 100 };
+type FullscreenChartPoint = SpacePoint & {
+  hourLabel?: string;
+  periodRange?: string;
+  dayLabel?: string;
+  date?: string;
+};
 const getCurrentBusinessDate = () => {
   const date = new Date();
   const day = date.getDay();
@@ -76,22 +86,41 @@ export default function ChartFullscreen() {
 
   const meta = CHART_META[chartId];
   const forecastKind = chartKeyMap[chartId];
-  const series = useMemo(() => forecastKind ? getForecastSeries(forecastKind, startDate, endDate, granularity) : [], [forecastKind, startDate, endDate, granularity]);
+  const biddingOffset = (saved?.biddingOffset ?? "D-1") as BiddingDayOffset;
+  const series = useMemo(() => forecastKind && chartId !== "bidding-space" ? getForecastSeries(forecastKind, startDate, endDate, granularity) : [], [forecastKind, chartId, startDate, endDate, granularity]);
   const chartData = useMemo(() => {
     if (chartId === "price-spread") {
       return series.map((p) => ({ ...p, dayAhead: p.predicted, realtime: p.actual, spread: p.deviation, cleared: Math.max(400, Math.round(p.predicted * 2.2)) }));
     }
-    if (chartId === "bidding-space") return series.map((p) => ({ ...p, warning: p.predicted < SPACE_WARN_THRESHOLD }));
+    if (chartId === "bidding-space") {
+      const base = biddingSpaceByOffset[biddingOffset];
+      if (granularity === "15min") return base;
+      if (granularity === "hour") {
+        return aggregateToHour(base, ["load", "renewable", "space"]).map((p) => ({
+          ...p,
+          warning: p.space < SPACE_WARN_THRESHOLD,
+        }));
+      }
+      return [{
+        ...base[0],
+        label: "24小时",
+        periodRange: "1-96",
+        load: Math.round(base.reduce((sum, p) => sum + p.load, 0) / base.length),
+        renewable: Math.round(base.reduce((sum, p) => sum + p.renewable, 0) / base.length),
+        space: Math.round(base.reduce((sum, p) => sum + p.space, 0) / base.length),
+        warning: base.some((p) => p.warning),
+      }];
+    }
     return series;
-  }, [chartId, series]);
+  }, [biddingOffset, chartId, granularity, series]);
   const zoomData = useMemo(() => {
     const start = Math.floor((zoomWindow.start / 100) * chartData.length);
     const end = Math.max(start + 1, Math.ceil((zoomWindow.end / 100) * chartData.length));
     return chartData.slice(start, end);
   }, [chartData, zoomWindow]);
-  const xKey = granularity === "day" ? "dayLabel" as const : "label" as const;
+  const xKey = chartId === "bidding-space" && granularity === "hour" ? "hourLabel" as const : granularity === "day" ? "dayLabel" as const : "label" as const;
   const xInterval = granularity === "15min" ? 15 : granularity === "hour" ? 5 : 0;
-  const periodLabel = (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "";
+  const periodLabel = (p: FullscreenChartPoint) => chartId === "bidding-space" ? `${biddingOffset} · 时段 ${p.periodRange ?? p.period}` : p.date ? `${p.date} · 时段 ${p.periodRange}` : "";
 
   useEffect(() => {
     if (saved?.province) setProvince(saved.province as ProvinceCode);
@@ -148,7 +177,7 @@ export default function ChartFullscreen() {
 
   const renderChart = () => {
     const common = {
-      data: [] as any[],
+      data: [],
       xKey,
       xInterval,
       periodLabel,

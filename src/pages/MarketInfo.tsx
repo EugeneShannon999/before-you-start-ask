@@ -29,6 +29,7 @@ import {
   aggregateToHour,
   type BiddingDayOffset,
   type DataSourceTag,
+  type SpacePoint,
 } from "@/lib/marketMocks";
 import { getForecastSeries, summarizeForecast } from "@/lib/predictionOutputs";
 import { MarketCursorProvider } from "@/contexts/MarketCursorContext";
@@ -54,6 +55,11 @@ interface ChartCfg {
   showLegend: boolean;
   zoomWindow: { start: number; end: number };
 }
+
+type SpaceChartPoint = SpacePoint & {
+  hourLabel?: string;
+  periodRange?: string;
+};
 
 const getCurrentBusinessDate = () => {
   const date = new Date();
@@ -102,7 +108,6 @@ export default function MarketInfo() {
   const [priceSeries, setPriceSeries] = useState(saved?.priceSeries ?? { dayAhead: true, realtime: true, spread: true, cleared: true });
   const [loadSeries, setLoadSeries] = useState(saved?.loadSeries ?? { predicted: true, actual: true, deviation: true });
   const [renSeries, setRenSeries] = useState(saved?.renSeries ?? { predicted: true, actual: true, deviation: true });
-  const [spaceSeries, setSpaceSeries] = useState(saved?.spaceSeries ?? { predicted: true, actual: true, deviation: true });
 
   const setGlobalAll = (g: Granularity) => {
     setGlobalGranularity(g);
@@ -185,24 +190,22 @@ export default function MarketInfo() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       province, startDate, endDate, granularity: globalGranularity,
       chartCfgs: { price: priceCfg, load: loadCfg, renewable: renCfg, space: spaceCfg },
-      priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow,
+      priceSeries, loadSeries, renSeries, zoomWindow,
       activeChart, lastExpandedChart: expandedChart, biddingOffset, selectedUnitId, snapshotCollapsed, thermalRankMode,
     }));
-  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, spaceSeries, zoomWindow, activeChart, expandedChart, biddingOffset, selectedUnitId, snapshotCollapsed, thermalRankMode]);
+  }, [province, startDate, endDate, globalGranularity, priceCfg, loadCfg, renCfg, spaceCfg, priceSeries, loadSeries, renSeries, zoomWindow, activeChart, expandedChart, biddingOffset, selectedUnitId, snapshotCollapsed, thermalRankMode]);
 
   // 各图数据
   const priceForecast = useMemo(() => getForecastSeries("price", startDate, endDate, priceCfg.granularity), [startDate, endDate, priceCfg.granularity]);
   const loadForecast = useMemo(() => getForecastSeries("load", startDate, endDate, loadCfg.granularity), [startDate, endDate, loadCfg.granularity]);
   const renForecast = useMemo(() => getForecastSeries("renewable", startDate, endDate, renCfg.granularity), [startDate, endDate, renCfg.granularity]);
-  const spaceForecast = useMemo(() => getForecastSeries("space", startDate, endDate, spaceCfg.granularity), [startDate, endDate, spaceCfg.granularity]);
   const priceDs = useMemo(() => ({ price: priceForecast.map((p) => ({ ...p, dayAhead: p.predicted, realtime: p.actual, spread: p.deviation, cleared: Math.max(400, Math.round(p.predicted * 2.2)) })), xKey: priceCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: priceCfg.granularity === "15min" ? 15 : priceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [priceForecast, priceCfg.granularity]);
   const loadDs = useMemo(() => ({ load: loadForecast, xKey: loadCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: loadCfg.granularity === "15min" ? 15 : loadCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [loadForecast, loadCfg.granularity]);
   const renDs = useMemo(() => ({ renewable: renForecast, xKey: renCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: renCfg.granularity === "15min" ? 15 : renCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [renForecast, renCfg.granularity]);
-  const spaceDs = useMemo(() => ({ space: spaceForecast.map((p) => ({ ...p, warning: p.predicted < SPACE_WARN_THRESHOLD })), xKey: spaceCfg.granularity === "day" ? "dayLabel" as const : "label" as const, xInterval: spaceCfg.granularity === "15min" ? 15 : spaceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => p.date ? `${p.date} · 时段 ${p.periodRange}` : "" }), [spaceForecast, spaceCfg.granularity]);
   const biddingOffsetDs = useMemo(() => {
     const base = biddingSpaceByOffset[biddingOffset];
-    const data = spaceCfg.granularity === "15min" ? base : spaceCfg.granularity === "hour" ? aggregateToHour(base, ["load", "renewable", "space"] as any).map((s: any) => ({ ...s, warning: s.space < SPACE_WARN_THRESHOLD })) : [{ ...base[0], label: "24小时", periodRange: "1-96", load: Math.round(base.reduce((sum, p) => sum + p.load, 0) / base.length), renewable: Math.round(base.reduce((sum, p) => sum + p.renewable, 0) / base.length), space: Math.round(base.reduce((sum, p) => sum + p.space, 0) / base.length), warning: base.some((p) => p.warning) }];
-    return { space: data, xKey: spaceCfg.granularity === "hour" ? "hourLabel" as const : "label" as const, xInterval: spaceCfg.granularity === "15min" ? 15 : spaceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: any) => `时段 ${p.periodRange ?? p.period}` };
+    const data: SpaceChartPoint[] = spaceCfg.granularity === "15min" ? base : spaceCfg.granularity === "hour" ? aggregateToHour(base, ["load", "renewable", "space"]).map((s) => ({ ...s, warning: s.space < SPACE_WARN_THRESHOLD })) : [{ ...base[0], label: "24小时", periodRange: "1-96", load: Math.round(base.reduce((sum, p) => sum + p.load, 0) / base.length), renewable: Math.round(base.reduce((sum, p) => sum + p.renewable, 0) / base.length), space: Math.round(base.reduce((sum, p) => sum + p.space, 0) / base.length), warning: base.some((p) => p.warning) }];
+    return { space: data, xKey: spaceCfg.granularity === "hour" ? "hourLabel" as const : "label" as const, xInterval: spaceCfg.granularity === "15min" ? 15 : spaceCfg.granularity === "hour" ? 5 : 0, periodLabel: (p: SpaceChartPoint) => `时段 ${p.periodRange ?? p.period}` };
   }, [biddingOffset, spaceCfg.granularity]);
   const boundaryTrendData = useMemo(() => aggregateToHour(boundary96, ["tieLine", "sectionLoad", "reservePos", "reserveNeg"] as any), []);
 
@@ -294,7 +297,12 @@ export default function MarketInfo() {
 
         <div className={`grid gap-3 ${snapshotCollapsed ? "xl:grid-cols-[minmax(0,1fr)_52px]" : "xl:grid-cols-[minmax(0,1fr)_320px]"}`}>
           <div className="space-y-3 min-w-0">
-            <ChartCard
+            <section className="space-y-3">
+              <div>
+                <h2 className="text-sm font-semibold">优先判断区</h2>
+                <p className="text-[11px] text-muted-foreground mt-1">默认先看 D-1 竞价空间；D-2 模型确认后再切换默认值。</p>
+              </div>
+              <ChartCard
               index={1}
               chartId="bidding-space"
               title="竞价空间判断"
@@ -327,7 +335,8 @@ export default function MarketInfo() {
                 <span className="text-[11px] text-muted-foreground">当前默认 D-1</span>
               </div>
               <BiddingSpaceChart data={zoomData(biddingOffsetDs.space, spaceCfg.zoomWindow)} xKey={biddingOffsetDs.xKey} xInterval={biddingOffsetDs.xInterval} periodLabel={biddingOffsetDs.periodLabel} showLegend={spaceCfg.showLegend} threshold={SPACE_WARN_THRESHOLD} visibleSeries={{ predicted: false, actual: false, deviation: false }} />
-            </ChartCard>
+              </ChartCard>
+            </section>
 
 
         <section className="rounded-lg border bg-card p-4 shadow-notion space-y-3">
@@ -391,7 +400,7 @@ export default function MarketInfo() {
                 <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{thermalUnits.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
               </Select>
-              <button onClick={() => downloadCsvLikeExcel(monthlyProfile)} className="h-8 rounded-md bg-primary px-3 text-xs text-primary-foreground hover:bg-primary/90">导出 Excel</button>
+              <button onClick={() => downloadThermalMonthlyCsv(monthlyProfile)} className="h-8 rounded-md bg-primary px-3 text-xs text-primary-foreground hover:bg-primary/90">导出 CSV</button>
             </div>
           </div>
           <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
@@ -400,7 +409,11 @@ export default function MarketInfo() {
           </div>
         </section>
 
-        <div className="space-y-3">
+        <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold">预测联动区</h2>
+          <p className="text-[11px] text-muted-foreground mt-1">以实际电价、负荷和新能源对照预测；候选影响因子仅用于联动提示。</p>
+        </div>
         {/* 1. 电价与价差 */}
         <ChartCard
           index={1}
@@ -652,73 +665,18 @@ export default function MarketInfo() {
           />
         </ChartCard>
 
-        {/* 4. 竞价空间 */}
-        <ChartCard
-          index={4}
-          chartId="bidding-space"
-          title="竞价空间实际对照/回测"
-          caption={`公式：竞价空间 = 总负荷预测 − 新能源预测 · 预警阈值 ${SPACE_WARN_THRESHOLD} MW`}
-          granularity={spaceCfg.granularity}
-          onGranularityChange={(g) => setSpaceCfg({ ...spaceCfg, granularity: g })}
-          range={spaceCfg.range}
-          onRangeChange={(r) => applyChartRange(r, setSpaceCfg)}
-          showLegend={spaceCfg.showLegend}
-          onToggleLegend={() => setSpaceCfg({ ...spaceCfg, showLegend: !spaceCfg.showLegend })}
-          active={activeChart === "bidding-space"}
-          expanded={expandedChart === "bidding-space"}
-          onActivate={() => setActiveChart("bidding-space")}
-          onExpand={() => openChartPage("bidding-space")}
-          onExpandedChange={(open) => setExpandedChart(open ? "bidding-space" : null)}
-          onZoomWheel={(deltaY) => handleZoomWheel(deltaY, "bidding-space")}
-          onResetZoom={() => resetZoom("bidding-space")}
-          tableHeader={["时段", "预测(MW)", "实际(MW)", "偏差", "状态"]}
-          tableRows={spaceDs.space.map((p: any) => [
-            p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? "⚠️ 预警" : "正常",
-          ])}
-          csvFilename="bidding-space.csv"
-          csvRows={[
-            ["时段", "预测", "实际", "偏差", "预警"],
-            ...spaceDs.space.map((p: any) => [p.label ?? p.hourLabel, p.predicted, p.actual, p.deviation, p.warning ? 1 : 0]),
-          ]}
-          footer={
-            <div className="mt-2 text-[11px]">
-              <SeriesToggles
-                series={spaceSeries}
-                onChange={setSpaceSeries}
-                items={[
-                  { k: "predicted", label: "预测竞价空间", color: C_PRIMARY },
-                  { k: "actual", label: "实际竞价空间", color: C_SUCCESS },
-                  { k: "deviation", label: "偏差", color: "hsl(var(--destructive))" },
-                ]}
-              />
-            </div>
-          }
-        >
-          <BiddingSpaceChart
-            data={zoomData(spaceDs.space, spaceCfg.zoomWindow)}
-            xKey={spaceDs.xKey}
-            xInterval={spaceDs.xInterval}
-            periodLabel={spaceDs.periodLabel}
-            showLegend={spaceCfg.showLegend}
-            threshold={SPACE_WARN_THRESHOLD}
-            visibleSeries={spaceSeries}
-            forecastMode="all"
-          />
-        </ChartCard>
-
-
-        </div>
+        </section>
           </div>
 
-          <aside className="order-first xl:order-none xl:sticky xl:top-0 xl:self-start rounded-lg border bg-card p-3 shadow-notion overflow-x-auto xl:overflow-visible">
-            <div className={`mb-3 flex items-center gap-2 ${snapshotCollapsed ? "xl:flex-col" : "justify-between"}`}>
+          <aside className={`xl:sticky xl:top-4 xl:self-start rounded-lg border bg-card shadow-notion overflow-x-auto xl:overflow-visible ${snapshotCollapsed ? "p-2" : "p-3"}`}>
+            <div className={`flex items-center gap-2 ${snapshotCollapsed ? "justify-center xl:flex-col" : "mb-3 justify-between"}`}>
               {!snapshotCollapsed && <h2 className="text-base font-semibold">预测快照</h2>}
               <button onClick={() => setSnapshotCollapsed((v) => !v)} className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary xl:ml-0" aria-label="收起或展开预测快照">
                 {snapshotCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
               </button>
               {snapshotCollapsed && <span className="hidden xl:block text-xs font-medium text-muted-foreground [writing-mode:vertical-rl]">预测快照</span>}
             </div>
-            <div className={`flex gap-2 min-w-max xl:min-w-0 ${snapshotCollapsed ? "xl:hidden" : "xl:flex-col"}`}>
+            <div className={`gap-2 min-w-max xl:min-w-0 ${snapshotCollapsed ? "hidden" : "flex xl:flex-col"}`}>
               {forecastSummary.map((card) => (
                 <div key={card.label} className="w-[240px] xl:w-full rounded-md border bg-background px-3 py-3 shrink-0">
                   <p className="text-sm font-medium">{card.label}</p>
@@ -754,7 +712,7 @@ function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: 
           {rows.map((u, index) => (
             <tr key={u.id} className={`border-t hover:bg-secondary/30 ${overlap.has(u.id) ? "bg-warning/10" : ""}`}>
               <td className="px-3 py-1.5 font-mono text-muted-foreground">#{index + 1}</td>
-              <td className="px-3 py-1.5">{u.name}{overlap.has(u.id) && <span className="ml-2 rounded bg-warning/20 px-1.5 py-0.5 text-[10px] text-warning">两榜重合</span>}</td>
+              <td className="px-3 py-1.5">{u.name}</td>
               <td className="px-3 py-1.5 text-right font-mono">{u[metric]}%</td>
             </tr>
           ))}
@@ -764,7 +722,7 @@ function LoadRateTable({ title, rows, metric, overlap }: { title: string; rows: 
   );
 }
 
-function downloadCsvLikeExcel(profile: ReturnType<typeof getThermalMonthlyProfile>) {
+function downloadThermalMonthlyCsv(profile: ReturnType<typeof getThermalMonthlyProfile>) {
   const rows = [["机组", "粒度", "时段", "负载率%"], ...profile.points.map((p) => [profile.unit.name, profile.granularity, p.label, p.loadRate])];
   const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });

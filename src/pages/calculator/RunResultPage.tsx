@@ -81,11 +81,18 @@ export default function RunResultPage() {
       </div>
 
       {/* 任务元信息 */}
-      <div className="p-3 rounded-lg shadow-notion bg-card mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-muted-foreground">{runTypeLabel[run.type]}</span>
-          <span className="text-muted-foreground">{run.settleMonth}</span>
-          <span className="text-muted-foreground">/ {run.policyVersion}</span>
+      <div className="p-3 rounded-lg shadow-notion bg-card mb-4 flex items-start justify-between gap-3">
+        <div className="grid gap-1.5 text-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-muted-foreground">{runTypeLabel[run.type]}</span>
+            <span className="text-muted-foreground">{run.settleMonth}</span>
+            <span className="text-muted-foreground">/ {run.policyVersion}</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+            <span className="font-mono">数据版本 {run.dataVersionId}</span>
+            <span className="font-mono">套餐快照 {run.packageSnapshot}</span>
+            <span>{run.validationSummary}</span>
+          </div>
         </div>
         <Badge
           variant="outline"

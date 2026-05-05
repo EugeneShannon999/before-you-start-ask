@@ -6,6 +6,8 @@ export type PackageVersionStatus = "published" | "draft" | "disabled";
 export type RunType = "trial" | "formal";
 export type RunStatus = "success" | "failed" | "running" | "pending";
 export type PolicyStatus = "active" | "draft" | "disabled";
+export type DataVersionStatus = "published" | "validating" | "warning" | "failed";
+export type DataVersionSource = "页面抓取" | "公开API" | "规则计算" | "Excel fallback";
 export type BatchType =
   | "raw_load"
   | "raw_market"
@@ -41,7 +43,10 @@ export interface CalcRun {
   id: string;
   settleMonth: string;
   type: RunType;
+  dataVersionId: string;
   policyVersion: string;
+  packageSnapshot: string;
+  validationSummary: string;
   status: RunStatus;
   customerCount: number;
   totalVolumeMWh: number;
@@ -98,6 +103,19 @@ export interface DataBatch {
   status: BatchStatus;
   importedAt: string;
   rows: number;
+}
+
+export interface DataVersion {
+  id: string;
+  dataType: string;
+  settleMonth: string;
+  businessDate: string;
+  source: DataVersionSource;
+  pluginTaskId: string;
+  coverage: string;
+  status: DataVersionStatus;
+  publishedAt: string;
+  traceNote: string;
 }
 
 // ===== 客户 =====
@@ -207,7 +225,10 @@ export const mockCalcRuns: CalcRun[] = [
     id: "RUN-202604-002",
     settleMonth: "2026-04",
     type: "formal",
+    dataVersionId: "DV-SETTLE-202604-V2",
     policyVersion: "POLICY-202604-DRAFT",
+    packageSnapshot: "PKG-SNAPSHOT-202604-DRAFT",
+    validationSummary: "月度结算数据缺 2 个客户补录确认，阻止正式核算",
     status: "failed",
     customerCount: 1,
     totalVolumeMWh: 0,
@@ -220,7 +241,10 @@ export const mockCalcRuns: CalcRun[] = [
     id: "RUN-202604-001",
     settleMonth: "2026-04",
     type: "trial",
+    dataVersionId: "DV-SETTLE-202604-V1",
     policyVersion: "POLICY-202604-TRIAL",
+    packageSnapshot: "PKG-SNAPSHOT-202604-ACTIVE",
+    validationSummary: "数据版本已发布，覆盖率 96/96；允许试算",
     status: "success",
     customerCount: 2,
     totalVolumeMWh: 8882.78,
@@ -233,7 +257,10 @@ export const mockCalcRuns: CalcRun[] = [
     id: "RUN-202603-003",
     settleMonth: "2026-03",
     type: "formal",
+    dataVersionId: "DV-SETTLE-202603-FINAL",
     policyVersion: "POLICY-202603-FINAL",
+    packageSnapshot: "PKG-SNAPSHOT-202603-FINAL",
+    validationSummary: "正式版本已封存，来源追溯完整",
     status: "success",
     customerCount: 4,
     totalVolumeMWh: 17542.6,
@@ -242,6 +269,77 @@ export const mockCalcRuns: CalcRun[] = [
     createdAt: "2026-04-02 16:20",
   },
 ];
+
+// ===== 数据版本 =====
+export const mockDataVersions: DataVersion[] = [
+  {
+    id: "DV-SETTLE-202604-V2",
+    dataType: "月度结算数据",
+    settleMonth: "2026-04",
+    businessDate: "2026-04",
+    source: "页面抓取",
+    pluginTaskId: "TASK-SETTLE-202604-02",
+    coverage: "94/96 时点 · 68/70 客户",
+    status: "warning",
+    publishedAt: "2026-04-20 11:05",
+    traceNote: "交易中心页面抓取，2 个客户等待 Excel fallback 补录",
+  },
+  {
+    id: "DV-SETTLE-202604-V1",
+    dataType: "月度结算数据",
+    settleMonth: "2026-04",
+    businessDate: "2026-04",
+    source: "页面抓取",
+    pluginTaskId: "TASK-SETTLE-202604-01",
+    coverage: "96/96 时点 · 70/70 客户",
+    status: "published",
+    publishedAt: "2026-04-20 09:58",
+    traceNote: "插件采集完成并通过校验，作为试算默认版本",
+  },
+  {
+    id: "DV-PRICE-202604-D",
+    dataType: "日前/实时电价",
+    settleMonth: "2026-04",
+    businessDate: "2026-04-20",
+    source: "公开API",
+    pluginTaskId: "TASK-PRICE-D-20260420",
+    coverage: "96/96 时点",
+    status: "published",
+    publishedAt: "2026-04-20 10:30",
+    traceNote: "公开 API 披露后入库，供批发侧成本核对",
+  },
+  {
+    id: "DV-LOAD-202604-D",
+    dataType: "用户负荷",
+    settleMonth: "2026-04",
+    businessDate: "2026-04-20",
+    source: "规则计算",
+    pluginTaskId: "TASK-LOAD-STG-20260420",
+    coverage: "96/96 时点 · 70/70 客户",
+    status: "published",
+    publishedAt: "2026-04-20 10:12",
+    traceNote: "由采集负荷清洗映射生成，不再作为上传批次主链路",
+  },
+  {
+    id: "DV-CONTRACT-202604-FB",
+    dataType: "中长期合约",
+    settleMonth: "2026-04",
+    businessDate: "2026-04",
+    source: "Excel fallback",
+    pluginTaskId: "TASK-CONTRACT-FALLBACK-202604",
+    coverage: "168 条合约",
+    status: "validating",
+    publishedAt: "待发布",
+    traceNote: "插件未接入受限页面，暂用人工文件补录并保留来源标记",
+  },
+];
+
+export const dataVersionStatusLabel: Record<DataVersionStatus, string> = {
+  published: "已发布",
+  validating: "校验中",
+  warning: "有缺口",
+  failed: "校验失败",
+};
 
 // ===== 结果详情 - 批发侧 =====
 export const mockWholesaleRows: WholesaleRow[] = [
@@ -363,7 +461,7 @@ export const mockPolicyVersions: PolicyVersion[] = [
   },
 ];
 
-// ===== 数据批次 =====
+// ===== 旧导入 Mock（保留兼容旧稿，不作为默认页面主链路）=====
 export const mockDataBatches: DataBatch[] = [
   {
     id: "RAW-LOAD-202604",

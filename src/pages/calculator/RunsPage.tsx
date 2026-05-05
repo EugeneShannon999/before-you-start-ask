@@ -19,8 +19,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Search, Plus } from "lucide-react";
-import { mockCalcRuns, runStatusLabel, runTypeLabel } from "@/lib/calculatorMocks";
+import { Search, Plus, ShieldCheck } from "lucide-react";
+import { mockCalcRuns, mockDataVersions, runStatusLabel, runTypeLabel } from "@/lib/calculatorMocks";
 import { toast } from "sonner";
 
 const statusStyle = (status: string) => {
@@ -128,7 +128,9 @@ export default function RunsPage() {
               <th className="text-left px-4 py-2.5 font-medium">任务编号</th>
               <th className="text-left px-4 py-2.5 font-medium">结算月</th>
               <th className="text-left px-4 py-2.5 font-medium">类型</th>
+              <th className="text-left px-4 py-2.5 font-medium">数据版本</th>
               <th className="text-left px-4 py-2.5 font-medium">政策版本</th>
+              <th className="text-left px-4 py-2.5 font-medium">套餐快照</th>
               <th className="text-left px-4 py-2.5 font-medium">状态</th>
               <th className="text-right px-4 py-2.5 font-medium">客户数</th>
               <th className="text-right px-4 py-2.5 font-medium">总电量(MWh)</th>
@@ -143,7 +145,9 @@ export default function RunsPage() {
                 <td className="px-4 py-2.5 font-medium">{r.id}</td>
                 <td className="px-4 py-2.5 text-muted-foreground">{r.settleMonth}</td>
                 <td className="px-4 py-2.5 text-muted-foreground">{runTypeLabel[r.type]}</td>
+                <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{r.dataVersionId}</td>
                 <td className="px-4 py-2.5 text-muted-foreground">{r.policyVersion}</td>
+                <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{r.packageSnapshot}</td>
                 <td className="px-4 py-2.5">
                   <Badge variant="outline" className={statusStyle(r.status)}>
                     {runStatusLabel[r.status]}
@@ -214,18 +218,19 @@ export default function RunsPage() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">原始批次集合</Label>
-              <div className="flex flex-wrap gap-1.5 mt-1.5 p-2 border rounded-md min-h-[40px] bg-background">
-                <Badge variant="secondary" className="text-xs">RAW-LOAD-202604 / 原始负荷 ✕</Badge>
-                <Badge variant="secondary" className="text-xs">RAW-MARKET-202604 / 原始交易 ✕</Badge>
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">中间层批次集合</Label>
-              <div className="flex flex-wrap gap-1.5 mt-1.5 p-2 border rounded-md min-h-[40px] bg-background">
-                <Badge variant="secondary" className="text-xs">STG-LOAD-202604 / 中间层负荷 ✕</Badge>
-                <Badge variant="secondary" className="text-xs">STG-PRICE-202604 / 中间层价格 ✕</Badge>
-              </div>
+              <Label className="text-xs text-muted-foreground">数据版本</Label>
+              <Select defaultValue="DV-SETTLE-202604-V1">
+                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {mockDataVersions
+                    .filter((v) => v.dataType === "月度结算数据")
+                    .map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.id} / {v.coverage}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">政策版本</Label>
@@ -246,6 +251,17 @@ export default function RunsPage() {
                   <SelectItem value="snapshot">指定时刻快照</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="rounded-md border bg-success/5 border-success/20 p-3">
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-success">校验摘要</p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    默认数据版本 DV-SETTLE-202604-V1 已发布，覆盖率 96/96；政策版本与套餐快照均可追溯。若切换到有缺口版本，正式核算按钮应阻止提交。
+                  </p>
+                </div>
+              </div>
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">备注</Label>

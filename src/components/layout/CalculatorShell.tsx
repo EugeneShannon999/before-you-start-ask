@@ -11,10 +11,10 @@ interface Tab {
 }
 
 const tabs: Tab[] = [
-  { to: "/tools/calculator/customers", label: "客户列表", icon: Users, desc: "客户档案与套餐绑定" },
+  { to: "/tools/calculator/customers", label: "客户与套餐", icon: Users, desc: "客户档案与套餐版本绑定" },
   { to: "/tools/calculator/runs", label: "计算任务", icon: CalcIcon, desc: "试算 / 正式核算与结果" },
   { to: "/tools/calculator/policies", label: "政策参数版本", icon: FileCog, desc: "结算政策版本管理" },
-  { to: "/tools/calculator/batches", label: "数据批次", icon: Database, desc: "原始与中间层数据批次" },
+  { to: "/tools/calculator/batches", label: "数据版本", icon: Database, desc: "插件采集与计算输入追溯" },
 ];
 
 interface CalculatorShellProps {
