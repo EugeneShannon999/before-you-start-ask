@@ -23,6 +23,19 @@ import { Search, Plus, ShieldCheck } from "lucide-react";
 import { mockCalcRuns, mockDataVersions, runStatusLabel, runTypeLabel } from "@/lib/calculatorMocks";
 import { toast } from "sonner";
 
+type RunDemoState = "normal" | "incompleteData" | "noPolicy" | "validationFailed" | "running" | "failed" | "warning" | "voidConfirm";
+
+const runDemoOptions: Array<{ value: RunDemoState; label: string; hint: string; blocking?: boolean }> = [
+  { value: "normal", label: "正常新建测算", hint: "输入数据版本、政策参数和套餐快照均可追溯。" },
+  { value: "incompleteData", label: "输入数据版本不完整", hint: "月度结算数据缺 2 个客户，正式核算阻断。", blocking: true },
+  { value: "noPolicy", label: "无可用政策参数版本", hint: "本月无 active 政策版本，不能开始正式测算。", blocking: true },
+  { value: "validationFailed", label: "校验不通过", hint: "缺失日前/实时记录或套餐重叠，需先修正。", blocking: true },
+  { value: "running", label: "测算运行中", hint: "任务已提交，结果尚未冻结。" },
+  { value: "failed", label: "测算失败", hint: "计算服务返回失败原因，仅保留日志。" },
+  { value: "warning", label: "成功但有警告", hint: "允许查看结果，但需提示输入缺口风险。" },
+  { value: "voidConfirm", label: "作废确认", hint: "作废任务前展示影响范围和确认提示。" },
+];
+
 const statusStyle = (status: string) => {
   switch (status) {
     case "success":
@@ -43,6 +56,9 @@ export default function RunsPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [policyFilter, setPolicyFilter] = useState("all");
   const [open, setOpen] = useState(false);
+  const [demoState, setDemoState] = useState<RunDemoState>("normal");
+
+  const currentDemo = runDemoOptions.find((option) => option.value === demoState) ?? runDemoOptions[0];
 
   const filtered = useMemo(() => {
     return mockCalcRuns.filter((r) => {
@@ -69,6 +85,33 @@ export default function RunsPage() {
         </Button>
       </div>
 
+      <div className="mb-4 rounded-lg border bg-card p-3 shadow-notion">
+        <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)] items-center">
+          <div>
+            <Label className="text-xs text-muted-foreground">演示状态</Label>
+            <Select value={demoState} onValueChange={(v) => setDemoState(v as RunDemoState)}>
+              <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {runDemoOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className={`rounded-md px-3 py-2 text-xs ${currentDemo.blocking ? "border border-destructive/30 bg-destructive/5 text-destructive" : demoState === "normal" ? "bg-secondary/40 text-muted-foreground" : "border border-warning/30 bg-warning/5 text-warning"}`}>
+            {currentDemo.hint}
+            <div className="mt-2 flex flex-wrap gap-1">
+              {runDemoOptions.map((option) => (
+                <span key={option.value} className="rounded bg-background px-1.5 py-0.5 text-muted-foreground">
+                  {option.label}
+                </span>
+              ))}
+              <span className="rounded bg-background px-1.5 py-0.5 text-muted-foreground">抽屉按钮：仅校验 / 开始测算 / 保存草稿 / 取消</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 筛选 */}
       <div className="p-4 rounded-lg shadow-notion bg-card mb-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
@@ -89,6 +132,7 @@ export default function RunsPage() {
                 <SelectItem value="success">成功</SelectItem>
                 <SelectItem value="failed">失败</SelectItem>
                 <SelectItem value="running">运行中</SelectItem>
+                <SelectItem value="pending">待校验</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -168,13 +212,13 @@ export default function RunsPage() {
                     </button>
                     <button
                       className="text-foreground/70 hover:text-foreground"
-                      onClick={() => toast.info(`已重新提交 ${r.id}`)}
+                      onClick={() => toast.info(demoState === "running" ? `${r.id} 已进入运行中（mock）` : `已重新提交 ${r.id}`)}
                     >
                       重算
                     </button>
                     <button
                       className="text-destructive hover:underline"
-                      onClick={() => toast.success(`${r.id} 已作废`)}
+                      onClick={() => toast.info(demoState === "voidConfirm" ? `${r.id} 作废确认：结果将不再作为正式口径` : `${r.id} 作废确认弹窗（mock）`)}
                     >
                       作废
                     </button>
@@ -254,11 +298,18 @@ export default function RunsPage() {
             </div>
             <div className="rounded-md border bg-success/5 border-success/20 p-3">
               <div className="flex items-start gap-2">
-                <ShieldCheck className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                <ShieldCheck className={`h-4 w-4 shrink-0 mt-0.5 ${currentDemo.blocking ? "text-destructive" : demoState === "warning" ? "text-warning" : "text-success"}`} />
                 <div>
-                  <p className="text-sm font-medium text-success">校验摘要</p>
+                  <p className={`text-sm font-medium ${currentDemo.blocking ? "text-destructive" : demoState === "warning" ? "text-warning" : "text-success"}`}>校验摘要</p>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    结算用户池 70 户；缺失套餐客户 0；缺失 P 售均小时数 0；缺失日前/实时记录数 0；套餐重叠数 0。默认数据版本 DV-SETTLE-202604-V1 已发布，覆盖率 96/96；政策版本与套餐快照均可追溯。若切换到有缺口版本，正式核算按钮应阻止提交。
+                    {demoState === "normal" && "结算用户池 70 户；缺失套餐客户 0；缺失 P 售均小时数 0；缺失日前/实时记录数 0；套餐重叠数 0。默认数据版本 DV-SETTLE-202604-V1 已发布，覆盖率 96/96；政策版本与套餐快照均可追溯。"}
+                    {demoState === "incompleteData" && "结算用户池 70 户；月度结算数据缺 2 户；缺失日前/实时记录数 0；正式核算阻断，仅允许保存草稿或试算。"}
+                    {demoState === "noPolicy" && "结算用户池 70 户；数据版本完整；但无 active 政策参数版本，开始测算按钮禁用。"}
+                    {demoState === "validationFailed" && "缺失套餐客户 3 户；缺失 P 售均小时数 12；缺失日前/实时记录数 8；套餐重叠数 2；校验不通过。"}
+                    {demoState === "running" && "任务已提交到 mock 队列，状态为运行中，结果页暂不可查看。"}
+                    {demoState === "failed" && "测算失败：批发侧成本计算缺少价格版本 DV-PRICE-20260421-MISS。"}
+                    {demoState === "warning" && "测算成功但有警告：2 个客户使用 Excel fallback，结果页需要展示输入版本风险提示。"}
+                    {demoState === "voidConfirm" && "作废确认：作废后该任务不能作为正式测算结果，只保留审计追溯。"}
                   </p>
                 </div>
               </div>
@@ -272,15 +323,26 @@ export default function RunsPage() {
             <Button
               variant="outline"
               onClick={() => {
-                toast.success("校验通过");
+                if (currentDemo.blocking) toast.error("校验不通过，请先处理阻断项");
+                else toast.success("校验通过");
               }}
             >
               仅校验
             </Button>
             <Button
+              variant="outline"
+              onClick={() => toast.success("测算草稿已保存（mock）")}
+            >
+              保存草稿
+            </Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              取消
+            </Button>
+            <Button
+              disabled={currentDemo.blocking}
               onClick={() => {
                 setOpen(false);
-                toast.success("已提交测算任务");
+                toast.success(demoState === "warning" ? "已提交测算任务，结果将带警告标记" : "已提交测算任务");
               }}
             >
               开始测算

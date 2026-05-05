@@ -50,7 +50,10 @@ type DemoScenario =
   | "heartbeatFail"
   | "platformMissing"
   | "serviceDown"
-  | "configOpen";
+  | "configOpen"
+  | "noDebugTasks"
+  | "requestRunning"
+  | "requestFail";
 
 interface SyncRow {
   id: string;
@@ -98,6 +101,9 @@ const scenarioOptions: Array<{ value: DemoScenario; label: string }> = [
   { value: "platformMissing", label: "未检测到交易平台" },
   { value: "serviceDown", label: "业务服务不可用" },
   { value: "configOpen", label: "采集配置未冻结" },
+  { value: "noDebugTasks", label: "无可调试任务" },
+  { value: "requestRunning", label: "请求运行中" },
+  { value: "requestFail", label: "请求失败" },
 ];
 
 const scenarioStatus: Record<DemoScenario, { label: string; tone: "success" | "warning" | "danger" | "muted"; hint: string; mainAction: string }> = {
@@ -113,6 +119,9 @@ const scenarioStatus: Record<DemoScenario, { label: string; tone: "success" | "w
   platformMissing: { label: "未检测到交易平台", tone: "danger", hint: "当前页面不是支持的交易中心域名。", mainAction: "不可采集" },
   serviceDown: { label: "业务服务不可用", tone: "danger", hint: "本地/后端业务服务未连接，无法读取目录与计划。", mainAction: "检查服务" },
   configOpen: { label: "采集配置未冻结", tone: "warning", hint: "市场目录或任务模板未冻结，只允许调试。", mainAction: "进入设置" },
+  noDebugTasks: { label: "无可调试任务", tone: "muted", hint: "本月没有可调试任务项，任务调试页展示空态。", mainAction: "刷新状态" },
+  requestRunning: { label: "请求运行中", tone: "warning", hint: "任务调试请求正在执行，展示运行中状态。", mainAction: "等待请求" },
+  requestFail: { label: "请求失败", tone: "danger", hint: "任务调试请求返回失败，展示错误提示与响应状态。", mainAction: "重新运行" },
 };
 
 export default function PluginManagement() {
@@ -210,6 +219,13 @@ export default function PluginManagement() {
               <div className="rounded-md border bg-background p-3">
                 <StatusStrip scenario={scenario} />
                 <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{scenarioStatus[scenario].hint}</p>
+                <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
+                  {scenarioOptions.map((item) => (
+                    <span key={item.value} className="rounded bg-secondary/50 px-1.5 py-0.5">
+                      {item.label}
+                    </span>
+                  ))}
+                </div>
               </div>
               <div className="grid gap-2 md:grid-cols-4">
                 <MiniStat label="应采任务" value={scenario === "noTasks" ? "0" : "28"} />
@@ -479,6 +495,22 @@ function SyncSidePanel({
                   <TinyMetric label="缺失" value={scenario === "planFail" ? "未知" : "3"} />
                   <TinyMetric label="未到期" value={scenario === "notDue" ? "5" : "2"} />
                 </div>
+                <div className="mt-3 space-y-2">
+                  <div>
+                    <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span>日级进度</span>
+                      <span>{scenario === "noTasks" ? "0/0" : "19/24"}</span>
+                    </div>
+                    <ProgressBar value={scenario === "noTasks" ? 0 : 79} />
+                  </div>
+                  <div>
+                    <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span>月级进度</span>
+                      <span>{scenario === "notDue" ? "18/28" : "24/28"}</span>
+                    </div>
+                    <ProgressBar value={scenario === "notDue" ? 64 : 86} />
+                  </div>
+                </div>
                 <div className="mt-3 rounded-md bg-secondary/40 px-2 py-1.5 text-[11px] text-muted-foreground leading-relaxed">
                   {status.hint}
                 </div>
@@ -563,23 +595,31 @@ function SyncSidePanel({
                 <TraceLine label="调试模式" value="不进入正式任务链路" />
               </SideCard>
               <SideCard title="任务项">
-                <Select defaultValue="TASK-SETTLE-202604-02">
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {rows.slice(0, 6).map((row) => (
-                      <SelectItem key={row.id} value={row.dataVersion ?? row.id}>{row.item} / {row.range}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="mt-2 space-y-1.5">
-                  <TraceLine label="任务名称" value="月度结算数据采集" />
-                  <TraceLine label="业务日期" value="2026-04" mono />
-                  <TraceLine label="状态" value={scenario === "unconfigured" ? "未配置 requestProfile" : "可调试"} />
-                  <TraceLine label="覆盖粒度" value="客户 x 96 点" />
-                </div>
-                <Button className="mt-2 w-full" size="sm" disabled={scenario === "unconfigured" || scenario === "serviceDown"} onClick={() => toast.success("请求成功（mock）")}>
-                  运行选中任务
-                </Button>
+                {scenario === "noDebugTasks" ? (
+                  <div className="rounded-md bg-secondary/40 p-3 text-xs text-muted-foreground">
+                    无可调试任务：当前结算月计划为空或任务模板未生成。
+                  </div>
+                ) : (
+                  <>
+                    <Select defaultValue="TASK-SETTLE-202604-02">
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {rows.slice(0, 6).map((row) => (
+                          <SelectItem key={row.id} value={row.dataVersion ?? row.id}>{row.item} / {row.range}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="mt-2 space-y-1.5">
+                      <TraceLine label="任务名称" value="月度结算数据采集" />
+                      <TraceLine label="业务日期" value="2026-04" mono />
+                      <TraceLine label="状态" value={scenario === "unconfigured" ? "未配置 requestProfile" : scenario === "requestRunning" ? "请求运行中" : scenario === "requestFail" ? "请求失败" : "可调试"} />
+                      <TraceLine label="覆盖粒度" value="客户 x 96 点" />
+                    </div>
+                    <Button className="mt-2 w-full" size="sm" disabled={scenario === "unconfigured" || scenario === "serviceDown" || scenario === "requestRunning"} onClick={() => scenario === "requestFail" ? toast.error("请求失败：选择器未命中目标表格（mock）") : toast.success("请求成功（mock）")}>
+                      {scenario === "requestRunning" ? "请求运行中" : "运行选中任务"}
+                    </Button>
+                  </>
+                )}
               </SideCard>
               <SideCard title="请求配置">
                 <div className="flex gap-1 text-[11px]">
@@ -592,11 +632,13 @@ function SyncSidePanel({
   "path": "/settlement/monthly",
   "params": { "month": "2026-04" }
 }`}</pre>
-                <TraceLine label="响应状态" value={scenario === "heartbeatFail" ? "500" : "200"} mono />
+                <TraceLine label="响应状态" value={scenario === "heartbeatFail" || scenario === "requestFail" ? "500" : scenario === "requestRunning" ? "pending" : "200"} mono />
                 <TraceLine label="finalUrl" value="https://trade.example/settlement/monthly" mono />
                 <TraceLine label="byteLength" value="248192" mono />
                 <TraceLine label="fileName" value="settlement-202604.json" mono />
                 {scenario === "unconfigured" && <p className="text-[11px] text-destructive">错误提示：当前任务未配置 requestProfile。</p>}
+                {scenario === "requestFail" && <p className="text-[11px] text-destructive">错误提示：选择器未命中目标表格或响应解析失败。</p>}
+                {scenario === "requestRunning" && <p className="text-[11px] text-warning">运行结果提示：请求执行中，等待响应返回。</p>}
               </SideCard>
               <div className="rounded-md border border-warning/30 bg-warning/5 p-3">
                 <p className="text-sm font-medium text-warning">Debug 单任务不申请租约、不 heartbeat、不回写后端。</p>
