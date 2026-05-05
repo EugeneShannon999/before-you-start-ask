@@ -6,7 +6,7 @@ export type PackageVersionStatus = "published" | "draft" | "disabled";
 export type RunType = "trial" | "formal";
 export type RunStatus = "success" | "failed" | "running" | "pending";
 export type PolicyStatus = "active" | "draft" | "disabled";
-export type DataVersionStatus = "published" | "validating" | "warning" | "failed";
+export type DataVersionStatus = "published" | "validating" | "warning" | "failed" | "voided" | "missing" | "not_due";
 export type DataVersionSource = "页面抓取" | "公开API" | "规则计算" | "Excel fallback";
 export type BatchType =
   | "raw_load"
@@ -111,11 +111,33 @@ export interface DataVersion {
   settleMonth: string;
   businessDate: string;
   source: DataVersionSource;
+  artifactType: "计算输入" | "采集原始件" | "清洗中间层" | "补录文件";
   pluginTaskId: string;
+  objectKey: string;
+  pluginVersion: string;
   coverage: string;
   status: DataVersionStatus;
   publishedAt: string;
+  sourceFileId: string;
+  importBatchId: string;
+  sourceFileName: string;
+  capturedAt: string;
   traceNote: string;
+  monthlyOverview: {
+    expected: number;
+    existing: number;
+    missing: number;
+    notDue: number;
+    coverageRate: string;
+    latestUpdatedAt: string;
+  };
+  validation: {
+    status: "通过" | "警告" | "失败" | "校验中" | "未到期";
+    errorCount: number;
+    warningCount: number;
+    fieldSamples: string[];
+    ruleSamples: string[];
+  };
 }
 
 // ===== 客户 =====
@@ -278,11 +300,26 @@ export const mockDataVersions: DataVersion[] = [
     settleMonth: "2026-04",
     businessDate: "2026-04",
     source: "页面抓取",
+    artifactType: "计算输入",
     pluginTaskId: "TASK-SETTLE-202604-02",
+    objectKey: "settlement/2026-04/current/v2.json",
+    pluginVersion: "sync-helper@0.3.1",
     coverage: "94/96 时点 · 68/70 客户",
     status: "warning",
     publishedAt: "2026-04-20 11:05",
+    sourceFileId: "SF-SETTLE-202604-002",
+    importBatchId: "IB-SETTLE-202604-002",
+    sourceFileName: "安徽交易中心_结算数据_202604.html",
+    capturedAt: "2026-04-20 11:02",
     traceNote: "交易中心页面抓取，2 个客户等待 Excel fallback 补录",
+    monthlyOverview: { expected: 70, existing: 68, missing: 2, notDue: 0, coverageRate: "97.1%", latestUpdatedAt: "2026-04-20 11:05" },
+    validation: {
+      status: "警告",
+      errorCount: 0,
+      warningCount: 2,
+      fieldSamples: ["C013 缺少 2026-04-18 12:00 电量", "C027 结算价为空，等待补录"],
+      ruleSamples: ["正式核算阻断：客户覆盖率未达 100%", "允许试算：已保留缺口标记"],
+    },
   },
   {
     id: "DV-SETTLE-202604-V1",
@@ -290,11 +327,26 @@ export const mockDataVersions: DataVersion[] = [
     settleMonth: "2026-04",
     businessDate: "2026-04",
     source: "页面抓取",
+    artifactType: "计算输入",
     pluginTaskId: "TASK-SETTLE-202604-01",
+    objectKey: "settlement/2026-04/current/v1.json",
+    pluginVersion: "sync-helper@0.3.0",
     coverage: "96/96 时点 · 70/70 客户",
     status: "published",
     publishedAt: "2026-04-20 09:58",
+    sourceFileId: "SF-SETTLE-202604-001",
+    importBatchId: "IB-SETTLE-202604-001",
+    sourceFileName: "安徽交易中心_结算数据_202604.html",
+    capturedAt: "2026-04-20 09:52",
     traceNote: "插件采集完成并通过校验，作为试算默认版本",
+    monthlyOverview: { expected: 70, existing: 70, missing: 0, notDue: 0, coverageRate: "100%", latestUpdatedAt: "2026-04-20 09:58" },
+    validation: {
+      status: "通过",
+      errorCount: 0,
+      warningCount: 0,
+      fieldSamples: ["无字段级错误"],
+      ruleSamples: ["客户池、套餐快照、96 点数据均完整"],
+    },
   },
   {
     id: "DV-PRICE-202604-D",
@@ -302,11 +354,26 @@ export const mockDataVersions: DataVersion[] = [
     settleMonth: "2026-04",
     businessDate: "2026-04-20",
     source: "公开API",
+    artifactType: "计算输入",
     pluginTaskId: "TASK-PRICE-D-20260420",
+    objectKey: "price/2026-04/2026-04-20/current.json",
+    pluginVersion: "sync-helper@0.3.1",
     coverage: "96/96 时点",
     status: "published",
     publishedAt: "2026-04-20 10:30",
+    sourceFileId: "SF-PRICE-20260420",
+    importBatchId: "IB-PRICE-20260420",
+    sourceFileName: "api-price-20260420.json",
+    capturedAt: "2026-04-20 10:28",
     traceNote: "公开 API 披露后入库，供批发侧成本核对",
+    monthlyOverview: { expected: 96, existing: 96, missing: 0, notDue: 0, coverageRate: "100%", latestUpdatedAt: "2026-04-20 10:30" },
+    validation: {
+      status: "通过",
+      errorCount: 0,
+      warningCount: 0,
+      fieldSamples: ["无字段级错误"],
+      ruleSamples: ["日前与实时价格时点对齐"],
+    },
   },
   {
     id: "DV-LOAD-202604-D",
@@ -314,11 +381,26 @@ export const mockDataVersions: DataVersion[] = [
     settleMonth: "2026-04",
     businessDate: "2026-04-20",
     source: "规则计算",
+    artifactType: "清洗中间层",
     pluginTaskId: "TASK-LOAD-STG-20260420",
+    objectKey: "load/2026-04/2026-04-20/staging.json",
+    pluginVersion: "sync-helper@0.3.1",
     coverage: "96/96 时点 · 70/70 客户",
     status: "published",
     publishedAt: "2026-04-20 10:12",
+    sourceFileId: "SF-LOAD-RAW-20260420",
+    importBatchId: "IB-LOAD-STG-20260420",
+    sourceFileName: "load-cleaned-20260420.parquet",
+    capturedAt: "2026-04-20 10:09",
     traceNote: "由采集负荷清洗映射生成，不再作为上传批次主链路",
+    monthlyOverview: { expected: 6720, existing: 6720, missing: 0, notDue: 0, coverageRate: "100%", latestUpdatedAt: "2026-04-20 10:12" },
+    validation: {
+      status: "通过",
+      errorCount: 0,
+      warningCount: 1,
+      fieldSamples: ["C044 1 个尖峰点使用插值，已标记"],
+      ruleSamples: ["负荷曲线总量与月度电量差异 0.3%，低于阈值"],
+    },
   },
   {
     id: "DV-CONTRACT-202604-FB",
@@ -326,11 +408,107 @@ export const mockDataVersions: DataVersion[] = [
     settleMonth: "2026-04",
     businessDate: "2026-04",
     source: "Excel fallback",
+    artifactType: "补录文件",
     pluginTaskId: "TASK-CONTRACT-FALLBACK-202604",
+    objectKey: "contract/2026-04/fallback/draft.xlsx",
+    pluginVersion: "manual-fallback",
     coverage: "168 条合约",
     status: "validating",
     publishedAt: "待发布",
+    sourceFileId: "SF-CONTRACT-FB-202604",
+    importBatchId: "IB-CONTRACT-FB-202604",
+    sourceFileName: "中长期合约补录_202604.xlsx",
+    capturedAt: "2026-04-20 11:12",
     traceNote: "插件未接入受限页面，暂用人工文件补录并保留来源标记",
+    monthlyOverview: { expected: 168, existing: 168, missing: 0, notDue: 0, coverageRate: "100%", latestUpdatedAt: "2026-04-20 11:12" },
+    validation: {
+      status: "校验中",
+      errorCount: 0,
+      warningCount: 3,
+      fieldSamples: ["合同 H-032 缺少交易单元映射", "合同 H-088 分解曲线未冻结"],
+      ruleSamples: ["fallback 文件需人工确认后才能发布为计算输入"],
+    },
+  },
+  {
+    id: "DV-SETTLE-202604-V0",
+    dataType: "月度结算数据",
+    settleMonth: "2026-04",
+    businessDate: "2026-04",
+    source: "页面抓取",
+    artifactType: "采集原始件",
+    pluginTaskId: "TASK-SETTLE-202604-00",
+    objectKey: "settlement/2026-04/archive/v0.raw.json",
+    pluginVersion: "sync-helper@0.2.9",
+    coverage: "83/96 时点 · 62/70 客户",
+    status: "voided",
+    publishedAt: "2026-04-19 17:40",
+    sourceFileId: "SF-SETTLE-202604-000",
+    importBatchId: "IB-SETTLE-202604-000",
+    sourceFileName: "安徽交易中心_结算数据_202604_旧版.html",
+    capturedAt: "2026-04-19 17:31",
+    traceNote: "旧选择器抓取不完整，已作废，仅保留追溯",
+    monthlyOverview: { expected: 70, existing: 62, missing: 8, notDue: 0, coverageRate: "88.6%", latestUpdatedAt: "2026-04-19 17:40" },
+    validation: {
+      status: "失败",
+      errorCount: 8,
+      warningCount: 4,
+      fieldSamples: ["8 个客户缺少月度结算金额", "13 个时点未采到电量"],
+      ruleSamples: ["已作废版本不得进入新测算任务"],
+    },
+  },
+  {
+    id: "DV-SETTLE-202605-PLAN",
+    dataType: "月度结算数据",
+    settleMonth: "2026-05",
+    businessDate: "2026-05",
+    source: "页面抓取",
+    artifactType: "计算输入",
+    pluginTaskId: "TASK-SETTLE-202605-PLAN",
+    objectKey: "settlement/2026-05/plan/not-due.json",
+    pluginVersion: "sync-helper@0.3.1",
+    coverage: "0/96 时点 · 0/70 客户",
+    status: "not_due",
+    publishedAt: "未到期",
+    sourceFileId: "待生成",
+    importBatchId: "IB-SETTLE-202605-PLAN",
+    sourceFileName: "待采集",
+    capturedAt: "未到期",
+    traceNote: "2026-05 月度结算数据未到披露窗口，仅展示后端计划",
+    monthlyOverview: { expected: 70, existing: 0, missing: 0, notDue: 70, coverageRate: "0%", latestUpdatedAt: "未到期" },
+    validation: {
+      status: "未到期",
+      errorCount: 0,
+      warningCount: 0,
+      fieldSamples: ["未到期，不执行字段校验"],
+      ruleSamples: ["未到披露窗口，不允许手工强制发布"],
+    },
+  },
+  {
+    id: "DV-PRICE-20260421-MISS",
+    dataType: "日前/实时电价",
+    settleMonth: "2026-04",
+    businessDate: "2026-04-21",
+    source: "公开API",
+    artifactType: "计算输入",
+    pluginTaskId: "TASK-PRICE-D-20260421",
+    objectKey: "price/2026-04/2026-04-21/missing.json",
+    pluginVersion: "sync-helper@0.3.1",
+    coverage: "84/96 时点",
+    status: "missing",
+    publishedAt: "待补齐",
+    sourceFileId: "SF-PRICE-20260421",
+    importBatchId: "IB-PRICE-20260421",
+    sourceFileName: "api-price-20260421.json",
+    capturedAt: "2026-04-21 10:28",
+    traceNote: "实时电价接口缺 12 个时点，等待重试或人工确认",
+    monthlyOverview: { expected: 96, existing: 84, missing: 12, notDue: 0, coverageRate: "87.5%", latestUpdatedAt: "2026-04-21 10:28" },
+    validation: {
+      status: "失败",
+      errorCount: 12,
+      warningCount: 1,
+      fieldSamples: ["P85-P96 realtimePrice 为空"],
+      ruleSamples: ["价格数据缺失阻断批发侧成本测算"],
+    },
   },
 ];
 
@@ -339,6 +517,9 @@ export const dataVersionStatusLabel: Record<DataVersionStatus, string> = {
   validating: "校验中",
   warning: "有缺口",
   failed: "校验失败",
+  voided: "已作废",
+  missing: "缺失",
+  not_due: "未到期",
 };
 
 // ===== 结果详情 - 批发侧 =====

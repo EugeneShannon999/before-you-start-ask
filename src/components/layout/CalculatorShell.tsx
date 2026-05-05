@@ -12,7 +12,7 @@ interface Tab {
 
 const tabs: Tab[] = [
   { to: "/tools/calculator/customers", label: "客户与套餐", icon: Users, desc: "客户档案与套餐版本绑定" },
-  { to: "/tools/calculator/runs", label: "计算任务", icon: CalcIcon, desc: "试算 / 正式核算与结果" },
+  { to: "/tools/calculator/runs", label: "测算任务", icon: CalcIcon, desc: "试算 / 正式核算与结果" },
   { to: "/tools/calculator/policies", label: "政策参数版本", icon: FileCog, desc: "结算政策版本管理" },
   { to: "/tools/calculator/batches", label: "数据版本", icon: Database, desc: "插件采集与计算输入追溯" },
 ];
@@ -40,7 +40,7 @@ export function CalculatorShell({ children, inner = false }: CalculatorShellProp
         return;
       }
     }
-    // 默认：回到结算计算器入口（即客户列表，作为默认首屏）
+    // 默认：回到收益测算后台入口（即客户与套餐，作为默认首屏）
     nav("/tools/calculator");
   };
 
@@ -52,13 +52,13 @@ export function CalculatorShell({ children, inner = false }: CalculatorShellProp
           <button
             onClick={handleBack}
             className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
-            title={inner ? "返回上一级" : "返回结算计算器首页"}
+            title={inner ? "返回上一级" : "返回收益测算后台首页"}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             返回
           </button>
           <span className="text-xs text-muted-foreground">
-            结算计算器{activeTab ? ` / ${activeTab.label}` : ""}
+            收益测算后台{activeTab ? ` / ${activeTab.label}` : ""}
           </span>
         </div>
         {activeTab && (

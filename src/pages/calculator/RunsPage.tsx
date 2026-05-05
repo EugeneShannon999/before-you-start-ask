@@ -59,13 +59,13 @@ export default function RunsPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold">计算任务</h1>
+          <h1 className="text-xl font-semibold">测算任务</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            将发起计算和历史记录合并到同一页面，支持校验、启动、状态追踪和结果跳转。
+            将发起测算和历史记录合并到同一页面，支持校验、启动、状态追踪和结果跳转。
           </p>
         </div>
         <Button size="sm" onClick={() => setOpen(true)}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" /> 新建任务
+          <Plus className="h-3.5 w-3.5 mr-1.5" /> 新建测算
         </Button>
       </div>
 
@@ -93,7 +93,7 @@ export default function RunsPage() {
             </Select>
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">计算类型</Label>
+            <Label className="text-xs text-muted-foreground">测算类型</Label>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -186,11 +186,11 @@ export default function RunsPage() {
         </table>
       </div>
 
-      {/* 新建任务抽屉 */}
+      {/* 新建测算抽屉 */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="w-[520px] sm:max-w-[520px] overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>新建计算任务</SheetTitle>
+            <SheetTitle>新建测算任务</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 mt-4">
             <div>
@@ -198,7 +198,7 @@ export default function RunsPage() {
               <Input className="h-9 mt-1" defaultValue="2026-04" />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">计算类型</Label>
+              <Label className="text-xs text-muted-foreground">测算类型</Label>
               <Select defaultValue="trial">
                 <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -258,7 +258,7 @@ export default function RunsPage() {
                 <div>
                   <p className="text-sm font-medium text-success">校验摘要</p>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    默认数据版本 DV-SETTLE-202604-V1 已发布，覆盖率 96/96；政策版本与套餐快照均可追溯。若切换到有缺口版本，正式核算按钮应阻止提交。
+                    结算用户池 70 户；缺失套餐客户 0；缺失 P 售均小时数 0；缺失日前/实时记录数 0；套餐重叠数 0。默认数据版本 DV-SETTLE-202604-V1 已发布，覆盖率 96/96；政策版本与套餐快照均可追溯。若切换到有缺口版本，正式核算按钮应阻止提交。
                   </p>
                 </div>
               </div>
@@ -280,10 +280,10 @@ export default function RunsPage() {
             <Button
               onClick={() => {
                 setOpen(false);
-                toast.success("已提交计算任务");
+                toast.success("已提交测算任务");
               }}
             >
-              开始计算
+              开始测算
             </Button>
           </SheetFooter>
         </SheetContent>

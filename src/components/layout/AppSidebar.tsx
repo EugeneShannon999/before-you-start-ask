@@ -3,6 +3,7 @@ import {
   BarChart3,
   LineChart,
   Calendar,
+  Calculator,
   Zap,
   Plug,
   CloudSun,
@@ -41,6 +42,7 @@ interface NavItem {
 
 const dashboardItems: NavItem[] = [
   { title: "市场看板", url: "/tools/market", icon: BarChart3 },
+  { title: "收益测算后台", url: "/tools/calculator", icon: Calculator },
   { title: "气象看板", url: "/tools/weather", icon: CloudSun },
   { title: "算法预测", url: "/tools/prediction", icon: LineChart },
   { title: "交易日历", url: "/tools/calendar", icon: Calendar },
@@ -55,8 +57,8 @@ const pluginModules: Array<{
   placeholder?: boolean;
 }> = [
   {
-    title: "爬虫插件",
-    description: "收益结算数据抓取、交易平台数据收集处理",
+    title: "交易同步助手",
+    description: "浏览器侧栏模拟：采集、设置、任务调试",
     icon: Plug,
     url: "/system/plugin",
   },
@@ -162,10 +164,10 @@ export function AppSidebar() {
             {!collapsed && <Card className="mt-auto rounded-md border-border/80 shadow-none bg-card/70 shrink-0">
               <CardHeader className="px-3 py-3 space-y-1.5">
                 <CardTitle className="text-[12px] leading-none font-semibold text-foreground/90">
-                  插件管理
+                  收益测算与交易同步
                 </CardTitle>
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  看板侧的能力入口，聚合结算、询盘与后续自动交易模块。
+                  后台测算闭环与浏览器采集侧栏；SP3 自动报价保持 On queue。
                 </p>
               </CardHeader>
               <CardContent className="px-2.5 pb-2.5 pt-0">
